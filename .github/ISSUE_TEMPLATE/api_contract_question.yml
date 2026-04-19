@@ -1,0 +1,30 @@
+name: API contract question
+description: Question or proposal about the public REST API or MCP surface (not how-to).
+title: "[contract] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for endpoint design, response shape, auth, deprecation, or MCP tool behavior.
+        **How-to questions** belong in [Discussions](https://github.com/smarterweather/developer/discussions).
+        Do not paste live API keys.
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Which surface (REST path, MCP tool name, error code)?
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question or proposal
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why this matters
+      description: User impact, agent use case, or integration constraint.
+    validations:
+      required: true
