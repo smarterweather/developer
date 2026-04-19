@@ -11,10 +11,11 @@ on:
 
 # Note: GITHUB_TOKEN cannot manage repository rulesets at any permission
 # level -- "administration" is not in the set of permissions that the
-# workflow token can be granted. This workflow therefore requires a
-# repository secret named RULESETS_ADMIN_TOKEN containing a PAT or
-# GitHub App installation token with the "Administration: Read and
-# write" repository permission. See .github/rulesets/README.md.
+# workflow token can be granted. We therefore mint an installation token
+# at job time from a GitHub App ("smarterweather-rulesets-cd") owned by
+# the smarterweather org and installed on this repository with the
+# "Administration: Read and write" permission. See
+# .github/rulesets/README.md for setup details.
 permissions:
   contents: read
 
@@ -32,23 +33,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Verify RULESETS_ADMIN_TOKEN is configured
+      - name: Verify GitHub App credentials are configured
         env:
-          RULESETS_ADMIN_TOKEN: ${{ secrets.RULESETS_ADMIN_TOKEN }}
+          RULESETS_APP_ID: ${{ secrets.RULESETS_APP_ID }}
+          RULESETS_APP_PRIVATE_KEY: ${{ secrets.RULESETS_APP_PRIVATE_KEY }}
         run: |
-          if [[ -z "${RULESETS_ADMIN_TOKEN:-}" ]]; then
-            echo "::error title=Missing secret::RULESETS_ADMIN_TOKEN is not set." \
-              "Create a fine-grained PAT (or GitHub App installation token) with" \
-              "'Administration: Read and write' on this repository and store it as" \
-              "a repository secret named RULESETS_ADMIN_TOKEN." \
-              "See .github/rulesets/README.md for details."
+          missing=()
+          [[ -z "${RULESETS_APP_ID:-}" ]] && missing+=("RULESETS_APP_ID")
+          [[ -z "${RULESETS_APP_PRIVATE_KEY:-}" ]] && missing+=("RULESETS_APP_PRIVATE_KEY")
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "::error title=Missing secret(s)::Required secret(s) not set: ${missing[*]}." \
+              "Create a GitHub App on the smarterweather org with 'Administration:" \
+              "Read and write' permission, install it on this repo, and store the" \
+              "App ID and private key as repository secrets named RULESETS_APP_ID" \
+              "and RULESETS_APP_PRIVATE_KEY. See .github/rulesets/README.md."
             exit 1
           fi
+
+      - name: Mint installation token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.RULESETS_APP_ID }}
+          private-key: ${{ secrets.RULESETS_APP_PRIVATE_KEY }}
 
       - name: Re-validate before applying
         run: ./scripts/validate-rulesets.sh
 
       - name: Apply rulesets
         env:
-          GH_TOKEN: ${{ secrets.RULESETS_ADMIN_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: ./scripts/apply-rulesets.sh "${{ github.repository }}"

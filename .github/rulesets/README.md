@@ -33,31 +33,48 @@ merge to main --> CD runs `scripts/apply-rulesets.sh`
 
 The workflow `GITHUB_TOKEN` **cannot** manage repository rulesets --
 `administration` is not in the [list of permissions](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#permissions)
-that `GITHUB_TOKEN` can be granted at any level. CD therefore requires a
-separate token.
+that `GITHUB_TOKEN` can be granted at any level. CD therefore mints a
+short-lived installation token at job time from a dedicated GitHub App
+([per GitHub's own guidance](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#about-personal-access-tokens)
+for org-owned automation).
 
-Create a repository secret named **`RULESETS_ADMIN_TOKEN`** containing
-either:
+### One-time setup
 
-- A **fine-grained personal access token** (preferred) scoped to this
-  repository with the `Administration: Read and write` repository
-  permission, OR
-- A **GitHub App installation token** generated at job time from an App
-  with the same `Administration: Read and write` permission.
+1. **Create the App** at
+   <https://github.com/organizations/smarterweather/settings/apps/new>:
+   - **GitHub App name**: `smarterweather-rulesets-cd`
+   - **Webhook**: uncheck *Active* (no webhooks needed)
+   - **Repository permissions**: `Administration` -> **Read and write**
+     (no other permissions)
+   - **Where can this GitHub App be installed?**: *Only on this account*
+2. After creation, scroll to **Private keys** -> **Generate a private
+   key**. Save the downloaded `.pem` file.
+3. Note the **App ID** at the top of the App's settings page.
+4. Left sidebar -> **Install App** -> install on `smarterweather`,
+   scoped to *Only select repositories* -> `developer`.
+5. Add two repository secrets at
+   <https://github.com/smarterweather/developer/settings/secrets/actions>:
+   - `RULESETS_APP_ID` -- the App ID (an integer).
+   - `RULESETS_APP_PRIVATE_KEY` -- the entire contents of the `.pem`
+     file, including the `-----BEGIN/END-----` lines.
 
-Steps for the fine-grained PAT path:
+The CD workflow fails fast with a clear error if either secret is
+missing, so it is safe to merge the workflow before completing setup
+(though CD won't apply anything until both secrets exist).
 
-1. <https://github.com/settings/personal-access-tokens/new>
-2. **Resource owner**: `smarterweather` (the org)
-3. **Repository access**: Only select repositories -> `smarterweather/developer`
-4. **Repository permissions**: `Administration` -> Read and write
-5. Generate, copy, then paste into
-   **Settings -> Secrets and variables -> Actions -> New repository secret**
-   with the name `RULESETS_ADMIN_TOKEN`.
+### Why a GitHub App and not a PAT
 
-The CD workflow fails fast with a clear error if this secret is missing,
-so it is safe to merge the workflow first and add the secret afterwards
-(though CD won't actually apply rulesets until the secret exists).
+- **No seat cost.** Apps are not users; they don't consume Team-plan
+  seats. Outside Collaborators on the org can't create fine-grained
+  PATs scoped to the org, and adding the bot as a Member would burn a
+  $4/mo seat.
+- **No expiry to babysit.** Installation tokens are minted fresh each
+  workflow run via `actions/create-github-app-token` and live for ~1
+  hour. There is no annual rotation.
+- **Org-owned identity.** Audit log shows the App as the actor, not a
+  human user.
+- **Narrow scope.** The App only has `Administration: Read and write`
+  on `smarterweather/developer`. Nothing else.
 
 ## Manual application (local)
 
