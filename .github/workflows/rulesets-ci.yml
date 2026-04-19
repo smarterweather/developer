@@ -1,0 +1,35 @@
+name: Rulesets CI
+
+on:
+  pull_request:
+    paths:
+      - ".github/rulesets/**"
+      - "scripts/validate-rulesets.sh"
+      - "scripts/apply-rulesets.sh"
+      - ".github/workflows/rulesets-ci.yml"
+      - ".github/workflows/rulesets-cd.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rulesets-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate ruleset definitions
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate JSON definitions
+        run: ./scripts/validate-rulesets.sh
+
+      - name: Lint shell scripts
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          shellcheck scripts/validate-rulesets.sh scripts/apply-rulesets.sh

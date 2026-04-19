@@ -1,0 +1,40 @@
+name: Rulesets CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/rulesets/**"
+      - "scripts/apply-rulesets.sh"
+      - ".github/workflows/rulesets-cd.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Required to manage repository rulesets via the REST API.
+  administration: write
+
+concurrency:
+  # Never run two applies at once -- the API has no atomic batch endpoint.
+  group: rulesets-cd
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: Apply rulesets to ${{ github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Re-validate before applying
+        run: ./scripts/validate-rulesets.sh
+
+      - name: Apply rulesets
+        env:
+          # Prefer a dedicated PAT/App token if present; otherwise fall back
+          # to GITHUB_TOKEN with administration:write. See
+          # .github/rulesets/README.md for details on token scope.
+          GH_TOKEN: ${{ secrets.RULESETS_ADMIN_TOKEN || secrets.GITHUB_TOKEN }}
+        run: ./scripts/apply-rulesets.sh "${{ github.repository }}"
