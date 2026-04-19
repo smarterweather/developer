@@ -101,9 +101,13 @@ well-known stable IDs are:
 | 4  | Maintain |
 | 5  | Admin |
 
-`protect-main.json` uses `5` (Admin) so that repository administrators can
-bypass the rules in a break-glass situation. Bypasses are still logged in
-the repo's audit log.
+`protect-main.json` uses `5` (Admin) with `bypass_mode: pull_request` so
+that repository administrators can bypass rules **only inside a pull
+request merge** (the legitimate break-glass case -- e.g., merging without
+all conversations resolved). Direct CLI pushes to `main` are blocked
+even for admins. Force pushes and deletions are likewise blocked unless
+done through a PR context, which they cannot be. Every bypass is logged
+in the repo's audit log.
 
 ## Adding a new ruleset
 
