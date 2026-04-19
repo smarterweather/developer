@@ -9,10 +9,14 @@ on:
       - ".github/workflows/rulesets-cd.yml"
   workflow_dispatch:
 
+# Note: GITHUB_TOKEN cannot manage repository rulesets at any permission
+# level -- "administration" is not in the set of permissions that the
+# workflow token can be granted. This workflow therefore requires a
+# repository secret named RULESETS_ADMIN_TOKEN containing a PAT or
+# GitHub App installation token with the "Administration: Read and
+# write" repository permission. See .github/rulesets/README.md.
 permissions:
   contents: read
-  # Required to manage repository rulesets via the REST API.
-  administration: write
 
 concurrency:
   # Never run two applies at once -- the API has no atomic batch endpoint.
@@ -28,13 +32,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Verify RULESETS_ADMIN_TOKEN is configured
+        env:
+          RULESETS_ADMIN_TOKEN: ${{ secrets.RULESETS_ADMIN_TOKEN }}
+        run: |
+          if [[ -z "${RULESETS_ADMIN_TOKEN:-}" ]]; then
+            echo "::error title=Missing secret::RULESETS_ADMIN_TOKEN is not set." \
+              "Create a fine-grained PAT (or GitHub App installation token) with" \
+              "'Administration: Read and write' on this repository and store it as" \
+              "a repository secret named RULESETS_ADMIN_TOKEN." \
+              "See .github/rulesets/README.md for details."
+            exit 1
+          fi
+
       - name: Re-validate before applying
         run: ./scripts/validate-rulesets.sh
 
       - name: Apply rulesets
         env:
-          # Prefer a dedicated PAT/App token if present; otherwise fall back
-          # to GITHUB_TOKEN with administration:write. See
-          # .github/rulesets/README.md for details on token scope.
-          GH_TOKEN: ${{ secrets.RULESETS_ADMIN_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RULESETS_ADMIN_TOKEN }}
         run: ./scripts/apply-rulesets.sh "${{ github.repository }}"
