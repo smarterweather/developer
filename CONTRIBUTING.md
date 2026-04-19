@@ -94,8 +94,8 @@ Use the **Bug report** issue template. The most useful bug reports include:
 - Any relevant environment details (OS, Node/Python/Go version, etc.)
 
 If your bug involves an API key, **please redact it** before pasting logs.
-Smarter Weather scans GitHub for leaked keys and revokes on detection, but
-we'd rather not be the ones to publish your key.
+We plan to participate in GitHub's secret-scanning partner program, but
+treat your keys as live until you have rotated them yourself.
 
 ## Filing a good feature request
 

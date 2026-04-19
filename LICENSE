@@ -19,20 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This MIT License applies to all code in this repository, including SDKs,
-example applications, the `@smarterweather/mcp-server` npm package source,
-and any agent skills or scaffolding.
-
-Documentation content under `docs/`, the OpenAPI specification at
-`openapi.yaml` (when present), and other prose materials are licensed
-separately under the Creative Commons Attribution 4.0 International License.
-See [LICENSE-docs](./LICENSE-docs) for the docs license.
-
-The Smarter Weather APIs and hosted services themselves are governed by the
-Smarter Weather Terms of Service and Developer Terms, available at
-https://smarterweather.com/terms and https://smarterweather.com/developers/terms.
-This repository contains client-side and documentation artifacts only; access
-to the hosted APIs requires a separate agreement.

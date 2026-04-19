@@ -103,14 +103,22 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full posture and the
 
 ## License
 
-- Code (SDKs, examples, package source, agent skills) is licensed under the
+- **Code** -- SDKs, examples, the `@smarterweather/mcp-server` package
+  source, and any agent skills or scaffolding are licensed under the
   [MIT License](./LICENSE).
-- Documentation and prose (README, `docs/`, `openapi.yaml`) are licensed
-  under [Creative Commons Attribution 4.0
-  International](./LICENSE-docs).
+- **Documentation and prose** -- this README, anything under `docs/`, and
+  `openapi.yaml` (when present) are licensed under [Creative Commons
+  Attribution 4.0 International](./LICENSE-docs).
 
-The Smarter Weather hosted APIs themselves are governed by separate Terms of
-Service and Developer Terms.
+Where any file's intended license is ambiguous (for example, a tutorial that
+mixes prose and code samples), assume MIT for the code blocks and CC BY 4.0
+for the surrounding prose.
+
+The Smarter Weather hosted APIs and services themselves are governed by
+separate Terms of Service and Developer Terms at
+https://smarterweather.com/terms and https://smarterweather.com/developers/terms.
+This repository contains client-side and documentation artifacts only; access
+to the hosted APIs requires a separate agreement.
 
 ## Attribution
 
