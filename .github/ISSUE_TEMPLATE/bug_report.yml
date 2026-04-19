@@ -1,0 +1,45 @@
+name: Bug report
+description: Something is broken in an SDK, example, or repo tooling.
+title: "[bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please redact API keys and tokens from logs and repro steps.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps or a small code snippet.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, runtime version (Node / Python / Go), package name and version.
+      placeholder: |
+        macOS 15
+        Node 22
+        @smarterweather/sdk 0.1.0
+    validations:
+      required: true

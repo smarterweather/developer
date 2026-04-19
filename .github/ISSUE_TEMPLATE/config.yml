@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Ask a question (how-to, integration)
+    url: https://github.com/smarterweather/developer/discussions
+    about: Use Discussions for general questions. Issues are for actionable bugs and requests.
+  - name: Developer documentation
+    url: https://smarterweather.com/developers
+    about: Portal docs, quickstart, API and MCP guides.
+  - name: Contact (account, billing, commercial)
+    url: https://smarterweather.com/contact
+    about: Email and mailing address for non-GitHub inquiries.

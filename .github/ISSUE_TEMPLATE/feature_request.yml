@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest an improvement to SDKs, examples, docs, or tooling in this repo.
+title: "[feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For changes to the hosted API or MCP contract, use **API contract question** instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      description: What are you trying to accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Sketch the API or behavior you want.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
