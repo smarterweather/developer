@@ -10,8 +10,7 @@ info:
     > ([`smarterweather/developer`](https://github.com/smarterweather/developer))
     > has a stable `openapi.yaml` to track. The full schema for every endpoint,
     > parameter, and response (including the RFC 7807 error envelope) lands in
-    > **Phase 2** of the developer-platform roadmap; see the parent epic
-    > [#7146](https://github.com/afisch710/SmarterWeather/issues/7146).
+    > the Phase 2 release of the developer platform.
     >
     > Treat field shapes as **non-binding** until the Phase 2 release. The set
     > of endpoints below is the planned `/v1/*` surface at general availability.
@@ -23,9 +22,6 @@ info:
     - Breaking shape changes: 90 days notice.
     - Active deprecations are listed at `GET /.well-known/deprecations`.
     - Non-breaking additions ship without notice.
-
-    See [ADR 001 — Public contracts](https://github.com/afisch710/SmarterWeather/blob/development/docs/developer/adr/001-public-contracts.md)
-    for the full contract.
 
     ## Errors
 
@@ -45,21 +41,24 @@ info:
     Test-mode keys (`sw_test_*`) return live data but are excluded from
     billing meter events. Get a key from the developer dashboard at
     [https://smarterweather.com/developers/dashboard](https://smarterweather.com/developers/dashboard)
-    once general availability ships. See
-    [ADR 008 — Public API auth scheme](https://github.com/afisch710/SmarterWeather/blob/development/docs/developer/adr/008-public-api-auth-scheme.md)
-    for the rationale.
+    once general availability ships.
   version: 0.0.1-preview
   contact:
     name: Smarter Weather Developer Platform
     url: https://github.com/smarterweather/developer
 
-# `servers` is intentionally omitted at preview. SDK generators should not
-# default to a base URL while the spec is non-binding -- pointing them at
-# `api.smarterweather.com` would route preview consumers to the legacy
-# wx-api service. The interim sw-api hostname is decided in F0
-# (afisch710/SmarterWeather#7254) and the production cutover to
-# `api.smarterweather.com` is Phase 5. The first concrete `servers` entry
-# lands when F0 closes.
+# `servers` is intentionally omitted through Phase 2. SDK generators should
+# not default to a base URL while the spec is non-binding -- pointing them
+# at `api.smarterweather.com` would route preview consumers to the legacy
+# wx-api service.
+#
+# Per ADR 006 (docs/developer/adr/006-sw-api-interim-hostname.md), the
+# Phase 2 interim hostname is the raw API Gateway HTTP API invocation URL
+# (`*.execute-api.us-east-1.amazonaws.com`), distributed to closed-beta
+# design partners via direct onboarding material rather than via a
+# `servers:` entry. The first concrete `servers:` entry lands at Phase 5
+# cutover, when `api.smarterweather.com` transfers from legacy wx-api to
+# sw-api.
 
 tags:
   - name: Weather
@@ -95,7 +94,7 @@ paths:
       summary: Get blended weather for a location.
       description: |
         Returns blended weather data for a single location. The full
-        parameter and response shape ships in Phase 2 (see #7258); this
+        parameter and response shape ships in the Phase 2 release; this
         placeholder entry exists only to reserve the path and the
         `Weather` tag in the spec. **No request parameters are listed
         yet** -- the location selector (lat/lon vs. address vs. ip),
@@ -127,8 +126,9 @@ paths:
       summary: List active API deprecations.
       description: |
         Returns the current set of active deprecations as required by
-        [ADR 001](https://github.com/afisch710/SmarterWeather/blob/development/docs/developer/adr/001-public-contracts.md).
-        Empty list when no deprecations are active.
+        the public-contract policy summarised in this document's
+        Versioning and deprecation section. Empty list when no
+        deprecations are active.
       tags: [Meta]
       security: []
       responses:
@@ -173,10 +173,9 @@ components:
           excluded from billing meter events. Useful for CI and local
           development.
 
-        Get a key from the developer dashboard. See
-        [ADR 008](https://github.com/afisch710/SmarterWeather/blob/development/docs/developer/adr/008-public-api-auth-scheme.md)
-        for the rationale behind the Bearer scheme over a custom
-        `X-API-Key` header.
+        Get a key from the developer dashboard at
+        [smarterweather.com/developers/dashboard](https://smarterweather.com/developers/dashboard)
+        once general availability ships.
   schemas:
     Health:
       type: object
