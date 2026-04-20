@@ -1,0 +1,9 @@
+{
+  "mode": "pre",
+  "tag": "preview",
+  "initialVersions": {
+    "@smarterweather/mcp-onboarding": "0.0.0-preview.1",
+    "@smarterweather/mcp-weather": "0.0.0-preview.1"
+  },
+  "changesets": []
+}
