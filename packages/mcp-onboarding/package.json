@@ -1,6 +1,6 @@
 {
   "name": "@smarterweather/mcp-onboarding",
-  "version": "0.0.0-preview.1",
+  "version": "0.0.0-preview.2",
   "description": "stdio bridge to the Smarter Weather developer onboarding MCP server (sw-onboarding). Preview — not yet functional.",
   "license": "MIT",
   "type": "module",
