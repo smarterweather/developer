@@ -41,8 +41,9 @@ Full license text and human-readable summary:
 ---
 
 Code in this repository (SDKs, example applications, the
-`@smarterweather/mcp-server` package source, agent skills) is licensed
-separately under the MIT License. See [LICENSE](./LICENSE).
+`@smarterweather/mcp-weather` and `@smarterweather/mcp-onboarding` package
+sources, agent skills) is licensed separately under the MIT License. See
+[LICENSE](./LICENSE).
 
 Where any file's intended license is ambiguous (for example, a tutorial that
 mixes prose and code samples), assume MIT for the code blocks and CC BY 4.0

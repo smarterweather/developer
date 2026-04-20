@@ -60,7 +60,7 @@ This security policy covers:
   `mcp.smarterweather.com` (and any other `*.smarterweather.com` host
   controlled by Smarter Weather LLC).
 - The developer dashboard at `smarterweather.com/developers`.
-- The `@smarterweather/mcp-server` npm package (when published).
+- The `@smarterweather/mcp-weather` and `@smarterweather/mcp-onboarding` npm packages (when published).
 - Code in this repository (SDKs, examples, agent skills).
 - The signing, hashing, and storage of API keys issued by the platform.
 

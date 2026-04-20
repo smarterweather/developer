@@ -1,0 +1,50 @@
+{
+  "name": "@smarterweather/mcp-onboarding",
+  "version": "0.0.0-preview.1",
+  "description": "stdio bridge to the Smarter Weather developer onboarding MCP server (sw-onboarding). Preview — not yet functional.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "mcp-onboarding": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "preview",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smarterweather/developer.git",
+    "directory": "packages/mcp-onboarding"
+  },
+  "homepage": "https://github.com/smarterweather/developer/tree/main/packages/mcp-onboarding",
+  "bugs": {
+    "url": "https://github.com/smarterweather/developer/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "onboarding",
+    "developer-tools",
+    "agent",
+    "smarterweather"
+  ]
+}

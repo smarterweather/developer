@@ -1,0 +1,24 @@
+name: packages-ci
+on:
+  pull_request:
+    paths:
+      - "packages/**"
+      - ".github/workflows/packages-ci.yml"
+      - "package.json"
+      - "package-lock.json"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [mcp-weather, mcp-onboarding]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace=@smarterweather/${{ matrix.package }}
+      - run: node packages/${{ matrix.package }}/dist/index.js
