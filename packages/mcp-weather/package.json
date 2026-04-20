@@ -1,0 +1,49 @@
+{
+  "name": "@smarterweather/mcp-weather",
+  "version": "0.0.0-preview.1",
+  "description": "stdio bridge to the Smarter Weather hosted MCP server (sw-mcp). Preview — not yet functional.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "mcp-weather": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "preview",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smarterweather/developer.git",
+    "directory": "packages/mcp-weather"
+  },
+  "homepage": "https://github.com/smarterweather/developer/tree/main/packages/mcp-weather",
+  "bugs": {
+    "url": "https://github.com/smarterweather/developer/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "weather",
+    "weather-api",
+    "forecast",
+    "smarterweather"
+  ]
+}

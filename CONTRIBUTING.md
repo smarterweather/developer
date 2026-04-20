@@ -10,7 +10,7 @@ A public surface for the Smarter Weather developer platform. The pieces it
 holds are:
 
 - The OpenAPI specification for the public REST API
-- The `@smarterweather/mcp-server` package source
+- The `@smarterweather/mcp-weather` and `@smarterweather/mcp-onboarding` package sources
 - Client SDKs (TypeScript, Python, Go)
 - Examples, cookbooks, and integration recipes
 - Agent skills (`.cursor/skills/`, `.claude/`)

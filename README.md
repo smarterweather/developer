@@ -1,8 +1,9 @@
 # Smarter Weather Developer Platform
 
 The public home for the Smarter Weather developer platform: SDKs,
-documentation, example apps, the `@smarterweather/mcp-server` package, agent
-skills, and the OpenAPI specification for `api.smarterweather.com`.
+documentation, example apps, the `@smarterweather/mcp-weather` and
+`@smarterweather/mcp-onboarding` packages, agent skills, and the OpenAPI
+specification for `api.smarterweather.com`.
 
 > **Preview.** The Smarter Weather REST API and hosted MCP server are not yet
 > generally available. This repository exists to publish the developer-facing
@@ -21,11 +22,16 @@ The intended scope is:
 - **OpenAPI specification** (`openapi.yaml`) for the public REST API at
   `https://api.smarterweather.com`. Auto-synced from the canonical source on
   change.
-- **`@smarterweather/mcp-server`** -- npm package source for the stdio
+- **`@smarterweather/mcp-weather`** -- npm package source for the stdio
   bridge that connects MCP clients (Cursor, Claude Desktop, Claude Code, etc.)
   to the hosted MCP endpoint at `https://mcp.smarterweather.com/mcp`. The
   bridge attaches your API key from `SMARTERWEATHER_API_KEY` and proxies
   every JSON-RPC message; all weather logic runs server-side.
+- **`@smarterweather/mcp-onboarding`** -- npm package source for the stdio
+  bridge to the developer-onboarding MCP server at
+  `https://onboarding.smarterweather.com`. Provides agent-driven self-service
+  account creation, API key provisioning, and SDK setup walkthroughs. Auth via
+  OAuth (browser callback).
 - **Client SDKs** -- TypeScript and Python first; Go to follow.
 - **Examples and cookbooks** -- runnable apps, agent integrations, and
   end-to-end recipes.
@@ -51,8 +57,8 @@ curl -H "X-API-Key: $SMARTERWEATHER_API_KEY" \
 ```
 
 ```bash
-# MCP server (npm package, when published)
-npx -y @smarterweather/mcp-server
+# Weather MCP server (npm package; preview placeholder today)
+npx -y @smarterweather/mcp-weather@preview
 ```
 
 The full quickstart with language-specific snippets lives at
@@ -84,9 +90,9 @@ publishes artifacts as each phase ships.
 | 1b | This public repository (governance, SDK scaffolding, OpenAPI sync workflow) | in progress |
 | 2  | Public REST API (`sw-api`) at `api.smarterweather.com` with usage-based billing | next |
 | 2b | First-party migration of the Smarter Weather web and iOS apps onto the public API | follows Phase 2 |
-| 3  | Public MCP server (`sw-mcp`) at `mcp.smarterweather.com/mcp` + `@smarterweather/mcp-server` | follows Phase 2 |
+| 3  | Public MCP server (`sw-mcp`) at `mcp.smarterweather.com/mcp` + `@smarterweather/mcp-weather` | follows Phase 2 |
 | 3b | First-party `wx-chat` migration onto the public MCP | follows Phase 3 |
-| 4  | Meta MCP server (`sw-onboarding`) for agent-driven self-service onboarding | follows Phase 3 |
+| 4  | Meta MCP server (`sw-onboarding`) for agent-driven self-service onboarding + `@smarterweather/mcp-onboarding` | follows Phase 3 |
 | 5  | SDKs, expanded examples, registry distribution, community growth | ongoing |
 
 The roadmap is published for transparency, not as a commitment. Dates are
@@ -103,9 +109,9 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full posture and the
 
 ## License
 
-- **Code** -- SDKs, examples, the `@smarterweather/mcp-server` package
-  source, and any agent skills or scaffolding are licensed under the
-  [MIT License](./LICENSE).
+- **Code** -- SDKs, examples, the `@smarterweather/mcp-weather` and
+  `@smarterweather/mcp-onboarding` package sources, and any agent skills or
+  scaffolding are licensed under the [MIT License](./LICENSE).
 - **Documentation and prose** -- this README, anything under `docs/`, and
   `openapi.yaml` (when present) are licensed under [Creative Commons
   Attribution 4.0 International](./LICENSE-docs).

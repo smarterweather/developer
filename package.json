@@ -1,0 +1,17 @@
+{
+  "name": "smarterweather-developer",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "release": "changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.0",
+    "@changesets/changelog-github": "^0.5.0"
+  },
+  "overrides": {
+    "@types/node": "^22.0.0"
+  }
+}
