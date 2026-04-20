@@ -7,7 +7,7 @@ This directory hosts the publishable npm packages in the Smarter Weather develop
 | Package | Purpose | Roadmap phase | Status |
 | ------- | ------- | ------------- | ------ |
 | [`@smarterweather/mcp-weather`](./mcp-weather) | stdio bridge to the hosted weather MCP server at `mcp.smarterweather.com`. Authenticates via `SMARTERWEATHER_API_KEY`. | Phase 3 | preview placeholder |
-| [`@smarterweather/mcp-onboarding`](./mcp-onboarding) | stdio bridge to the hosted developer-onboarding MCP server at `onboarding.smarterweather.com`. Authenticates via OAuth (browser callback). | Phase 4 | preview placeholder |
+| [`@smarterweather/mcp-onboarding`](./mcp-onboarding) | stdio bridge to the hosted developer-onboarding MCP server at `developers.smarterweather.com/mcp`. Authenticates via OAuth (browser callback). | Phase 4 | preview placeholder |
 
 Both packages currently ship a single `console.log` placeholder that exits cleanly. The real implementations land in their respective phases of the [public roadmap](../README.md#roadmap).
 

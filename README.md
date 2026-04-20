@@ -29,16 +29,17 @@ The intended scope is:
   every JSON-RPC message; all weather logic runs server-side.
 - **`@smarterweather/mcp-onboarding`** -- npm package source for the stdio
   bridge to the developer-onboarding MCP server at
-  `https://onboarding.smarterweather.com`. Provides agent-driven self-service
-  account creation, API key provisioning, and SDK setup walkthroughs. Auth via
-  OAuth (browser callback).
+  `https://developers.smarterweather.com/mcp`. Provides agent-driven
+  self-service account creation, API key provisioning, and SDK setup
+  walkthroughs. Auth via OAuth (browser callback).
 - **Client SDKs** -- TypeScript and Python first; Go to follow.
 - **Examples and cookbooks** -- runnable apps, agent integrations, and
   end-to-end recipes.
 - **Agent skills** -- `.cursor/skills/` and `.claude/` content that teaches
   AI coding agents how to integrate the Smarter Weather APIs.
-- **Documentation** -- guides that complement the developer portal at
-  https://smarterweather.com/developers.
+- **Documentation** -- guides under [`docs/`](./docs/) that complement the
+  developer portal at https://smarterweather.com/developers. See the
+  [docs index](./docs/README.md) for the current map.
 
 What does **not** live here: the Smarter Weather core service, ingestion
 pipeline, or any internal infrastructure. Those remain in a separate private
