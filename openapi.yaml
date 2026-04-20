@@ -47,13 +47,18 @@ info:
     name: Smarter Weather Developer Platform
     url: https://github.com/smarterweather/developer
 
-# `servers` is intentionally omitted at preview. SDK generators should not
-# default to a base URL while the spec is non-binding -- pointing them at
-# `api.smarterweather.com` would route preview consumers to the legacy
-# wx-api service. The interim sw-api hostname is decided in F0 of the
-# internal developer-platform roadmap, and the production cutover to
-# `api.smarterweather.com` happens in Phase 5. The first concrete
-# `servers` entry lands when F0 closes.
+# `servers` is intentionally omitted through Phase 2. SDK generators should
+# not default to a base URL while the spec is non-binding -- pointing them
+# at `api.smarterweather.com` would route preview consumers to the legacy
+# wx-api service.
+#
+# Per ADR 006 (docs/developer/adr/006-sw-api-interim-hostname.md), the
+# Phase 2 interim hostname is the raw API Gateway HTTP API invocation URL
+# (`*.execute-api.us-east-1.amazonaws.com`), distributed to closed-beta
+# design partners via direct onboarding material rather than via a
+# `servers:` entry. The first concrete `servers:` entry lands at Phase 5
+# cutover, when `api.smarterweather.com` transfers from legacy wx-api to
+# sw-api.
 
 tags:
   - name: Weather
