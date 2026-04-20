@@ -35,8 +35,11 @@ The intended scope is:
 - **Client SDKs** -- TypeScript and Python first; Go to follow.
 - **Examples and cookbooks** -- runnable apps, agent integrations, and
   end-to-end recipes.
-- **Agent skills** -- `.cursor/skills/` and `.claude/` content that teaches
-  AI coding agents how to integrate the Smarter Weather APIs.
+- **Agent skills** --
+  [`.cursor/skills/use-smarterweather-api/`](./.cursor/skills/use-smarterweather-api/SKILL.md)
+  and [`.claude/CLAUDE.md`](./.claude/CLAUDE.md) content that teaches AI
+  coding agents how to integrate the Smarter Weather APIs. Copy them to
+  the same paths in your own repo to install.
 - **Documentation** -- guides under [`docs/`](./docs/) that complement the
   developer portal at https://smarterweather.com/developers. See the
   [docs index](./docs/README.md) for the current map.

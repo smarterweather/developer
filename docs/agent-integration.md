@@ -63,18 +63,14 @@ first try.
 
 | Agent      | Skill location                     | Status |
 | ---------- | ---------------------------------- | ------ |
-| Cursor     | `.cursor/skills/use-smarterweather-api/SKILL.md` | Phase 1b |
-| Claude Code| `.claude/CLAUDE.md`                | Phase 1b |
+| Cursor     | [`.cursor/skills/use-smarterweather-api/SKILL.md`](https://github.com/smarterweather/developer/blob/main/.cursor/skills/use-smarterweather-api/SKILL.md) | Available |
+| Claude Code| [`.claude/CLAUDE.md`](https://github.com/smarterweather/developer/blob/main/.claude/CLAUDE.md) | Available |
 | Codex CLI  | `AGENTS.md` at repo root           | Phase 5 |
 
-When a skill ships, copy its `SKILL.md` (or equivalent) into the
-corresponding directory at the root of your own repo. Most agents
-auto-discover skills the next time they index the project; some require a
-restart.
-
-Until the official skills land, the [REST API guide](./rest-api.md) is
-short enough that pasting it into your agent's system prompt works as a
-manual substitute.
+To install a skill in your own project, copy the corresponding file (or
+the whole `.cursor/skills/use-smarterweather-api/` directory for Cursor)
+into your repo at the same path. Most agents auto-discover skills the
+next time they index the project; some require a restart.
 
 ## Pattern 3 (do not do this): hard-coded keys in agent prompts
 
@@ -99,8 +95,8 @@ hosted server walks the agent through the env-var path automatically.
 | `@smarterweather/mcp-weather` real implementation | Phase 3 |
 | Real onboarding MCP at `developers.smarterweather.com/mcp` | Phase 4 |
 | `@smarterweather/mcp-onboarding` real implementation | Phase 4 |
-| Cursor skill (`use-smarterweather-api`) | Phase 1b |
-| Claude Code instructions (`.claude/`) | Phase 1b |
+| Cursor skill (`use-smarterweather-api`) | Phase 1b (done) |
+| Claude Code instructions (`.claude/`) | Phase 1b (done) |
 
 Watch this repository's [Releases][releases] for the artifact-by-artifact
 ship log.
