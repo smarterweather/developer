@@ -1,0 +1,261 @@
+openapi: 3.1.0
+info:
+  title: Smarter Weather API
+  summary: Public REST API for the Smarter Weather developer platform
+  description: |
+    The public REST API for Smarter Weather (`sw-api`).
+
+    > **Preview / placeholder.** This document is the bootstrap version of the
+    > spec, published so the public developer repo
+    > ([`smarterweather/developer`](https://github.com/smarterweather/developer))
+    > has a stable `openapi.yaml` to track. The full schema for every endpoint,
+    > parameter, and response (including the RFC 7807 error envelope) lands in
+    > **Phase 2** of the developer-platform roadmap; see the parent epic
+    > [#7146](https://github.com/afisch710/SmarterWeather/issues/7146).
+    >
+    > Treat field shapes as **non-binding** until the Phase 2 release. The set
+    > of endpoints below is the planned `/v1/*` surface at general availability.
+
+    ## Versioning and deprecation
+
+    - Path-based versioning (`/v1/`).
+    - Endpoint removal: 6 months notice.
+    - Breaking shape changes: 90 days notice.
+    - Active deprecations are listed at `GET /.well-known/deprecations`.
+    - Non-breaking additions ship without notice.
+
+    See [ADR 001 — Public contracts](https://github.com/afisch710/SmarterWeather/blob/development/docs/developer/adr/001-public-contracts.md)
+    for the full contract.
+
+    ## Errors
+
+    Error responses (`4xx`, `5xx`) are served with content type
+    `application/problem+json` per [RFC 7807](https://datatracker.ietf.org/doc/html/rfc7807).
+    Successful responses use `application/json`.
+
+    ## Authentication
+
+    Most endpoints require an API key passed as an HTTP Bearer token in the
+    `Authorization` header:
+
+    ```
+    Authorization: Bearer sw_live_xxxx...
+    ```
+
+    Test-mode keys (`sw_test_*`) return live data but are excluded from
+    billing meter events. Get a key from the developer dashboard at
+    [https://smarterweather.com/developers/dashboard](https://smarterweather.com/developers/dashboard)
+    once general availability ships. See
+    [ADR 008 — Public API auth scheme](https://github.com/afisch710/SmarterWeather/blob/development/docs/developer/adr/008-public-api-auth-scheme.md)
+    for the rationale.
+  version: 0.0.1-preview
+  contact:
+    name: Smarter Weather Developer Platform
+    url: https://github.com/smarterweather/developer
+
+# `servers` is intentionally omitted at preview. SDK generators should not
+# default to a base URL while the spec is non-binding -- pointing them at
+# `api.smarterweather.com` would route preview consumers to the legacy
+# wx-api service. The interim sw-api hostname is decided in F0
+# (afisch710/SmarterWeather#7254) and the production cutover to
+# `api.smarterweather.com` is Phase 5. The first concrete `servers` entry
+# lands when F0 closes.
+
+tags:
+  - name: Weather
+    description: Public weather data endpoints.
+  - name: Health
+    description: Service health.
+  - name: Meta
+    description: Cross-cutting platform endpoints (deprecations, etc.).
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/health:
+    get:
+      operationId: getHealth
+      summary: Service health probe.
+      description: |
+        Returns service readiness and downstream connectivity. Does not require
+        authentication.
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+  /v1/weather:
+    get:
+      operationId: getWeather
+      summary: Get blended weather for a location.
+      description: |
+        Returns blended weather data for a single location. The full
+        parameter and response shape ships in Phase 2 (see #7258); this
+        placeholder entry exists only to reserve the path and the
+        `Weather` tag in the spec. **No request parameters are listed
+        yet** -- the location selector (lat/lon vs. address vs. ip),
+        requested variables, and units are still being designed and
+        will be added in Phase 2.
+      tags: [Weather]
+      responses:
+        '200':
+          description: Weather data for the requested location.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Placeholder; full schema lands in Phase 2.
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+  /.well-known/deprecations:
+    get:
+      operationId: getDeprecations
+      summary: List active API deprecations.
+      description: |
+        Returns the current set of active deprecations as required by
+        [ADR 001](https://github.com/afisch710/SmarterWeather/blob/development/docs/developer/adr/001-public-contracts.md).
+        Empty list when no deprecations are active.
+      tags: [Meta]
+      security: []
+      responses:
+        '200':
+          description: Current deprecations (possibly empty).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deprecations]
+                properties:
+                  deprecations:
+                    type: array
+                    description: |
+                      Active deprecations. Each entry includes the deprecated
+                      surface (path / parameter / field), the announcement date,
+                      the sunset date, and a migration hint.
+                    items:
+                      type: object
+                      additionalProperties: true
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      # `bearerFormat` is informational per OpenAPI 3.1; SDK generators use
+      # it as a hint when naming the credential field.
+      bearerFormat: sw_live_*|sw_test_*
+      description: |
+        API key passed as an HTTP Bearer token (RFC 6750):
+
+        ```
+        Authorization: Bearer sw_live_xxxx...
+        ```
+
+        Keys are issued in two flavors:
+
+        - `sw_live_*` -- production keys; requests are billed and counted
+          against rate limits.
+        - `sw_test_*` -- test-mode keys; requests return live data but are
+          excluded from billing meter events. Useful for CI and local
+          development.
+
+        Get a key from the developer dashboard. See
+        [ADR 008](https://github.com/afisch710/SmarterWeather/blob/development/docs/developer/adr/008-public-api-auth-scheme.md)
+        for the rationale behind the Bearer scheme over a custom
+        `X-API-Key` header.
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        reader:
+          type: string
+          enum: [reachable, unreachable]
+          description: Reader (internal data plane) connectivity status.
+    Problem:
+      type: object
+      description: |
+        RFC 7807 problem-details object served as `application/problem+json`
+        on every `4xx` and `5xx` response.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: A URI reference identifying the problem type.
+          example: https://api.smarterweather.com/errors/invalid-key
+        title:
+          type: string
+          description: Short, human-readable summary of the problem type.
+        status:
+          type: integer
+          description: HTTP status code.
+        detail:
+          type: string
+          description: Human-readable explanation specific to this occurrence.
+        instance:
+          type: string
+          format: uri
+          description: A URI reference identifying the specific occurrence.
+  responses:
+    Problem400:
+      description: Bad request.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem401:
+      description: Missing or invalid API key.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem403:
+      description: API key lacks required scope.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem429:
+      description: Rate limit exceeded.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem500:
+      description: Internal server error.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
