@@ -4,4 +4,4 @@
 
 ### Patch Changes
 
-- Initial preview placeholder. Bridge to https://onboarding.smarterweather.com — not yet functional. Real implementation ships in Phase 4 of the developer ecosystem rollout.
+- Initial preview placeholder. Bridge to https://developers.smarterweather.com/mcp — not yet functional. Real implementation ships in Phase 4 of the developer ecosystem rollout.
