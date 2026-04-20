@@ -5,16 +5,6 @@ info:
   description: |
     The public REST API for Smarter Weather (`sw-api`).
 
-    > **Preview / placeholder.** This document is the bootstrap version of the
-    > spec, published so the public developer repo
-    > ([`smarterweather/developer`](https://github.com/smarterweather/developer))
-    > has a stable `openapi.yaml` to track. The full schema for every endpoint,
-    > parameter, and response (including the RFC 7807 error envelope) lands in
-    > the Phase 2 release of the developer platform.
-    >
-    > Treat field shapes as **non-binding** until the Phase 2 release. The set
-    > of endpoints below is the planned `/v1/*` surface at general availability.
-
     ## Versioning and deprecation
 
     - Path-based versioning (`/v1/`).
@@ -22,6 +12,11 @@ info:
     - Breaking shape changes: 90 days notice.
     - Active deprecations are listed at `GET /.well-known/deprecations`.
     - Non-breaking additions ship without notice.
+    - Fields marked `x-stability: experimental` (also flagged in their
+      descriptions) are excluded from the 90-day breaking-change
+      commitment during Phase 2 closed beta. Stability commitments apply
+      to every field at general availability (Phase 5 cutover) per
+      ADR 001 unless explicitly carved out.
 
     ## Errors
 
@@ -42,15 +37,47 @@ info:
     billing meter events. Get a key from the developer dashboard at
     [https://smarterweather.com/developers/dashboard](https://smarterweather.com/developers/dashboard)
     once general availability ships.
-  version: 0.0.1-preview
+
+    ## Rate limits
+
+    Authenticated operations return rate-limit state on every response via
+    `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset`
+    headers. Exceeding the rate limit returns `429 Too Many Requests` with a
+    `Retry-After` header. See individual operation responses for header
+    definitions.
+
+    ## `/v1/weather` include tokens
+
+    `/v1/weather` returns a composite response. The `include` query parameter
+    is a comma-separated list of sections to include. Unknown tokens are
+    silently ignored. The token set is:
+
+    | Token       | Default | Stability | Description                                       |
+    |-------------|:-------:|-----------|---------------------------------------------------|
+    | `current`   | yes     | stable    | Current conditions (RTMA + MRMS).                 |
+    | `hourly`    | yes     | stable    | Hourly forecast (1-168 hours, default 48).        |
+    | `daily`     | yes     | stable    | Daily forecast (1-14 days, default 10).           |
+    | `alerts`    | yes     | stable    | Active NWS alerts for the location.               |
+    | `outlooks`  | yes     | stable    | SPC convective outlooks for the location.         |
+    | `astro`     | yes     | stable    | Sunrise/sunset/moon phase, etc.                   |
+    | `location`  | no      | stable    | Echo of the resolved location (lat/lon/name/tz).  |
+    | `gis`       | no      | stable    | Geographic metadata (population, timezone, nearest radar site). |
+    | `narrations`| no      | experimental | LLM-generated narrative text for current/short-term conditions. |
+    | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/SWO/MCD).   |
+
+    `radar` and `products` (wx visual-products manifest) are **not** in the
+    v1 token set. They will land in Phase 5 alongside a separate
+    `/v1/radar/*` family, once the public CDN authentication design
+    (signed-URL minting or equivalent) is accepted in a follow-up ADR.
+  version: 0.1.0
   contact:
     name: Smarter Weather Developer Platform
     url: https://github.com/smarterweather/developer
 
 # `servers` is intentionally omitted through Phase 2. SDK generators should
-# not default to a base URL while the spec is non-binding -- pointing them
-# at `api.smarterweather.com` would route preview consumers to the legacy
-# wx-api service.
+# not default to a base URL while the spec's hostname is not final --
+# pointing them at `api.smarterweather.com` would route preview consumers
+# to the legacy wx-api service.
 #
 # Per ADR 006 (docs/developer/adr/006-sw-api-interim-hostname.md), the
 # Phase 2 interim hostname is the raw API Gateway HTTP API invocation URL
@@ -88,47 +115,107 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Health'
+
   /v1/weather:
     get:
       operationId: getWeather
       summary: Get blended weather for a location.
       description: |
-        Returns blended weather data for a single location. The full
-        parameter and response shape ships in the Phase 2 release; this
-        placeholder entry exists only to reserve the path and the
-        `Weather` tag in the spec. **No request parameters are listed
-        yet** -- the location selector (lat/lon vs. address vs. ip),
-        requested variables, and units are still being designed and
-        will be added in Phase 2.
+        Returns a composite blended weather payload for a single location.
+        A single call covers current conditions, hourly forecast, daily
+        forecast, active alerts, convective outlooks, and astronomical data
+        by default; other sections (location echo, geographic metadata,
+        narrative text, forecaster guidance) are available via the
+        `include` parameter.
+
+        ### Location selector
+
+        Exactly **one** of the following must be provided:
+
+        - `lat` **and** `lon` — latitude/longitude pair.
+        - `zip` — 5-digit US ZIP code.
+        - `location` — free-text location name (e.g., `"Boston, MA"`,
+          `"94043"`, `"Kyiv"`). Resolved via an internal geocoder; a
+          dedicated `/v1/geocode` endpoint is planned for Phase 5.
+
+        Sending more than one selector, or none, returns `400`.
+
+        ### Units
+
+        - `imperial` (default): °F, mph, inHg, mi, in.
+        - `metric`: °C, kph, hPa, km, mm.
+
+        SI is not exposed in v1; partners that need SI should convert
+        client-side.
+
+        ### Include semantics
+
+        `include` is a comma-separated list. Unknown tokens are silently
+        dropped. See the API-level "Include tokens" table in the
+        `info.description` for the full token catalog, defaults, and
+        stability markers.
+
+        ### Coverage
+
+        Sections that depend on US-only datasets (e.g., `alerts`, some
+        `outlooks`, radar-adjacent `gis.nearest_radar` fields) may be
+        empty or absent for international locations. Partial-coverage
+        scenarios are reported via `meta.warnings[]` with a structured
+        code so clients can respond programmatically.
       tags: [Weather]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - $ref: '#/components/parameters/ZipQuery'
+        - $ref: '#/components/parameters/LocationQuery'
+        - $ref: '#/components/parameters/UnitsQuery'
+        - $ref: '#/components/parameters/IncludeQuery'
+        - $ref: '#/components/parameters/DaysQuery'
+        - $ref: '#/components/parameters/HourlyHoursQuery'
       responses:
         '200':
-          description: Weather data for the requested location.
+          description: Blended weather data for the requested location.
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
               schema:
-                type: object
-                description: Placeholder; full schema lands in Phase 2.
-                additionalProperties: true
+                $ref: '#/components/schemas/Weather'
+              examples:
+                boston:
+                  $ref: '#/components/examples/WeatherBoston'
         '400':
           $ref: '#/components/responses/Problem400'
         '401':
           $ref: '#/components/responses/Problem401'
         '403':
           $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
           $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /.well-known/deprecations:
     get:
       operationId: getDeprecations
       summary: List active API deprecations.
       description: |
-        Returns the current set of active deprecations as required by
-        the public-contract policy summarised in this document's
-        Versioning and deprecation section. Empty list when no
-        deprecations are active.
+        Returns the current set of active deprecations as required by the
+        public-contract policy summarised in this document's Versioning and
+        deprecation section. Empty list when no deprecations are active.
       tags: [Meta]
       security: []
       responses:
@@ -142,13 +229,9 @@ paths:
                 properties:
                   deprecations:
                     type: array
-                    description: |
-                      Active deprecations. Each entry includes the deprecated
-                      surface (path / parameter / field), the announcement date,
-                      the sunset date, and a migration hint.
+                    description: Active deprecations.
                     items:
-                      type: object
-                      additionalProperties: true
+                      $ref: '#/components/schemas/Deprecation'
 
 components:
   securitySchemes:
@@ -176,7 +259,257 @@ components:
         Get a key from the developer dashboard at
         [smarterweather.com/developers/dashboard](https://smarterweather.com/developers/dashboard)
         once general availability ships.
+
+  parameters:
+    LatQuery:
+      name: lat
+      in: query
+      description: |
+        Latitude. Must be provided together with `lon`. Mutually exclusive
+        with `zip` and `location`.
+      required: false
+      schema:
+        type: number
+        format: double
+        minimum: -90
+        maximum: 90
+      example: 42.3601
+    LonQuery:
+      name: lon
+      in: query
+      description: |
+        Longitude. Must be provided together with `lat`. Mutually exclusive
+        with `zip` and `location`.
+      required: false
+      schema:
+        type: number
+        format: double
+        minimum: -180
+        maximum: 180
+      example: -71.0589
+    ZipQuery:
+      name: zip
+      in: query
+      description: |
+        5-digit US ZIP code. Mutually exclusive with `lat`/`lon` and
+        `location`.
+      required: false
+      schema:
+        type: string
+        pattern: '^\d{5}$'
+      example: "02108"
+    LocationQuery:
+      name: location
+      in: query
+      description: |
+        Free-text location name. Examples: `"Boston, MA"`, `"94043"`,
+        `"Kyiv"`. Resolved by an internal geocoder. Mutually exclusive with
+        `lat`/`lon` and `zip`.
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+      example: "Boston, MA"
+    UnitsQuery:
+      name: units
+      in: query
+      description: |
+        Unit system for numeric response fields. `imperial` (default) uses
+        °F, mph, inHg, mi, in; `metric` uses °C, kph, hPa, km, mm. See the
+        `Units` schema returned with every response for the exact label set.
+      required: false
+      schema:
+        type: string
+        enum: [imperial, metric]
+        default: imperial
+    IncludeQuery:
+      name: include
+      in: query
+      description: |
+        Comma-separated list of sections to include. See the "Include
+        tokens" table in `info.description` for the full catalog, defaults,
+        and stability markers. Unknown tokens are silently dropped.
+      required: false
+      schema:
+        type: string
+      example: "current,hourly,daily,alerts"
+    DaysQuery:
+      name: days
+      in: query
+      description: Number of days for the daily forecast.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 14
+        default: 10
+    HourlyHoursQuery:
+      name: hourly_hours
+      in: query
+      description: Number of hours for the hourly forecast.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 168
+        default: 48
+
+  headers:
+    RateLimitLimit:
+      description: The request-rate limit for this API key in the current window.
+      schema:
+        type: integer
+        minimum: 0
+    RateLimitRemaining:
+      description: The number of requests remaining in the current window.
+      schema:
+        type: integer
+        minimum: 0
+    RateLimitReset:
+      description: Unix epoch seconds at which the current window resets.
+      schema:
+        type: integer
+        minimum: 0
+    RetryAfter:
+      description: Seconds to wait before retrying after a rate-limit rejection.
+      schema:
+        type: integer
+        minimum: 0
+
+  examples:
+    WeatherBoston:
+      summary: Composite weather response for Boston, MA (default include, imperial).
+      value:
+        location:
+          lat: 42.3601
+          lon: -71.0589
+          name: "Boston"
+          region: "MA"
+          country: "US"
+          timezone: "America/New_York"
+          county: "Suffolk"
+          zip: "02108"
+        current:
+          time: "2026-04-20T15:00:00Z"
+          temperature: 58.4
+          feels_like: 56.1
+          humidity: 62
+          dew_point: 45.2
+          pressure: 30.05
+          wind_speed: 11.3
+          wind_gust: 17.8
+          wind_direction: 240
+          visibility: 10
+          cloud_cover: 35
+          uv_index: 5
+          precip_rate: 0
+          precip_type: "none"
+          conditions: "Partly Cloudy"
+          icon: "partly-cloudy-day"
+          severe: false
+        hourly:
+          - time: "2026-04-20T16:00:00Z"
+            temperature: 59.1
+            feels_like: 56.8
+            humidity: 60
+            wind_speed: 12.1
+            wind_direction: 245
+            precip_probability: 5
+            precip_amount: 0
+            conditions: "Partly Cloudy"
+            icon: "partly-cloudy-day"
+          - time: "2026-04-20T17:00:00Z"
+            temperature: 59.6
+            feels_like: 57.2
+            humidity: 58
+            wind_speed: 12.4
+            wind_direction: 245
+            precip_probability: 5
+            precip_amount: 0
+            conditions: "Partly Cloudy"
+            icon: "partly-cloudy-day"
+        daily:
+          - date: "2026-04-20"
+            high: 61.0
+            low: 44.5
+            humidity_avg: 55
+            wind_speed_max: 14.2
+            wind_direction: 240
+            precip_probability: 10
+            precip_total: 0
+            snow_total: 0
+            conditions: "Partly Cloudy"
+            icon: "partly-cloudy-day"
+            day:
+              temperature: 61.0
+              wind_speed: 14.2
+              wind_direction: 240
+              precip_probability: 10
+              precip_total: 0
+              conditions: "Partly Cloudy"
+              icon: "partly-cloudy-day"
+              narrative: "Partly cloudy with a high near 61. West winds 10 to 15 mph."
+            night:
+              temperature: 44.5
+              wind_speed: 6.8
+              wind_direction: 260
+              precip_probability: 5
+              precip_total: 0
+              conditions: "Mostly Clear"
+              icon: "mostly-clear-night"
+              narrative: "Mostly clear with a low around 45. Winds becoming light."
+        alerts: []
+        outlooks: []
+        astro:
+          civil_dawn: "2026-04-20T09:37:00Z"
+          sunrise: "2026-04-20T10:05:00Z"
+          solar_noon: "2026-04-20T16:47:00Z"
+          sunset: "2026-04-20T23:29:00Z"
+          civil_dusk: "2026-04-20T23:57:00Z"
+          day_length: 48240
+          daylight_length: 51600
+          moonrise: "2026-04-20T11:42:00Z"
+          moonset: "2026-04-21T01:18:00Z"
+          moon_phase: 0.15
+          moon_phase_name: "Waxing Crescent"
+          moon_illumination: 0.22
+        units:
+          temperature: "F"
+          wind_speed: "mph"
+          pressure: "inHg"
+          visibility: "mi"
+          precip_amount: "in"
+        attribution:
+          sources:
+            - "NOAA NBM"
+            - "HRRR"
+            - "RTMA"
+            - "MRMS"
+            - "NWS"
+            - "JPL Ephemeris"
+          notice: "Weather data from NOAA/NWS. Astronomical calculations from JPL ephemerides."
+        meta:
+          schema_version: "2026-04-20"
+          generated_at: "2026-04-20T15:00:04Z"
+          freshness:
+            - source: "rtma"
+              product_id: "rtma_conus_2p5km"
+              reference_time: "2026-04-20T14:45:00Z"
+              latest_valid: "2026-04-20T14:45:00Z"
+              age_seconds: 904
+            - source: "hrrr"
+              product_id: "hrrr_conus_3km"
+              reference_time: "2026-04-20T14:00:00Z"
+              latest_valid: "2026-04-20T15:00:00Z"
+              age_seconds: 3604
+          warnings: []
+
   schemas:
+    # -----------------------------------------------------------------------
+    # Health / deprecations / error envelope (existing F1 surfaces)
+    # -----------------------------------------------------------------------
+
     Health:
       type: object
       required: [status]
@@ -188,6 +521,7 @@ components:
           type: string
           enum: [reachable, unreachable]
           description: Reader (internal data plane) connectivity status.
+
     Problem:
       type: object
       description: |
@@ -199,7 +533,7 @@ components:
           type: string
           format: uri
           description: A URI reference identifying the problem type.
-          example: https://api.smarterweather.com/errors/invalid-key
+          example: https://smarterweather.com/errors/invalid-key
         title:
           type: string
           description: Short, human-readable summary of the problem type.
@@ -213,6 +547,976 @@ components:
           type: string
           format: uri
           description: A URI reference identifying the specific occurrence.
+
+    Deprecation:
+      type: object
+      description: |
+        A single active deprecation entry. See the Versioning and
+        deprecation section in `info.description` for notice-period rules.
+      required: [surface, announced_at, sunset_at, migration]
+      properties:
+        surface:
+          type: string
+          description: |
+            The deprecated surface, expressed as a stable identifier.
+            Common forms include an operation path (`/v1/weather`),
+            a parameter reference (`/v1/weather?param=foo`), or a
+            response-field JSON Pointer (`/v1/weather#/current/feels_like`).
+          example: "/v1/weather?param=legacy_include"
+        announced_at:
+          type: string
+          format: date
+          description: ISO 8601 date on which the deprecation was announced.
+          example: "2026-04-01"
+        sunset_at:
+          type: string
+          format: date
+          description: |
+            ISO 8601 date on or after which the deprecated surface may be
+            removed (minimum 90 days for shape changes, 6 months for
+            endpoint removal per ADR 001).
+          example: "2026-07-01"
+        migration:
+          type: string
+          description: |
+            Short prose pointer to the replacement surface or migration
+            guide. Clients should treat this as documentation, not a
+            machine-parseable URL.
+          example: "Use the `include=narrations` token instead."
+
+    # -----------------------------------------------------------------------
+    # Top-level weather response
+    # -----------------------------------------------------------------------
+
+    Weather:
+      type: object
+      description: |
+        Composite blended weather payload returned by `GET /v1/weather`.
+        Section presence is controlled by the `include` query parameter;
+        every section that is present is the complete shape documented
+        below.
+      required: [meta, attribution]
+      properties:
+        location:
+          $ref: '#/components/schemas/Location'
+        current:
+          $ref: '#/components/schemas/Current'
+        hourly:
+          type: array
+          description: Hourly forecast, ordered ascending by `time`.
+          items:
+            $ref: '#/components/schemas/Hourly'
+        daily:
+          type: array
+          description: Daily forecast, ordered ascending by `date`.
+          items:
+            $ref: '#/components/schemas/Daily'
+        alerts:
+          type: array
+          description: Active NWS alerts for the location.
+          items:
+            $ref: '#/components/schemas/Alert'
+        outlooks:
+          type: array
+          description: SPC convective outlooks active for the location.
+          items:
+            $ref: '#/components/schemas/Outlook'
+        astro:
+          $ref: '#/components/schemas/Astro'
+        gis:
+          $ref: '#/components/schemas/GIS'
+        units:
+          $ref: '#/components/schemas/Units'
+        attribution:
+          $ref: '#/components/schemas/Attribution'
+        narrations:
+          $ref: '#/components/schemas/Narrations'
+        guidance:
+          $ref: '#/components/schemas/Guidance'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    # -----------------------------------------------------------------------
+    # Location / current / hourly / daily
+    # -----------------------------------------------------------------------
+
+    Location:
+      type: object
+      description: Resolved location.
+      required: [lat, lon, name, timezone]
+      properties:
+        lat:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        lon:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+        name:
+          type: string
+          description: Human-readable place name (city or nearest city).
+          example: "Boston"
+        region:
+          type: string
+          description: State or region abbreviation.
+          example: "MA"
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code.
+          example: "US"
+        timezone:
+          type: string
+          description: IANA timezone identifier.
+          example: "America/New_York"
+        county:
+          type: string
+          description: County name (US only).
+          example: "Suffolk"
+        zip:
+          type: string
+          description: ZIP code (US only).
+          example: "02108"
+
+    Current:
+      type: object
+      description: |
+        Current weather conditions derived from the RTMA + MRMS blend.
+      required: [time, conditions, icon]
+      properties:
+        time:
+          type: string
+          format: date-time
+          description: Observation time (ISO 8601, UTC).
+        temperature:
+          type: [number, "null"]
+          format: double
+          description: Temperature (unit per `units.temperature`).
+        feels_like:
+          type: [number, "null"]
+          format: double
+          description: Apparent temperature (wind chill or heat index).
+        humidity:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: Relative humidity, percent.
+        dew_point:
+          type: [number, "null"]
+          format: double
+        pressure:
+          type: [number, "null"]
+          format: double
+          description: Atmospheric pressure (unit per `units.pressure`).
+        wind_speed:
+          type: [number, "null"]
+          format: double
+        wind_gust:
+          type: [number, "null"]
+          format: double
+        wind_direction:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 360
+          description: Wind direction in degrees (0 = N, 90 = E).
+        visibility:
+          type: [number, "null"]
+          format: double
+          description: Visibility distance (may be null for international coverage).
+        cloud_cover:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: Cloud cover, percent.
+        uv_index:
+          type: [number, "null"]
+          format: double
+        aqi:
+          type: [integer, "null"]
+          description: Air-quality index (US EPA scale, 0-500).
+        aqi_category:
+          type: string
+          description: |
+            Human-readable AQI category (e.g., `"Good"`, `"Moderate"`,
+            `"Unhealthy for Sensitive Groups"`). Omitted when AQI is
+            unavailable.
+        pm25:
+          type: [number, "null"]
+          format: double
+          description: PM2.5 concentration (µg/m³).
+        ozone:
+          type: [number, "null"]
+          format: double
+          description: Ozone concentration (ppb).
+        pm10:
+          type: [number, "null"]
+          format: double
+          description: PM10 concentration (µg/m³).
+        precip_rate:
+          type: [number, "null"]
+          format: double
+          description: Current precipitation rate.
+        precip_type:
+          type: string
+          enum: [none, rain, snow, mix, hail, unknown]
+          description: |
+            Current precipitation type. Omitted when no precipitation data
+            is available for the location.
+        lightning_density:
+          type: [number, "null"]
+          format: double
+          description: Lightning strike density (strikes per unit area per time window).
+        lightning_prob:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 100
+          description: Lightning probability, percent.
+        conditions:
+          type: string
+          description: Human-readable weather description.
+          example: "Partly Cloudy"
+        icon:
+          type: string
+          description: Icon slug for UI rendering.
+          example: "partly-cloudy-day"
+        severe:
+          type: boolean
+          description: True when severe conditions are present or imminent.
+          default: false
+
+    Hourly:
+      type: object
+      description: Single hourly forecast point.
+      required: [time]
+      properties:
+        time:
+          type: string
+          format: date-time
+          description: Forecast valid time (ISO 8601, UTC).
+        temperature:
+          type: [number, "null"]
+          format: double
+        feels_like:
+          type: [number, "null"]
+          format: double
+        humidity:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        wind_speed:
+          type: [number, "null"]
+          format: double
+        wind_direction:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 360
+        precip_probability:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        precip_amount:
+          type: [number, "null"]
+          format: double
+        conditions:
+          type: string
+        icon:
+          type: string
+        severe:
+          type: boolean
+          default: false
+
+        # Tier 1 fields (promoted from internal-only in wx-api).
+        wind_gust:
+          type: [number, "null"]
+          format: double
+        dew_point:
+          type: [number, "null"]
+          format: double
+        cloud_cover:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        visibility:
+          type: [number, "null"]
+          format: double
+
+        # Tier 2 fields.
+        pressure:
+          type: [number, "null"]
+          format: double
+        thunderstorm_probability:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        uv_index:
+          type: [number, "null"]
+          format: double
+        aqi:
+          type: [number, "null"]
+        precip_type:
+          type: string
+          enum: [none, rain, snow, mix, hail, unknown]
+        precip_type_rain_prob:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        precip_type_snow_prob:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        precip_type_freezing_rain_prob:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        precip_type_ice_pellets_prob:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+
+        # Tier 3 fields.
+        cape:
+          type: [number, "null"]
+          format: double
+          description: Convective available potential energy (J/kg).
+        snow_amount:
+          type: [number, "null"]
+          format: double
+        cloud_ceiling:
+          type: [number, "null"]
+          format: double
+        snow_level:
+          type: [number, "null"]
+          format: double
+
+    Daily:
+      type: object
+      description: |
+        Single daily forecast entry. Per-period weather (temperature, wind,
+        precipitation, narrative) lives in `day` / `night`; top-level
+        fields are aggregate values for the full calendar day.
+      required: [date]
+      properties:
+        date:
+          type: string
+          format: date
+          description: Forecast date (ISO 8601, local to the location's timezone).
+          example: "2026-04-20"
+        high:
+          type: [number, "null"]
+          format: double
+        low:
+          type: [number, "null"]
+          format: double
+        conditions:
+          type: string
+        icon:
+          type: string
+        severe:
+          type: boolean
+          default: false
+        precip_probability:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        precip_total:
+          type: [number, "null"]
+          format: double
+        snow_total:
+          type: [number, "null"]
+          format: double
+        ice_total:
+          type: [number, "null"]
+          format: double
+        wind_speed_max:
+          type: [number, "null"]
+          format: double
+        wind_direction:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 360
+        humidity_avg:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        cloud_cover_avg:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        uv_index_max:
+          type: [number, "null"]
+          format: double
+        cape_max:
+          type: [number, "null"]
+          format: double
+        astro:
+          $ref: '#/components/schemas/Astro'
+        day:
+          $ref: '#/components/schemas/DailyPeriod'
+        night:
+          $ref: '#/components/schemas/DailyPeriod'
+        threats:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyThreat'
+          description: Per-day hazard callouts (winter, severe, heat, etc.).
+
+    DailyPeriod:
+      type: object
+      description: |
+        Forecast data for a single period (day or night) within a
+        `Daily` entry.
+      properties:
+        temperature:
+          type: [number, "null"]
+          format: double
+          description: High for `day`, low for `night`.
+        wind_speed:
+          type: [number, "null"]
+          format: double
+        wind_direction:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 360
+        precip_probability:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        precip_total:
+          type: [number, "null"]
+          format: double
+        snow_total:
+          type: [number, "null"]
+          format: double
+        ice_total:
+          type: [number, "null"]
+          format: double
+        humidity:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        cloud_cover:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+        conditions:
+          type: string
+        icon:
+          type: string
+        severe:
+          type: boolean
+          default: false
+        narrative:
+          type: string
+          description: Human-readable narrative for this period.
+
+    DailyThreat:
+      type: object
+      description: Per-day hazard callout.
+      required: [type, risk_label]
+      properties:
+        type:
+          type: string
+          description: Hazard category (e.g., `severe`, `winter`, `heat`, `fire`).
+          example: "severe"
+        risk:
+          type: string
+          description: Raw risk identifier from the upstream source.
+        probability:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Fractional probability (0-1) when known.
+        risk_label:
+          type: string
+          description: Human-readable risk label (e.g., `"Slight"`, `"Enhanced"`).
+
+    # -----------------------------------------------------------------------
+    # Alerts / outlooks / astro
+    # -----------------------------------------------------------------------
+
+    Alert:
+      type: object
+      description: NWS weather alert active for the requested location.
+      required:
+        - id
+        - event
+        - severity
+        - urgency
+        - certainty
+        - headline
+        - sender
+        - status
+        - onset
+        - ends
+        - effective
+        - expires
+        - expiration
+      properties:
+        id:
+          type: string
+          description: Unique alert identifier.
+          example: "urn:oid:2.49.0.1.840.0.abc123"
+        event:
+          type: string
+          example: "Wind Advisory"
+        severity:
+          type: string
+          enum: [Extreme, Severe, Moderate, Minor, Unknown]
+        urgency:
+          type: string
+          enum: [Immediate, Expected, Future, Past, Unknown]
+        certainty:
+          type: string
+          enum: [Observed, Likely, Possible, Unlikely, Unknown]
+        headline:
+          type: string
+        sender:
+          type: string
+          description: Issuing NWS office identifier.
+        status:
+          type: string
+          description: Alert lifecycle status (e.g., `Actual`, `Exercise`, `Test`).
+        onset:
+          type: string
+          format: date-time
+        ends:
+          type: string
+          format: date-time
+        effective:
+          type: string
+          format: date-time
+        expires:
+          type: string
+          format: date-time
+        expiration:
+          type: string
+          format: date-time
+          description: Final expiration time used for cache invalidation.
+        area_desc:
+          type: string
+          description: Human-readable affected area.
+        highlights:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Map of salient callouts extracted from the alert text
+            (e.g., `{"hazard": "Strong winds", "impact": "Loose debris possible"}`).
+
+    Outlook:
+      type: object
+      description: |
+        Single SPC convective outlook (or equivalent product) active for
+        the location.
+      required: [product_id, type, day, risk_label, valid, expires]
+      properties:
+        product_id:
+          type: string
+          description: Upstream product identifier (e.g., `spc_otlk_day1`).
+          example: "spc_otlk_day1"
+        type:
+          type: string
+          description: Hazard category (`severe`, `tornado`, `hail`, `wind`, etc.).
+          example: "severe"
+        day:
+          type: integer
+          minimum: 1
+          maximum: 8
+          description: Day number relative to issuance (1 = today).
+        risk:
+          type: string
+          description: Raw risk identifier from the upstream source.
+        probability:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Fractional probability (0-1) when the source provides one.
+        risk_label:
+          type: string
+          description: Human-readable risk label.
+          example: "Slight"
+        valid:
+          type: string
+          format: date-time
+        expires:
+          type: string
+          format: date-time
+
+    Astro:
+      type: object
+      description: Astronomical data for the requested location and date.
+      required: [day_length, daylight_length, moon_phase, moon_phase_name, moon_illumination]
+      properties:
+        civil_dawn:
+          type: [string, "null"]
+          format: date-time
+        sunrise:
+          type: [string, "null"]
+          format: date-time
+        solar_noon:
+          type: [string, "null"]
+          format: date-time
+        sunset:
+          type: [string, "null"]
+          format: date-time
+        civil_dusk:
+          type: [string, "null"]
+          format: date-time
+        day_length:
+          type: integer
+          minimum: 0
+          description: Seconds from sunrise to sunset.
+        daylight_length:
+          type: integer
+          minimum: 0
+          description: Seconds from civil dawn to civil dusk.
+        moonrise:
+          type: [string, "null"]
+          format: date-time
+          description: Null when no moonrise occurs on this date.
+        moonset:
+          type: [string, "null"]
+          format: date-time
+          description: Null when no moonset occurs on this date.
+        moon_phase:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Moon phase (0 = new, 0.5 = full, 1 = new).
+        moon_phase_name:
+          type: string
+          enum:
+            - "New Moon"
+            - "Waxing Crescent"
+            - "First Quarter"
+            - "Waxing Gibbous"
+            - "Full Moon"
+            - "Waning Gibbous"
+            - "Last Quarter"
+            - "Waning Crescent"
+        moon_illumination:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+
+    # -----------------------------------------------------------------------
+    # GIS (scoped down), units, attribution, meta
+    # -----------------------------------------------------------------------
+
+    GIS:
+      type: object
+      description: |
+        Geographic metadata for the resolved location. Contains coordinate
+        data, political boundaries, population, timezone, and nearest
+        NEXRAD radar site metadata.
+
+        Radar data URLs (wx-pipeline visual-products manifest, NEXRAD
+        ledger URLs) are **not** returned in the Phase 2 v1 response; they
+        require a public-CDN authentication model that is still being
+        designed. `/v1/radar/*` endpoints will land in Phase 5.
+      required: [lat, lon, timezone]
+      properties:
+        lat:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        lon:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+        city:
+          type: string
+          description: City name covering the point (if the point lies inside city limits).
+        nearest_city:
+          type: string
+          description: Nearest named city (useful when `city` is not populated).
+        state:
+          type: string
+          description: State or equivalent subdivision (abbreviation).
+        county:
+          type: string
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code.
+        population:
+          type: [integer, "null"]
+          minimum: 0
+          description: Approximate population of `city` or `nearest_city`.
+        timezone:
+          type: string
+          description: IANA timezone identifier.
+        nearest_radar:
+          $ref: '#/components/schemas/NearestRadar'
+
+    NearestRadar:
+      type: object
+      description: |
+        Metadata for the nearest NEXRAD radar site. Data URLs are not
+        included here; Phase 5 `/v1/radar/*` endpoints will return the
+        URL contract.
+      required: [id, name, lat, lon, distance_km]
+      properties:
+        id:
+          type: string
+          description: Radar site code without ICAO prefix (e.g., `LOT`, `OKX`, `AKC`).
+          example: "BOX"
+        name:
+          type: string
+          example: "Boston"
+        lat:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        lon:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+        distance_km:
+          type: number
+          format: double
+          minimum: 0
+
+    Units:
+      type: object
+      description: |
+        Unit labels for the numeric fields in this response. The exact
+        label set is determined by the `units` request parameter.
+      required: [temperature, wind_speed, pressure, visibility, precip_amount]
+      properties:
+        temperature:
+          type: string
+          enum: ["F", "C"]
+          description: Temperature unit.
+        wind_speed:
+          type: string
+          enum: ["mph", "kph"]
+        pressure:
+          type: string
+          enum: ["inHg", "hPa"]
+        visibility:
+          type: string
+          enum: ["mi", "km"]
+        precip_amount:
+          type: string
+          enum: ["in", "mm"]
+
+    Attribution:
+      type: object
+      description: |
+        Attribution for the data sources that contributed to this response.
+        `sources` is an explicit list of canonical identifiers suitable
+        for compliance checklists; `notice` is a human-readable catch-all
+        covering licensing / credit language.
+      required: [sources, notice]
+      properties:
+        sources:
+          type: array
+          description: Canonical source identifiers that contributed data.
+          items:
+            type: string
+          example:
+            - "NOAA NBM"
+            - "HRRR"
+            - "RTMA"
+            - "MRMS"
+            - "NWS"
+            - "JPL Ephemeris"
+        notice:
+          type: string
+          description: Human-readable attribution notice.
+          example: "Weather data from NOAA/NWS. Astronomical calculations from JPL ephemerides."
+
+    Meta:
+      type: object
+      description: |
+        Per-response metadata: response schema version, generation time,
+        upstream data freshness, and any non-fatal warnings.
+      required: [schema_version, generated_at]
+      properties:
+        schema_version:
+          type: string
+          description: |
+            Response schema version, emitted as an ISO 8601 date. Increments
+            on every non-additive change. SDKs and caches can use this as a
+            stable cache key for response shape.
+          example: "2026-04-20"
+        generated_at:
+          type: string
+          format: date-time
+          description: Server time at which this response body was generated.
+        freshness:
+          type: array
+          description: Freshness metadata for each upstream data source used.
+          items:
+            $ref: '#/components/schemas/SourceFreshness'
+        warnings:
+          type: array
+          description: |
+            Non-fatal warnings generated during request fulfillment. Each
+            entry has a stable `code` clients can branch on and a
+            human-readable `detail`.
+          items:
+            $ref: '#/components/schemas/MetaWarning'
+
+    MetaWarning:
+      type: object
+      required: [code, section]
+      properties:
+        code:
+          type: string
+          description: |
+            Stable machine-parseable warning code. Clients should branch on
+            `code`, not on `detail`. Additive set; new codes may be added
+            without a breaking-change announcement.
+          enum:
+            - partial_fetch
+            - upstream_timeout
+            - upstream_unavailable
+            - coverage_limited
+            - geocode_ambiguous
+          example: "partial_fetch"
+        section:
+          type: string
+          description: |
+            Response section the warning applies to (e.g., `"alerts"`,
+            `"hourly"`, `"outlooks"`). May also be `"_request"` for
+            request-level warnings.
+          example: "alerts"
+        detail:
+          type: string
+          description: Human-readable explanation.
+
+    SourceFreshness:
+      type: object
+      description: Freshness metadata for a single upstream data source.
+      required: [source, product_id, age_seconds]
+      properties:
+        source:
+          type: string
+          description: Source family (e.g., `rtma`, `hrrr`, `nbm`, `mrms`).
+          example: "rtma"
+        product_id:
+          type: string
+          description: Specific product identifier.
+          example: "rtma_conus_2p5km"
+        reference_time:
+          type: [string, "null"]
+          format: date-time
+          description: Model run / observation reference time.
+        latest_valid:
+          type: [string, "null"]
+          format: date-time
+          description: Latest valid time represented in the source.
+        age_seconds:
+          type: integer
+          minimum: 0
+          description: Seconds elapsed since `reference_time`.
+
+    # -----------------------------------------------------------------------
+    # Experimental: narrations + guidance
+    # -----------------------------------------------------------------------
+
+    Narrations:
+      type: object
+      x-stability: experimental
+      description: |
+        LLM-generated narrative text for current and short-term conditions.
+
+        **Experimental.** Field shapes and prose styling may change during
+        Phase 2 closed beta without notice; the 90-day breaking-change
+        commitment applies at Phase 5 cutover per ADR 001.
+      properties:
+        current:
+          type: string
+          description: Short narrative describing the current conditions.
+        short_term:
+          type: string
+          description: Narrative covering the next few hours.
+
+    Guidance:
+      type: object
+      x-stability: experimental
+      description: |
+        Distilled data from NWS forecaster text products (AFD, HWO, SWO,
+        MCD). Structured summaries rather than raw text.
+
+        **Experimental.** Field shapes may change during Phase 2 closed
+        beta without notice; the 90-day breaking-change commitment applies
+        at Phase 5 cutover per ADR 001.
+      required: [active_mcds]
+      properties:
+        afd:
+          $ref: '#/components/schemas/AFDGuidance'
+        hwo:
+          $ref: '#/components/schemas/HWOGuidance'
+        active_mcds:
+          type: integer
+          minimum: 0
+          description: Count of active SPC Mesoscale Convective Discussions overlapping the location.
+        swo_day1_risk:
+          type: string
+          description: SPC Day-1 convective outlook categorical risk label (when active).
+
+    AFDGuidance:
+      type: object
+      x-stability: experimental
+      description: Structured Area Forecast Discussion summary.
+      properties:
+        synopsis:
+          type: string
+        key_takeaway:
+          type: string
+        confidence:
+          type: string
+          description: Forecaster-stated confidence level (free text).
+        issued_at:
+          type: [string, "null"]
+          format: date-time
+        wfo:
+          type: string
+          description: Issuing Weather Forecast Office identifier.
+
+    HWOGuidance:
+      type: object
+      x-stability: experimental
+      description: Structured Hazardous Weather Outlook summary.
+      required: [has_active_hazards]
+      properties:
+        day_one:
+          type: string
+          description: Day-one hazard summary text.
+        has_active_hazards:
+          type: boolean
+        issued_at:
+          type: [string, "null"]
+          format: date-time
+
   responses:
     Problem400:
       description: Bad request.
@@ -232,28 +1536,48 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+    Problem404:
+      description: |
+        Resource not found. For `/v1/weather`, returned when the requested
+        location cannot be resolved (unknown ZIP, unrecognised free-text
+        location) or when no upstream data covers the location.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
     Problem429:
       description: Rate limit exceeded.
       headers:
         Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying.
+          $ref: '#/components/headers/RetryAfter'
         X-RateLimit-Limit:
-          schema:
-            type: integer
+          $ref: '#/components/headers/RateLimitLimit'
         X-RateLimit-Remaining:
-          schema:
-            type: integer
+          $ref: '#/components/headers/RateLimitRemaining'
         X-RateLimit-Reset:
-          schema:
-            type: integer
+          $ref: '#/components/headers/RateLimitReset'
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
     Problem500:
       description: Internal server error.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem502:
+      description: |
+        Bad gateway. The service received an invalid response from an
+        upstream data source.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem504:
+      description: |
+        Gateway timeout. An upstream data source did not respond within
+        the service's budget.
       content:
         application/problem+json:
           schema:
