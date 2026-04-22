@@ -205,6 +205,8 @@ paths:
           $ref: '#/components/responses/Problem500'
         '502':
           $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
         '504':
           $ref: '#/components/responses/Problem504'
 
@@ -1569,7 +1571,17 @@ components:
     Problem502:
       description: |
         Bad gateway. The service received an invalid response from an
-        upstream data source.
+        upstream data source. Transient; clients should retry with backoff.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem503:
+      description: |
+        Service unavailable. Typically returned when an upstream-reader
+        circuit breaker has tripped after repeated failures. Transient;
+        clients should retry with backoff and honor any `Retry-After`
+        header.
       content:
         application/problem+json:
           schema:
