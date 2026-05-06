@@ -211,6 +211,81 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/weather/batch:
+    post:
+      operationId: postWeatherBatch
+      summary: Get blended weather for up to 25 locations in one call.
+      description: |
+        Multi-location form of `GET /v1/weather`. Accepts a JSON body with
+        an array of up to 25 locations and returns one F2 weather result
+        per input, preserving order.
+
+        ### Locations
+
+        Each entry in `locations[]` follows the same selector rules as
+        the single-location endpoint: exactly one of `lat`+`lon`, `zip`,
+        or `location` must be set. Mixing selectors in a single entry,
+        or omitting all of them, fails that row only — the rest of the
+        batch still runs.
+
+        ### Per-location failure semantics
+
+        A single location failure does not fail the whole request. The
+        corresponding `results[i]` carries `error` (a structured
+        `WeatherBatchError`) instead of `weather`. Callers can detect a
+        partial result by scanning for non-null `error` fields on
+        `results[]`. Section-level partial failures inside a successfully
+        resolved location surface as `weather.meta.warnings[]`, exactly
+        as for `GET /v1/weather`.
+
+        ### Shared parameters
+
+        `include`, `units`, `days`, and `hourly_hours` are applied to
+        every location; per-location overrides are not supported. Defaults
+        match the `GET /v1/weather` defaults.
+      tags: [Weather]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeatherBatchRequest'
+            examples:
+              twoLocations:
+                $ref: '#/components/examples/WeatherBatchRequestTwoLocations'
+      responses:
+        '200':
+          description: Batch result, one entry per input location.
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherBatchResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /.well-known/deprecations:
     get:
       operationId: getDeprecations
@@ -507,6 +582,18 @@ components:
               latest_valid: "2026-04-20T15:00:00Z"
               age_seconds: 3604
           warnings: []
+
+    WeatherBatchRequestTwoLocations:
+      summary: Two locations (one by lat/lon, one by ZIP) with shared `include`.
+      value:
+        locations:
+          - lat: 42.3601
+            lon: -71.0589
+          - zip: "94043"
+        include: "current,daily,alerts"
+        units: imperial
+        days: 7
+        hourly_hours: 48
 
   schemas:
     # -----------------------------------------------------------------------
@@ -1763,6 +1850,139 @@ components:
         issued_at:
           type: [string, "null"]
           format: date-time
+
+    # -----------------------------------------------------------------------
+    # POST /v1/weather/batch
+    # -----------------------------------------------------------------------
+
+    WeatherBatchRequest:
+      type: object
+      description: |
+        Multi-location request body. `locations[]` is required and capped
+        at 25 entries. The remaining fields are shared parameters applied
+        to every location.
+      required: [locations]
+      properties:
+        locations:
+          type: array
+          minItems: 1
+          maxItems: 25
+          description: |
+            Locations to fetch in this batch. Order is preserved on the
+            corresponding `results[]` array.
+          items:
+            $ref: '#/components/schemas/WeatherBatchLocation'
+        include:
+          type: string
+          description: |
+            Same semantics as the `include` query parameter on
+            `GET /v1/weather`. Applied to every location.
+          example: "current,daily,alerts"
+        units:
+          type: string
+          enum: [imperial, metric]
+          default: imperial
+          description: Same semantics as the `units` query parameter on `GET /v1/weather`.
+        days:
+          type: integer
+          minimum: 1
+          maximum: 14
+          default: 10
+          description: Same semantics as the `days` query parameter on `GET /v1/weather`.
+        hourly_hours:
+          type: integer
+          minimum: 1
+          maximum: 168
+          default: 48
+          description: Same semantics as the `hourly_hours` query parameter on `GET /v1/weather`.
+
+    WeatherBatchLocation:
+      type: object
+      description: |
+        A single location selector. Exactly one of (`lat` + `lon`),
+        `zip`, or `location` must be provided. Mixing selectors in one
+        entry, or omitting all of them, fails that row only.
+      properties:
+        lat:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          description: Latitude. Required together with `lon`.
+        lon:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          description: Longitude. Required together with `lat`.
+        zip:
+          type: string
+          pattern: '^\d{5}$'
+          description: 5-digit US ZIP code.
+        location:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Free-text location name.
+
+    WeatherBatchResponse:
+      type: object
+      description: |
+        Batch response. `results[i]` corresponds to `locations[i]` from
+        the request body and carries either `weather` (a full F2 weather
+        payload) or `error` (a structured per-location failure).
+      required: [results, meta]
+      properties:
+        results:
+          type: array
+          description: One entry per input location, in input order.
+          items:
+            $ref: '#/components/schemas/WeatherBatchResult'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    WeatherBatchResult:
+      type: object
+      description: |
+        A single batch entry. Exactly one of `weather` or `error` is set.
+        Section-level partial failures inside a successfully resolved
+        location surface as `weather.meta.warnings[]`, exactly as for
+        `GET /v1/weather`.
+      required: [index]
+      properties:
+        index:
+          type: integer
+          minimum: 0
+          description: Zero-based index into the original `locations[]` array.
+        weather:
+          $ref: '#/components/schemas/Weather'
+        error:
+          $ref: '#/components/schemas/WeatherBatchError'
+
+    WeatherBatchError:
+      type: object
+      description: Structured per-location error envelope inside a batch response.
+      required: [index, code, message]
+      properties:
+        index:
+          type: integer
+          minimum: 0
+          description: Zero-based index into the original `locations[]` array.
+        input:
+          $ref: '#/components/schemas/WeatherBatchLocation'
+          description: Echo of the failing input row, for client correlation.
+        code:
+          type: string
+          description: Stable machine-parseable error code.
+          enum:
+            - invalid_input
+            - location_not_found
+            - upstream_unavailable
+            - upstream_timeout
+            - internal_error
+        message:
+          type: string
+          description: Human-readable explanation. Stable for logging; clients should branch on `code`.
 
   responses:
     Problem400:
