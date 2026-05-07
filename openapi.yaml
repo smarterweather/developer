@@ -91,6 +91,8 @@ info:
 tags:
   - name: Weather
     description: Public weather data endpoints.
+  - name: Alerts
+    description: NWS weather alert lookups.
   - name: Health
     description: Service health.
   - name: Meta
@@ -275,6 +277,88 @@ paths:
           $ref: '#/components/responses/Problem401'
         '403':
           $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/alerts/{id}:
+    get:
+      operationId: getAlertById
+      summary: Get a single NWS alert by id.
+      description: |
+        Returns the full alert detail (geometry, spatial metadata,
+        affected population, etc.) for a single NWS alert. Accepts
+        either a `group_id` (the canonical primary key on the alerts
+        table) or a `message_id` (resolved via `nws_alerts_map`);
+        callers do not need to disambiguate.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=60`
+        to match the upstream cache policy. CDN edge cache is keyed
+        on the URL path so cache invalidation tracks alert
+        replacement / cancellation events naturally.
+
+        ### Geometry
+
+        `geometry` is a GeoJSON object embedded in the response.
+        Clients should treat it as opaque GeoJSON: forward-compat
+        fields the upstream pipeline adds without a sw-api release
+        pass through unchanged.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies. Internal first-party
+        keys (`sw_internal_web_*`, `sw_internal_ios_*`,
+        `sw_internal_og_*`) are accepted alongside `sw_live_*` /
+        `sw_test_*` partner keys; the OG-image lambda authenticates
+        with the `og` audience.
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: |
+            Alert identifier — either `group_id` (canonical primary
+            key) or `message_id` (NWS-issued, resolved via
+            `nws_alerts_map`). URL-encode embedded dots / colons /
+            slashes; the handler `url.PathEscape`s on the wire.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 256
+          example: "1.2.3-NWS-WW.SAMPLE.CASE"
+      responses:
+        '200':
+          description: Alert detail for the requested id.
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertDetail'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -1447,6 +1531,134 @@ components:
           description: |
             Map of salient callouts extracted from the alert text
             (e.g., `{"hazard": "Strong winds", "impact": "Loose debris possible"}`).
+
+    AlertDetail:
+      type: object
+      description: |
+        Full alert representation returned by `GET /v1/alerts/{id}`.
+        Supersets `Alert` with full description, instruction, geometry,
+        spatial metadata (centroid, recommended zoom, affected
+        population), and the upstream NWS VTEC identifier.
+
+        Field shape mirrors `wx-api`'s `GET /v1/alerts/{id}` so iOS,
+        legacy CRA, and OG-service consumers swap base URLs without
+        parsing changes.
+      required:
+        - group_id
+        - message_id
+        - status
+        - event
+        - severity
+        - urgency
+        - certainty
+        - headline
+        - sender
+        - effective
+        - expires
+        - onset
+        - ends
+        - expiration
+      properties:
+        group_id:
+          type: string
+          description: Canonical primary key on the alerts table.
+          example: "1.2.3-NWS-WW.SAMPLE.CASE"
+        message_id:
+          type: string
+          description: NWS-issued message identifier (matches `Alert.id`).
+          example: "1.2.3-NWS-WW.SAMPLE.CASE"
+        status:
+          type: string
+          description: Alert lifecycle status (e.g., `Actual`, `Exercise`, `Test`).
+        event:
+          type: string
+          example: "Severe Thunderstorm Warning"
+        severity:
+          type: string
+          enum: [Extreme, Severe, Moderate, Minor, Unknown]
+        urgency:
+          type: string
+          enum: [Immediate, Expected, Future, Past, Unknown]
+        certainty:
+          type: string
+          enum: [Observed, Likely, Possible, Unlikely, Unknown]
+        headline:
+          type: string
+        description:
+          type: string
+          description: |
+            Multi-paragraph human-readable forecast / hazard
+            description. Line endings vary by NWS office; clients
+            should treat as opaque text.
+        instruction:
+          type: string
+          description: Recommended actions (NWS-issued instruction text).
+        sender:
+          type: string
+          description: Issuing NWS office identifier.
+        effective:
+          type: string
+          format: date-time
+        expires:
+          type: string
+          format: date-time
+        onset:
+          type: string
+          format: date-time
+        ends:
+          type: string
+          format: date-time
+        expiration:
+          type: string
+          format: date-time
+          description: Final expiration time used for cache invalidation.
+        area_desc:
+          type: string
+          description: Human-readable affected area.
+        highlights:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Map of salient callouts extracted from the alert text
+            (e.g., `{"hazard": "Strong winds", "impact": "Loose debris possible"}`).
+        geometry:
+          type: object
+          description: |
+            GeoJSON geometry (Polygon / MultiPolygon) for the affected
+            area when stored upstream. Treat as opaque GeoJSON;
+            forward-compat fields the pipeline adds without a sw-api
+            release pass through unchanged.
+          additionalProperties: true
+        centroid_lat:
+          type: number
+          format: double
+          description: Centroid latitude of the affected geometry.
+        centroid_lon:
+          type: number
+          format: double
+          description: Centroid longitude of the affected geometry.
+        recommended_zoom:
+          type: integer
+          description: Suggested map zoom level when rendering the alert detail.
+        affected_population:
+          type: integer
+          description: Estimated population intersecting the alert geometry.
+        timezone:
+          type: string
+          description: IANA timezone of the affected area (e.g., `America/Chicago`).
+        vtec_id:
+          type: string
+          description: |
+            Upstream NWS VTEC identifier (when present). Useful for
+            joining against external VTEC datasets; `null` for alerts
+            without a VTEC code.
+        event_ending_time:
+          type: string
+          description: |
+            Optional ending-time hint surfaced by the OG-share image
+            renderer. Currently always omitted by the pipeline; clients
+            should fall back to `expires`. Reserved for forward-compat.
 
     Outlook:
       type: object
