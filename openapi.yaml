@@ -480,6 +480,256 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/storm-reports:
+    get:
+      operationId: getStormReports
+      summary: Get recent NWS local storm reports as GeoJSON.
+      description: |
+        Returns a GeoJSON `FeatureCollection` of recent NWS local storm
+        reports (LSR) — observed tornadoes, hail, damaging wind, flood,
+        etc. Each feature carries the report's geometry plus a
+        `properties` bag with at minimum `valid_time` and the
+        report's payload fields (event-type-specific magnitude /
+        narrative). The full property bag is forward-compat: the reader
+        pipeline may add new keys without a sw-api release, so consumers
+        should treat unknown keys as opaque additive data.
+
+        ### Filters
+
+        - `hours` — rolling lookback in whole hours (1 ≤ N ≤ 168). Empty
+          falls through to the reader's default window.
+        - `type` — single-letter NWS report code (e.g. `T` tornado, `H`
+          hail, `W` damaging wind, `F` flood). Server uppercases the
+          input before forwarding.
+        - `wfo` — 3-letter NWS Weather Forecast Office identifier (e.g.
+          `LOT`). Server uppercases the input.
+
+        Filters compose: setting all three returns the AND of each
+        filter applied to the reader's recent-reports table.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=30,
+        stale-while-revalidate=30`. Edge cache key includes the full
+        query string so each filter combination gets its own TTL.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Storms]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: hours
+          in: query
+          required: false
+          description: |
+            Rolling lookback window in whole hours (1-168). When empty,
+            the reader's default window applies.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 168
+          example: 6
+        - name: type
+          in: query
+          required: false
+          description: |
+            Single-letter NWS report code. Common values include
+            `T` (tornado), `H` (hail), `W` (damaging wind), `F` (flood).
+          schema:
+            type: string
+            pattern: '^[A-Za-z]$'
+            minLength: 1
+            maxLength: 1
+          example: "T"
+        - name: wfo
+          in: query
+          required: false
+          description: |
+            3-letter NWS Weather Forecast Office identifier
+            (e.g. `LOT` for Chicago).
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{3}$'
+            minLength: 3
+            maxLength: 3
+          example: "LOT"
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            reports match the filters (200, not 404).
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/StormReportsFeatureCollection'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/record-events:
+    get:
+      operationId: getRecordEvents
+      summary: Get NWS climate-record events as GeoJSON.
+      description: |
+        Returns a GeoJSON `FeatureCollection` of NWS climate-record
+        events (record high / low temperatures, daily precipitation
+        records, etc.) within the requested time window. Each feature's
+        `properties` bag carries at minimum `valid_time` plus the
+        event-type-specific payload from the reader pipeline. As with
+        `/v1/storm-reports`, additional `properties` keys may appear
+        without a sw-api release.
+
+        ### Time window
+
+        Exactly one of three selectors is forwarded to the reader:
+
+        1. `date=YYYY-MM-DD` — single-day window
+        2. `start=...&end=...` — explicit RFC3339 window (both required
+           together)
+        3. `hours=N` — rolling lookback (1 ≤ N ≤ 720, i.e. 30 days)
+
+        When more than one selector is set, the precedence is
+        `date` > `start+end` > `hours`. The handler enforces this by
+        forwarding all three to libs/wxreader, which picks the
+        highest-priority selector.
+
+        ### Filters
+
+        - `wfo` — 3-letter NWS Weather Forecast Office identifier.
+        - `type` — alphabetic record-event code (2-16 characters, e.g.
+          `high`, `low`, `precip`, `snow`).
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=60,
+        stale-while-revalidate=60`. Mirrors the reader's
+        recordEventsCacheTTL.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Storms]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: hours
+          in: query
+          required: false
+          description: |
+            Rolling lookback window in whole hours (1-720). Lowest
+            precedence among the time-window selectors.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+          example: 168
+        - name: date
+          in: query
+          required: false
+          description: |
+            ISO-8601 date (YYYY-MM-DD). Highest-precedence time-window
+            selector; trumps `start+end` and `hours` when supplied.
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          example: "2026-05-07"
+        - name: start
+          in: query
+          required: false
+          description: |
+            RFC3339 timestamp marking the start of the window. Must
+            be supplied together with `end`.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-05-01T00:00:00Z"
+        - name: end
+          in: query
+          required: false
+          description: |
+            RFC3339 timestamp marking the end of the window. Must be
+            supplied together with `start`.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-05-07T00:00:00Z"
+        - name: wfo
+          in: query
+          required: false
+          description: 3-letter NWS Weather Forecast Office identifier.
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{3}$'
+            minLength: 3
+            maxLength: 3
+          example: "LOT"
+        - name: type
+          in: query
+          required: false
+          description: |
+            Alphabetic record-event code (e.g. `high`, `low`,
+            `precip`, `snow`). 2-16 characters.
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{2,16}$'
+            minLength: 2
+            maxLength: 16
+          example: "high"
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            record events match the window + filters.
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/RecordEventsFeatureCollection'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /.well-known/deprecations:
     get:
       operationId: getDeprecations
@@ -1831,6 +2081,84 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StormTrackFeature'
+      additionalProperties: true
+
+    StormReportsFeatureCollection:
+      type: object
+      description: |
+        GeoJSON FeatureCollection of recent NWS local storm reports.
+        Returned as `application/geo+json` from `GET /v1/storm-reports`.
+
+        The reader pipeline emits at minimum a `valid_time` field on
+        each feature's `properties`; additional event-type-specific
+        keys (magnitude, narrative, county, etc.) may appear without a
+        sw-api release. Treat unknown keys as opaque additive data.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONReportsFeature'
+      additionalProperties: true
+
+    RecordEventsFeatureCollection:
+      type: object
+      description: |
+        GeoJSON FeatureCollection of NWS climate-record events
+        (record high / low temperatures, daily precipitation records,
+        etc.). Returned as `application/geo+json` from
+        `GET /v1/record-events`. Same forward-compat property-bag
+        contract as `StormReportsFeatureCollection`.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONReportsFeature'
+      additionalProperties: true
+
+    GeoJSONReportsFeature:
+      type: object
+      description: |
+        Shared per-feature shape used by `StormReportsFeatureCollection`
+        and `RecordEventsFeatureCollection`. The reader emits
+        `geometry` as opaque GeoJSON (typically `Point`) and a
+        `properties` bag whose only stable key is `valid_time`.
+      required: [type, geometry, properties]
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        geometry:
+          type: object
+          description: |
+            GeoJSON geometry (typically `Point`). Treat as opaque
+            GeoJSON; pass through to the renderer unchanged.
+          additionalProperties: true
+        properties:
+          $ref: '#/components/schemas/GeoJSONReportsProperties'
+      additionalProperties: true
+
+    GeoJSONReportsProperties:
+      type: object
+      description: |
+        Per-feature property bag emitted by the storm-reports +
+        record-events pipelines. `valid_time` is the only stable key;
+        additional keys may appear without a sw-api release
+        (forward-compat).
+      required: [valid_time]
+      properties:
+        valid_time:
+          type: string
+          format: date-time
+          description: |
+            UTC timestamp the report / record was observed or recorded.
       additionalProperties: true
 
     StormTrackFeature:
