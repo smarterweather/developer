@@ -15,8 +15,8 @@ info:
     - Fields marked `x-stability: experimental` (also flagged in their
       descriptions) are excluded from the 90-day breaking-change
       commitment during Phase 2 closed beta. Stability commitments apply
-      to every field at general availability (Phase 5 cutover) per
-      ADR 001 unless explicitly carved out.
+      to every field at general availability per ADR 001 unless
+      explicitly carved out.
 
     ## Errors
 
@@ -75,18 +75,18 @@ info:
     name: Smarter Weather Developer Platform
     url: https://github.com/smarterweather/developer
 
-# `servers` is intentionally omitted through Phase 2. SDK generators should
-# not default to a base URL while the spec's hostname is not final --
-# pointing them at `api.smarterweather.com` would route preview consumers
-# to the legacy wx-api service.
+# Canonical public base URL. Adopted by sw-api at the Phase 2 closed-beta
+# launch via Track A.3 PR-0 (#7754) per ADR 013, which supersedes ADR 006's
+# "interim execute-api hostname through Phase 5" plan.
 #
-# Per ADR 006 (docs/developer/adr/006-sw-api-interim-hostname.md), the
-# Phase 2 interim hostname is the raw API Gateway HTTP API invocation URL
-# (`*.execute-api.us-east-1.amazonaws.com`), distributed to closed-beta
-# design partners via direct onboarding material rather than via a
-# `servers:` entry. The first concrete `servers:` entry lands at Phase 5
-# cutover, when `api.smarterweather.com` transfers from legacy wx-api to
-# sw-api.
+# SDK generators emit https://api.smarterweather.com as the default base URL
+# from this point on. Closed-beta design partners onboarded against the raw
+# *.execute-api.us-east-1.amazonaws.com URL (per superseded ADR 006) keep
+# working -- the API Gateway URL is unaffected by the CloudFront repointing
+# in PR-0 -- but should switch to the canonical hostname before GA.
+servers:
+  - url: https://api.smarterweather.com
+    description: Production
 
 tags:
   - name: Weather
@@ -2878,7 +2878,7 @@ components:
 
         **Experimental.** Field shapes and prose styling may change during
         Phase 2 closed beta without notice; the 90-day breaking-change
-        commitment applies at Phase 5 cutover per ADR 001.
+        commitment applies at general availability per ADR 001.
       properties:
         current:
           type: string
@@ -2896,7 +2896,7 @@ components:
 
         **Experimental.** Field shapes may change during Phase 2 closed
         beta without notice; the 90-day breaking-change commitment applies
-        at Phase 5 cutover per ADR 001.
+        at general availability per ADR 001.
       required: [active_mcds]
       properties:
         afd:
