@@ -41,7 +41,7 @@ info:
     ## Rate limits
 
     Authenticated operations return rate-limit state on every response via
-    `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset`
+    `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset`
     headers. Exceeding the rate limit returns `429 Too Many Requests` with a
     `Retry-After` header. See individual operation responses for header
     definitions.
@@ -187,11 +187,11 @@ paths:
         '200':
           description: Blended weather data for the requested location.
           headers:
-            X-RateLimit-Limit:
+            RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
-            X-RateLimit-Remaining:
+            RateLimit-Remaining:
               $ref: '#/components/headers/RateLimitRemaining'
-            X-RateLimit-Reset:
+            RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
@@ -267,11 +267,11 @@ paths:
         '200':
           description: Batch result, one entry per input location.
           headers:
-            X-RateLimit-Limit:
+            RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
-            X-RateLimit-Remaining:
+            RateLimit-Remaining:
               $ref: '#/components/headers/RateLimitRemaining'
-            X-RateLimit-Reset:
+            RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
@@ -347,11 +347,11 @@ paths:
         '200':
           description: Alert detail for the requested id.
           headers:
-            X-RateLimit-Limit:
+            RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
-            X-RateLimit-Remaining:
+            RateLimit-Remaining:
               $ref: '#/components/headers/RateLimitRemaining'
-            X-RateLimit-Reset:
+            RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
@@ -457,11 +457,11 @@ paths:
             with `{"features": []}` is the canonical "no active storms"
             response).
           headers:
-            X-RateLimit-Limit:
+            RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
-            X-RateLimit-Remaining:
+            RateLimit-Remaining:
               $ref: '#/components/headers/RateLimitRemaining'
-            X-RateLimit-Reset:
+            RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
           content:
             application/geo+json:
@@ -565,11 +565,11 @@ paths:
             GeoJSON FeatureCollection. Empty `features` array when no
             reports match the filters (200, not 404).
           headers:
-            X-RateLimit-Limit:
+            RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
-            X-RateLimit-Remaining:
+            RateLimit-Remaining:
               $ref: '#/components/headers/RateLimitRemaining'
-            X-RateLimit-Reset:
+            RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
           content:
             application/geo+json:
@@ -707,11 +707,11 @@ paths:
             GeoJSON FeatureCollection. Empty `features` array when no
             record events match the window + filters.
           headers:
-            X-RateLimit-Limit:
+            RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
-            X-RateLimit-Remaining:
+            RateLimit-Remaining:
               $ref: '#/components/headers/RateLimitRemaining'
-            X-RateLimit-Reset:
+            RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
           content:
             application/geo+json:
@@ -782,11 +782,11 @@ paths:
         '200':
           description: Resolved location metadata.
           headers:
-            X-RateLimit-Limit:
+            RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
-            X-RateLimit-Remaining:
+            RateLimit-Remaining:
               $ref: '#/components/headers/RateLimitRemaining'
-            X-RateLimit-Reset:
+            RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
@@ -858,11 +858,11 @@ paths:
             Match results. Empty `results` array when no candidates
             match the input.
           headers:
-            X-RateLimit-Limit:
+            RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
-            X-RateLimit-Remaining:
+            RateLimit-Remaining:
               $ref: '#/components/headers/RateLimitRemaining'
-            X-RateLimit-Reset:
+            RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
@@ -945,11 +945,11 @@ paths:
             Match results. Empty `results` array when no candidates
             match the query.
           headers:
-            X-RateLimit-Limit:
+            RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
-            X-RateLimit-Remaining:
+            RateLimit-Remaining:
               $ref: '#/components/headers/RateLimitRemaining'
-            X-RateLimit-Reset:
+            RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
@@ -3109,11 +3109,11 @@ components:
       headers:
         Retry-After:
           $ref: '#/components/headers/RetryAfter'
-        X-RateLimit-Limit:
+        RateLimit-Limit:
           $ref: '#/components/headers/RateLimitLimit'
-        X-RateLimit-Remaining:
+        RateLimit-Remaining:
           $ref: '#/components/headers/RateLimitRemaining'
-        X-RateLimit-Reset:
+        RateLimit-Reset:
           $ref: '#/components/headers/RateLimitReset'
       content:
         application/problem+json:
