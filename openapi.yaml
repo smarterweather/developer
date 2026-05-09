@@ -144,8 +144,10 @@ paths:
         - `lat` **and** `lon` — latitude/longitude pair.
         - `zip` — 5-digit US ZIP code.
         - `location` — free-text location name (e.g., `"Boston, MA"`,
-          `"94043"`, `"Kyiv"`). Resolved via an internal geocoder; a
-          dedicated `/v1/geocode` endpoint is planned for Phase 5.
+          `"94043"`, `"Kyiv"`). Resolved by the same upstream geocoder
+          that powers the dedicated `/v1/geocode/{search,autosuggest,reverse}`
+          endpoints; clients that need geocoding without a weather
+          fetch should call those directly.
 
         Sending more than one selector, or none, returns `400`.
 
