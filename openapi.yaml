@@ -15,8 +15,8 @@ info:
     - Fields marked `x-stability: experimental` (also flagged in their
       descriptions) are excluded from the 90-day breaking-change
       commitment during Phase 2 closed beta. Stability commitments apply
-      to every field at general availability (Phase 5 cutover) per
-      ADR 001 unless explicitly carved out.
+      to every field at general availability per ADR 001 unless
+      explicitly carved out.
 
     ## Errors
 
@@ -41,7 +41,7 @@ info:
     ## Rate limits
 
     Authenticated operations return rate-limit state on every response via
-    `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset`
+    `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset`
     headers. Exceeding the rate limit returns `429 Too Many Requests` with a
     `Retry-After` header. See individual operation responses for header
     definitions.
@@ -75,22 +75,30 @@ info:
     name: Smarter Weather Developer Platform
     url: https://github.com/smarterweather/developer
 
-# `servers` is intentionally omitted through Phase 2. SDK generators should
-# not default to a base URL while the spec's hostname is not final --
-# pointing them at `api.smarterweather.com` would route preview consumers
-# to the legacy wx-api service.
+# Canonical public base URL. Adopted by sw-api at the Phase 2 closed-beta
+# launch via Track A.3 PR-0 (#7754) per ADR 013, which supersedes ADR 006's
+# "interim execute-api hostname through Phase 5" plan.
 #
-# Per ADR 006 (docs/developer/adr/006-sw-api-interim-hostname.md), the
-# Phase 2 interim hostname is the raw API Gateway HTTP API invocation URL
-# (`*.execute-api.us-east-1.amazonaws.com`), distributed to closed-beta
-# design partners via direct onboarding material rather than via a
-# `servers:` entry. The first concrete `servers:` entry lands at Phase 5
-# cutover, when `api.smarterweather.com` transfers from legacy wx-api to
-# sw-api.
+# SDK generators emit https://api.smarterweather.com as the default base URL
+# from this point on. Closed-beta design partners onboarded against the raw
+# *.execute-api.us-east-1.amazonaws.com URL (per superseded ADR 006) keep
+# working -- the API Gateway URL is unaffected by the CloudFront repointing
+# in PR-0 -- but should switch to the canonical hostname before GA.
+servers:
+  - url: https://api.smarterweather.com
+    description: Production
 
 tags:
   - name: Weather
     description: Public weather data endpoints.
+  - name: Alerts
+    description: NWS weather alert lookups.
+  - name: Storms
+    description: Severe-weather tracking products (storm tracks, etc.).
+  - name: Geocode
+    description: |
+      Forward, reverse, and typeahead geocoding for locations within
+      the supported NWS coverage domain (CONUS, AK, HI, PR, GU/MP).
   - name: Health
     description: Service health.
   - name: Meta
@@ -136,8 +144,10 @@ paths:
         - `lat` **and** `lon` — latitude/longitude pair.
         - `zip` — 5-digit US ZIP code.
         - `location` — free-text location name (e.g., `"Boston, MA"`,
-          `"94043"`, `"Kyiv"`). Resolved via an internal geocoder; a
-          dedicated `/v1/geocode` endpoint is planned for Phase 5.
+          `"94043"`, `"Kyiv"`). Resolved by the same upstream geocoder
+          that powers the dedicated `/v1/geocode/{search,autosuggest,reverse}`
+          endpoints; clients that need geocoding without a weather
+          fetch should call those directly.
 
         Sending more than one selector, or none, returns `400`.
 
@@ -179,11 +189,11 @@ paths:
         '200':
           description: Blended weather data for the requested location.
           headers:
-            X-RateLimit-Limit:
+            RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
-            X-RateLimit-Remaining:
+            RateLimit-Remaining:
               $ref: '#/components/headers/RateLimitRemaining'
-            X-RateLimit-Reset:
+            RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
@@ -259,11 +269,11 @@ paths:
         '200':
           description: Batch result, one entry per input location.
           headers:
-            X-RateLimit-Limit:
+            RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
-            X-RateLimit-Remaining:
+            RateLimit-Remaining:
               $ref: '#/components/headers/RateLimitRemaining'
-            X-RateLimit-Reset:
+            RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
@@ -275,6 +285,686 @@ paths:
           $ref: '#/components/responses/Problem401'
         '403':
           $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/alerts/{id}:
+    get:
+      operationId: getAlertById
+      summary: Get a single NWS alert by id.
+      description: |
+        Returns the full alert detail (geometry, spatial metadata,
+        affected population, etc.) for a single NWS alert. Accepts
+        either a `group_id` (the canonical primary key on the alerts
+        table) or a `message_id` (resolved via `nws_alerts_map`);
+        callers do not need to disambiguate.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=60`
+        to match the upstream cache policy. CDN edge cache is keyed
+        on the URL path so cache invalidation tracks alert
+        replacement / cancellation events naturally.
+
+        ### Geometry
+
+        `geometry` is a GeoJSON object embedded in the response.
+        Clients should treat it as opaque GeoJSON: forward-compat
+        fields the upstream pipeline adds without a sw-api release
+        pass through unchanged.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies. Internal first-party
+        keys (`sw_internal_web_*`, `sw_internal_ios_*`,
+        `sw_internal_og_*`) are accepted alongside `sw_live_*` /
+        `sw_test_*` partner keys; the OG-image lambda authenticates
+        with the `og` audience.
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: |
+            Alert identifier — either `group_id` (canonical primary
+            key) or `message_id` (NWS-issued, resolved via
+            `nws_alerts_map`). URL-encode embedded dots / colons /
+            slashes; the handler `url.PathEscape`s on the wire.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 256
+          example: "1.2.3-NWS-WW.SAMPLE.CASE"
+      responses:
+        '200':
+          description: Alert detail for the requested id.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertDetail'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/storm-tracks:
+    get:
+      operationId: getStormTracks
+      summary: Get active storm-cell tracks as GeoJSON.
+      description: |
+        Returns a GeoJSON `FeatureCollection` of active storm-cell
+        tracks aggregated from NEXRAD radar products. Each feature
+        carries cell metadata (id, site, scan / valid times) plus an
+        optional impact section listing affected cities and population
+        when `detailed=true` is requested.
+
+        ### Site filter
+
+        `site` is an optional 4-character ICAO radar site identifier
+        (e.g., `KLOT`, `KTLX`). Empty `site` returns one feature per
+        active radar cell across the network; setting `site` filters
+        to that ICAO. Site IDs are uppercased server-side.
+
+        ### Detailed mode
+
+        `detailed=true` requests the LATERAL-joined impact payload
+        (`properties.impact.affected_cities`,
+        `properties.impact.affected_population`). Detailed responses
+        are larger and use a 60s reader cache; the all-sites all-cells
+        path uses a 30s cache.
+
+        ### Schema stability
+
+        The GeoJSON `type`, `geometry`, and `properties.cell_id` /
+        `properties.site_id` / `properties.scan_time` /
+        `properties.valid_time` fields are stable. Other property-bag
+        keys (`impact.*`, `category`, etc.) are documented as
+        forward-compat: the reader pipeline may add new keys without a
+        sw-api release, so consumers should treat unknown keys as
+        opaque additive data.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=30,
+        stale-while-revalidate=30`. Edge cache key includes the
+        full query string (`site` and `detailed`) so each variant
+        gets its own TTL.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies. The legacy CRA storm-tracks
+        UI uses `sw_internal_web_*` keys; partners use `sw_live_*`.
+      tags: [Storms]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: site
+          in: query
+          required: false
+          description: |
+            Optional 4-character ICAO radar site code (e.g., `KLOT`).
+            Empty returns active cells across all radar sites.
+          schema:
+            type: string
+            pattern: '^[A-Za-z][A-Za-z0-9]{3}$'
+            minLength: 4
+            maxLength: 4
+          example: "KLOT"
+        - name: detailed
+          in: query
+          required: false
+          description: |
+            When `true`, includes the LATERAL-joined impact payload
+            (affected cities + populations). When omitted or `false`,
+            returns the lightweight cell-only response.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            active cells are tracked (this is a 200, not a 404 — a 200
+            with `{"features": []}` is the canonical "no active storms"
+            response).
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/StormTracksFeatureCollection'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/storm-reports:
+    get:
+      operationId: getStormReports
+      summary: Get recent NWS local storm reports as GeoJSON.
+      description: |
+        Returns a GeoJSON `FeatureCollection` of recent NWS local storm
+        reports (LSR) — observed tornadoes, hail, damaging wind, flood,
+        etc. Each feature carries the report's geometry plus a
+        `properties` bag with at minimum `valid_time` and the
+        report's payload fields (event-type-specific magnitude /
+        narrative). The full property bag is forward-compat: the reader
+        pipeline may add new keys without a sw-api release, so consumers
+        should treat unknown keys as opaque additive data.
+
+        ### Filters
+
+        - `hours` — rolling lookback in whole hours (1 ≤ N ≤ 168). Empty
+          falls through to the reader's default window.
+        - `type` — single-letter NWS report code (e.g. `T` tornado, `H`
+          hail, `W` damaging wind, `F` flood). Server uppercases the
+          input before forwarding.
+        - `wfo` — 3-letter NWS Weather Forecast Office identifier (e.g.
+          `LOT`). Server uppercases the input.
+
+        Filters compose: setting all three returns the AND of each
+        filter applied to the reader's recent-reports table.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=30,
+        stale-while-revalidate=30`. Edge cache key includes the full
+        query string so each filter combination gets its own TTL.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Storms]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: hours
+          in: query
+          required: false
+          description: |
+            Rolling lookback window in whole hours (1-168). When empty,
+            the reader's default window applies.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 168
+          example: 6
+        - name: type
+          in: query
+          required: false
+          description: |
+            Single-letter NWS report code. Common values include
+            `T` (tornado), `H` (hail), `W` (damaging wind), `F` (flood).
+          schema:
+            type: string
+            pattern: '^[A-Za-z]$'
+            minLength: 1
+            maxLength: 1
+          example: "T"
+        - name: wfo
+          in: query
+          required: false
+          description: |
+            3-letter NWS Weather Forecast Office identifier
+            (e.g. `LOT` for Chicago).
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{3}$'
+            minLength: 3
+            maxLength: 3
+          example: "LOT"
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            reports match the filters (200, not 404).
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/StormReportsFeatureCollection'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/record-events:
+    get:
+      operationId: getRecordEvents
+      summary: Get NWS climate-record events as GeoJSON.
+      description: |
+        Returns a GeoJSON `FeatureCollection` of NWS climate-record
+        events (record high / low temperatures, daily precipitation
+        records, etc.) within the requested time window. Each feature's
+        `properties` bag carries at minimum `valid_time` plus the
+        event-type-specific payload from the reader pipeline. As with
+        `/v1/storm-reports`, additional `properties` keys may appear
+        without a sw-api release.
+
+        ### Time window
+
+        Exactly one of three selectors is forwarded to the reader:
+
+        1. `date=YYYY-MM-DD` — single-day window
+        2. `start=...&end=...` — explicit RFC3339 window (both required
+           together)
+        3. `hours=N` — rolling lookback (1 ≤ N ≤ 720, i.e. 30 days)
+
+        When more than one selector is set, the precedence is
+        `date` > `start+end` > `hours`. The handler enforces this by
+        forwarding all three to libs/wxreader, which picks the
+        highest-priority selector.
+
+        ### Filters
+
+        - `wfo` — 3-letter NWS Weather Forecast Office identifier.
+        - `type` — alphabetic record-event code (2-16 characters, e.g.
+          `high`, `low`, `precip`, `snow`).
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=60,
+        stale-while-revalidate=60`. Mirrors the reader's
+        recordEventsCacheTTL.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Storms]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: hours
+          in: query
+          required: false
+          description: |
+            Rolling lookback window in whole hours (1-720). Lowest
+            precedence among the time-window selectors.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+          example: 168
+        - name: date
+          in: query
+          required: false
+          description: |
+            ISO-8601 date (YYYY-MM-DD). Highest-precedence time-window
+            selector; trumps `start+end` and `hours` when supplied.
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          example: "2026-05-07"
+        - name: start
+          in: query
+          required: false
+          description: |
+            RFC3339 timestamp marking the start of the window. Must
+            be supplied together with `end`.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-05-01T00:00:00Z"
+        - name: end
+          in: query
+          required: false
+          description: |
+            RFC3339 timestamp marking the end of the window. Must be
+            supplied together with `start`.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-05-07T00:00:00Z"
+        - name: wfo
+          in: query
+          required: false
+          description: 3-letter NWS Weather Forecast Office identifier.
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{3}$'
+            minLength: 3
+            maxLength: 3
+          example: "LOT"
+        - name: type
+          in: query
+          required: false
+          description: |
+            Alphabetic record-event code (e.g. `high`, `low`,
+            `precip`, `snow`). 2-16 characters.
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{2,16}$'
+            minLength: 2
+            maxLength: 16
+          example: "high"
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            record events match the window + filters.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/RecordEventsFeatureCollection'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/geocode/reverse:
+    get:
+      operationId: getGeocodeReverse
+      summary: Reverse-geocode a coordinate to a location.
+      description: |
+        Resolves a `(lat, lon)` coordinate into a city / nearest-city /
+        state / county / IANA timezone tuple. Coverage is the supported
+        NWS domain (CONUS, AK, HI, PR, GU/MP); coordinates outside the
+        domain return a 404 Problem.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public,
+        max-age=86400`. The underlying place-name <-> timezone mapping
+        changes on the order of years; clients should treat this as a
+        long-term cache.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Geocode]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitude in decimal degrees, range [-90, 90].
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 41.8781
+        - name: lon
+          in: query
+          required: true
+          description: Longitude in decimal degrees, range [-180, 180].
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -87.6298
+      responses:
+        '200':
+          description: Resolved location metadata.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReverseGeocodeResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/geocode/autosuggest:
+    get:
+      operationId: getGeocodeAutosuggest
+      summary: Typeahead-style location lookup.
+      description: |
+        Returns up to `count` location candidates whose names match the
+        partial `input` string. Designed for client-side typeahead
+        widgets: latency is dominated by the reader's PostGIS prefix
+        index; `Cache-Control: public, max-age=300` keeps repeated
+        keystrokes off the read replica.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Geocode]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: input
+          in: query
+          required: true
+          description: |
+            Partial place-name to expand. 2-128 characters, restricted
+            to alphanumerics + spaces + `,`, `.`, `-`, and `'`.
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 128
+            pattern: "^[A-Za-z0-9 ,.\\-']+$"
+          example: "Chic"
+        - name: count
+          in: query
+          required: false
+          description: |
+            Maximum number of results (1-100). Defaults to 10.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 10
+      responses:
+        '200':
+          description: |
+            Match results. Empty `results` array when no candidates
+            match the input.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeocodeResultsResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/geocode/search:
+    get:
+      operationId: getGeocodeSearch
+      summary: Forward-geocode a place name or US ZIP.
+      description: |
+        Returns location candidates matching either a 5-digit US `zipcode`
+        or a `city` (with optional `state` disambiguator). Exactly one
+        of `city` or `zipcode` must be supplied.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public,
+        max-age=3600`. The underlying place-name <-> ZIP mapping is
+        stable on the order of months.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Geocode]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: city
+          in: query
+          required: false
+          description: |
+            City name to resolve. Mutually exclusive with `zipcode`.
+            Permits the same character set as `autosuggest.input`.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+          example: "Chicago"
+        - name: state
+          in: query
+          required: false
+          description: |
+            Optional 2-letter US state code or full state name to
+            disambiguate the city query. Ignored when `zipcode` is set.
+          schema:
+            type: string
+            maxLength: 64
+          example: "IL"
+        - name: zipcode
+          in: query
+          required: false
+          description: |
+            5-digit US ZIP code. Mutually exclusive with `city`.
+          schema:
+            type: string
+            pattern: '^\d{5}$'
+            minLength: 5
+            maxLength: 5
+          example: "60601"
+      responses:
+        '200':
+          description: |
+            Match results. Empty `results` array when no candidates
+            match the query.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeocodeResultsResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -1448,6 +2138,134 @@ components:
             Map of salient callouts extracted from the alert text
             (e.g., `{"hazard": "Strong winds", "impact": "Loose debris possible"}`).
 
+    AlertDetail:
+      type: object
+      description: |
+        Full alert representation returned by `GET /v1/alerts/{id}`.
+        Supersets `Alert` with full description, instruction, geometry,
+        spatial metadata (centroid, recommended zoom, affected
+        population), and the upstream NWS VTEC identifier.
+
+        Field shape mirrors `wx-api`'s `GET /v1/alerts/{id}` so iOS,
+        legacy CRA, and OG-service consumers swap base URLs without
+        parsing changes.
+      required:
+        - group_id
+        - message_id
+        - status
+        - event
+        - severity
+        - urgency
+        - certainty
+        - headline
+        - sender
+        - effective
+        - expires
+        - onset
+        - ends
+        - expiration
+      properties:
+        group_id:
+          type: string
+          description: Canonical primary key on the alerts table.
+          example: "1.2.3-NWS-WW.SAMPLE.CASE"
+        message_id:
+          type: string
+          description: NWS-issued message identifier (matches `Alert.id`).
+          example: "1.2.3-NWS-WW.SAMPLE.CASE"
+        status:
+          type: string
+          description: Alert lifecycle status (e.g., `Actual`, `Exercise`, `Test`).
+        event:
+          type: string
+          example: "Severe Thunderstorm Warning"
+        severity:
+          type: string
+          enum: [Extreme, Severe, Moderate, Minor, Unknown]
+        urgency:
+          type: string
+          enum: [Immediate, Expected, Future, Past, Unknown]
+        certainty:
+          type: string
+          enum: [Observed, Likely, Possible, Unlikely, Unknown]
+        headline:
+          type: string
+        description:
+          type: string
+          description: |
+            Multi-paragraph human-readable forecast / hazard
+            description. Line endings vary by NWS office; clients
+            should treat as opaque text.
+        instruction:
+          type: string
+          description: Recommended actions (NWS-issued instruction text).
+        sender:
+          type: string
+          description: Issuing NWS office identifier.
+        effective:
+          type: string
+          format: date-time
+        expires:
+          type: string
+          format: date-time
+        onset:
+          type: string
+          format: date-time
+        ends:
+          type: string
+          format: date-time
+        expiration:
+          type: string
+          format: date-time
+          description: Final expiration time used for cache invalidation.
+        area_desc:
+          type: string
+          description: Human-readable affected area.
+        highlights:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Map of salient callouts extracted from the alert text
+            (e.g., `{"hazard": "Strong winds", "impact": "Loose debris possible"}`).
+        geometry:
+          type: object
+          description: |
+            GeoJSON geometry (Polygon / MultiPolygon) for the affected
+            area when stored upstream. Treat as opaque GeoJSON;
+            forward-compat fields the pipeline adds without a sw-api
+            release pass through unchanged.
+          additionalProperties: true
+        centroid_lat:
+          type: number
+          format: double
+          description: Centroid latitude of the affected geometry.
+        centroid_lon:
+          type: number
+          format: double
+          description: Centroid longitude of the affected geometry.
+        recommended_zoom:
+          type: integer
+          description: Suggested map zoom level when rendering the alert detail.
+        affected_population:
+          type: integer
+          description: Estimated population intersecting the alert geometry.
+        timezone:
+          type: string
+          description: IANA timezone of the affected area (e.g., `America/Chicago`).
+        vtec_id:
+          type: string
+          description: |
+            Upstream NWS VTEC identifier (when present). Useful for
+            joining against external VTEC datasets; `null` for alerts
+            without a VTEC code.
+        event_ending_time:
+          type: string
+          description: |
+            Optional ending-time hint surfaced by the OG-share image
+            renderer. Currently always omitted by the pipeline; clients
+            should fall back to `expires`. Reserved for forward-compat.
+
     Outlook:
       type: object
       description: |
@@ -1487,6 +2305,282 @@ components:
         expires:
           type: string
           format: date-time
+
+    StormTracksFeatureCollection:
+      type: object
+      description: |
+        GeoJSON FeatureCollection of active storm-cell tracks. Returned
+        as `application/geo+json` from `GET /v1/storm-tracks`.
+
+        The schema below documents the stable subset of the wire
+        format. The reader pipeline may add new keys to
+        `properties` (e.g. richer `impact.*` sub-objects, additional
+        cell-classification fields) without a sw-api release; clients
+        should treat unknown keys as opaque additive data and never
+        fail-closed on their presence.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/StormTrackFeature'
+      additionalProperties: true
+
+    StormReportsFeatureCollection:
+      type: object
+      description: |
+        GeoJSON FeatureCollection of recent NWS local storm reports.
+        Returned as `application/geo+json` from `GET /v1/storm-reports`.
+
+        The reader pipeline emits at minimum a `valid_time` field on
+        each feature's `properties`; additional event-type-specific
+        keys (magnitude, narrative, county, etc.) may appear without a
+        sw-api release. Treat unknown keys as opaque additive data.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONReportsFeature'
+      additionalProperties: true
+
+    RecordEventsFeatureCollection:
+      type: object
+      description: |
+        GeoJSON FeatureCollection of NWS climate-record events
+        (record high / low temperatures, daily precipitation records,
+        etc.). Returned as `application/geo+json` from
+        `GET /v1/record-events`. Same forward-compat property-bag
+        contract as `StormReportsFeatureCollection`.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONReportsFeature'
+      additionalProperties: true
+
+    GeoJSONReportsFeature:
+      type: object
+      description: |
+        Shared per-feature shape used by `StormReportsFeatureCollection`
+        and `RecordEventsFeatureCollection`. The reader emits
+        `geometry` as opaque GeoJSON (typically `Point`) and a
+        `properties` bag whose only stable key is `valid_time`.
+      required: [type, geometry, properties]
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        geometry:
+          type: object
+          description: |
+            GeoJSON geometry (typically `Point`). Treat as opaque
+            GeoJSON; pass through to the renderer unchanged.
+          additionalProperties: true
+        properties:
+          $ref: '#/components/schemas/GeoJSONReportsProperties'
+      additionalProperties: true
+
+    GeoJSONReportsProperties:
+      type: object
+      description: |
+        Per-feature property bag emitted by the storm-reports +
+        record-events pipelines. `valid_time` is the only stable key;
+        additional keys may appear without a sw-api release
+        (forward-compat).
+      required: [valid_time]
+      properties:
+        valid_time:
+          type: string
+          format: date-time
+          description: |
+            UTC timestamp the report / record was observed or recorded.
+      additionalProperties: true
+
+    ReverseGeocodeResponse:
+      type: object
+      description: |
+        Resolved place metadata for a `(lat, lon)` query against
+        `GET /v1/geocode/reverse`. All fields are best-effort: `city`
+        is populated when the coordinate falls inside a populated-place
+        polygon; `nearest_city` is populated when the coordinate is
+        outside any city polygon but within the resolution radius of
+        one. `state` carries the canonical NWS region label.
+
+        Forward-compat: additional fields may appear in this object
+        without a sw-api release.
+      properties:
+        city:
+          type: string
+          description: |
+            Populated-place name when the query coordinate falls inside
+            a city polygon. Empty when only `nearest_city` is set.
+          example: "Chicago"
+        nearest_city:
+          type: string
+          description: |
+            Closest populated-place name when the query coordinate is
+            outside any city polygon. Empty when `city` is set.
+          example: "Naperville"
+        state:
+          type: string
+          description: |
+            Canonical NWS state / region label (e.g. "Illinois",
+            "Puerto Rico").
+          example: "Illinois"
+        county:
+          type: string
+          description: |
+            County or equivalent admin-2 area, when available.
+          example: "Cook"
+        timezone:
+          type: string
+          description: |
+            IANA timezone identifier covering the query coordinate.
+          example: "America/Chicago"
+      additionalProperties: true
+
+    GeocodeResultsResponse:
+      type: object
+      description: |
+        Envelope returned by `GET /v1/geocode/autosuggest` and
+        `GET /v1/geocode/search`. The `results` array is the only
+        stable key; additional sibling fields may appear without a
+        sw-api release (e.g. server-side annotations).
+
+        An empty array is returned when no candidates match.
+      required: [results]
+      properties:
+        results:
+          type: array
+          description: Match candidates, ordered by reader-side score.
+          items:
+            $ref: '#/components/schemas/GeocodeAutosuggestResult'
+      additionalProperties: true
+
+    GeocodeAutosuggestResult:
+      type: object
+      description: |
+        Single forward-geocode candidate. Field shape mirrors the
+        reader's `AutosuggestResult` (most fields are nullable JSON
+        nulls when the underlying row lacks the column). `type` is
+        the reader's discriminator (`city`, `zip`, etc.).
+
+        Forward-compat: additional fields may appear without a
+        sw-api release.
+      properties:
+        name:
+          type: [string, "null"]
+          description: Populated-place name.
+          example: "Chicago"
+        state:
+          type: [string, "null"]
+          description: 2-letter US state code.
+          example: "IL"
+        state_name:
+          type: [string, "null"]
+          description: Full state / region label.
+          example: "Illinois"
+        county:
+          type: [string, "null"]
+          description: County or equivalent admin-2 area.
+          example: "Cook"
+        zip:
+          type: [string, "null"]
+          description: Representative ZIP for the place (or query ZIP for ZIP search).
+          example: "60601"
+        lat:
+          type: [number, "null"]
+          format: double
+          description: Centroid latitude in decimal degrees.
+          example: 41.8781
+        lon:
+          type: [number, "null"]
+          format: double
+          description: Centroid longitude in decimal degrees.
+          example: -87.6298
+        population:
+          type: [integer, "null"]
+          description: Population estimate, when known.
+          example: 2746388
+        timezone:
+          type: [string, "null"]
+          description: IANA timezone identifier covering the centroid.
+          example: "America/Chicago"
+        type:
+          type: string
+          description: |
+            Reader-side discriminator. Currently emitted values
+            include `city`, `zip`. Treat as opaque -- new types may
+            appear without a sw-api release.
+          example: "city"
+      additionalProperties: true
+
+    StormTrackFeature:
+      type: object
+      description: |
+        Single storm-cell GeoJSON Feature. `geometry` is the projected
+        track polyline; `properties` carries per-cell metadata.
+      required: [type, geometry, properties]
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        geometry:
+          type: object
+          description: |
+            GeoJSON geometry (typically `LineString` or `MultiLineString`).
+            Treat as opaque GeoJSON; pass through to the renderer
+            unchanged.
+          additionalProperties: true
+        properties:
+          $ref: '#/components/schemas/StormTrackProperties'
+      additionalProperties: true
+
+    StormTrackProperties:
+      type: object
+      description: |
+        Per-cell property bag emitted by the storm-tracks pipeline.
+        Stable keys are listed below; additional keys may appear
+        without a sw-api release (forward-compat).
+      required: [cell_id, site_id]
+      properties:
+        cell_id:
+          type: string
+          description: Pipeline-assigned cell identifier (stable across scans).
+          example: "A1"
+        site_id:
+          type: string
+          description: 4-character ICAO radar site code that produced the cell.
+          example: "KTLX"
+        scan_time:
+          type: string
+          format: date-time
+          description: Radar scan timestamp the cell was observed at.
+        valid_time:
+          type: string
+          format: date-time
+          description: |
+            Forecast valid-time (extrapolated). May equal `scan_time`
+            for cells without an extrapolation.
+        impact:
+          type: object
+          description: |
+            Optional impact metadata. Populated only when the request
+            included `detailed=true`. Property bag is forward-compat:
+            new fields may appear without a sw-api release.
+          additionalProperties: true
+      additionalProperties: true
 
     Astro:
       type: object
@@ -1784,7 +2878,7 @@ components:
 
         **Experimental.** Field shapes and prose styling may change during
         Phase 2 closed beta without notice; the 90-day breaking-change
-        commitment applies at Phase 5 cutover per ADR 001.
+        commitment applies at general availability per ADR 001.
       properties:
         current:
           type: string
@@ -1802,7 +2896,7 @@ components:
 
         **Experimental.** Field shapes may change during Phase 2 closed
         beta without notice; the 90-day breaking-change commitment applies
-        at Phase 5 cutover per ADR 001.
+        at general availability per ADR 001.
       required: [active_mcds]
       properties:
         afd:
@@ -2017,11 +3111,11 @@ components:
       headers:
         Retry-After:
           $ref: '#/components/headers/RetryAfter'
-        X-RateLimit-Limit:
+        RateLimit-Limit:
           $ref: '#/components/headers/RateLimitLimit'
-        X-RateLimit-Remaining:
+        RateLimit-Remaining:
           $ref: '#/components/headers/RateLimitRemaining'
-        X-RateLimit-Reset:
+        RateLimit-Reset:
           $ref: '#/components/headers/RateLimitReset'
       content:
         application/problem+json:

@@ -72,11 +72,12 @@ overlap.
 
 Every response includes three rate-limit headers:
 
-| Header                   | Meaning                                              |
-| ------------------------ | ---------------------------------------------------- |
-| `X-RateLimit-Limit`      | Requests per minute allowed at your tier.            |
-| `X-RateLimit-Remaining`  | Requests remaining in the current minute window.     |
-| `X-RateLimit-Reset`      | Unix timestamp at which the bucket refills.          |
+| Header                 | Meaning                                          |
+| ---------------------- | ------------------------------------------------ |
+| `RateLimit-Limit`      | Requests per minute allowed at your tier.        |
+| `RateLimit-Remaining`  | Requests remaining in the current minute window. |
+| `RateLimit-Reset`      | Seconds until the bucket refills.                |
+| `RateLimit-Policy`     | Window + burst, e.g. `60;w=60;burst=60`.         |
 
 When you exceed the limit the API returns **HTTP 429** with a
 `Retry-After` header (seconds). Your client should back off for
