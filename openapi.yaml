@@ -2828,6 +2828,7 @@ components:
             - upstream_unavailable
             - coverage_limited
             - geocode_ambiguous
+            - stale_response
           example: "partial_fetch"
         section:
           type: string
