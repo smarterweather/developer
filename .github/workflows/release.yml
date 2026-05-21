@@ -25,9 +25,88 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - run: npm ci
       - uses: changesets/action@v1
+        id: changesets
         with:
           publish: npm run release
           title: "Version Packages"
           createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Repoint the prerelease dist-tag (e.g. `preview`) onto every
+      # package we just published a prerelease version of.
+      #
+      # Why this step exists (issue #8090 in afisch710/SmarterWeather):
+      # Changesets enforces npm's invariant that the `latest` dist-tag
+      # MUST resolve to something installable. For any package that has
+      # not had a "regular" (non-prerelease) release yet, Changesets
+      # publishes prereleases to `latest` regardless of
+      # `publishConfig.tag` -- otherwise `npm install <pkg>` (no tag)
+      # would resolve nothing. The (correct, documented) side effect
+      # is that the `preview` dist-tag is left frozen on whatever
+      # version it was last manually pointed at, so users following
+      # our README's `npx -y <pkg>@preview` instruction get a stale
+      # build. We saw this concretely after `0.0.0-preview.2` of
+      # `@smarterweather/mcp-weather` shipped (preview stayed pinned
+      # to `0.0.0-preview.1`).
+      #
+      # Fix: after `changesets/action` publishes, walk its
+      # `publishedPackages` output, filter for any version with a
+      # prerelease segment (semver `-...`), and `npm dist-tag add`
+      # each one onto the tag configured in `.changeset/pre.json`.
+      # If `.changeset/pre.json` is missing (i.e. we've exited
+      # pre-release mode via `changeset pre exit`), the step
+      # no-ops -- a future stable `1.0.0` correctly takes `latest`
+      # and we don't want to second-guess Changesets.
+      #
+      # Auth: this uses NPM_TOKEN with the `automation` access level
+      # rather than the OIDC trusted-publishing path used by
+      # `changeset publish` -- the npm dist-tag API is not covered
+      # by OIDC trusted publishing today. If NPM_TOKEN is unset the
+      # step emits a workflow warning + the manual fix-up command
+      # but does not fail the release; this keeps publishes working
+      # even before the secret is wired so we don't gate the package
+      # on the IAM follow-up.
+      - name: Repoint prerelease dist-tag
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          PRERELEASES=$(echo "$PUBLISHED_PACKAGES" | jq -c '[.[] | select(.version | test("-"))]')
+          PRERELEASE_COUNT=$(echo "$PRERELEASES" | jq 'length')
+
+          if [ "$PRERELEASE_COUNT" -eq 0 ]; then
+            echo "No prerelease publishes in this run; nothing to repoint."
+            exit 0
+          fi
+
+          if [ ! -f .changeset/pre.json ]; then
+            echo "Not in pre-release mode (.changeset/pre.json absent); leaving dist-tags as Changesets set them."
+            exit 0
+          fi
+          PRE_TAG=$(jq -r '.tag' .changeset/pre.json)
+          if [ -z "$PRE_TAG" ] || [ "$PRE_TAG" = "null" ]; then
+            echo "::warning::.changeset/pre.json is present but .tag is empty; skipping dist-tag repoint."
+            exit 0
+          fi
+
+          if [ -z "${NPM_TOKEN:-}" ]; then
+            echo "::warning::NPM_TOKEN secret is not configured. The publish succeeded via OIDC, but the '${PRE_TAG}' dist-tag was not repointed."
+            echo "$PRERELEASES" | jq -r '.[] | "  Run manually: npm dist-tag add \(.name)@\(.version) '"${PRE_TAG}"'"'
+            echo "See https://github.com/afisch710/SmarterWeather/issues/8090 for context."
+            exit 0
+          fi
+
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > "$HOME/.npmrc"
+          trap 'rm -f "$HOME/.npmrc"' EXIT
+
+          echo "$PRERELEASES" | jq -r '.[] | "\(.name)@\(.version)"' | while read -r pkg_ref; do
+            if [ -z "$pkg_ref" ]; then
+              continue
+            fi
+            echo "Repointing ${PRE_TAG} -> ${pkg_ref}"
+            npm dist-tag add "${pkg_ref}" "${PRE_TAG}"
+          done
