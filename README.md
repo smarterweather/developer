@@ -61,8 +61,10 @@ curl -H "X-API-Key: $SMARTERWEATHER_API_KEY" \
 ```
 
 ```bash
-# Weather MCP server (npm package; preview placeholder today)
-npx -y @smarterweather/mcp-weather@preview
+# Weather MCP bridge (functional preview; defaults to
+# https://mcp.smarterweather.com/mcp -- override via
+# SMARTERWEATHER_MCP_URL during Phase 3 rollout).
+npx -y @smarterweather/mcp-weather@preview --version
 ```
 
 The full quickstart with language-specific snippets lives at

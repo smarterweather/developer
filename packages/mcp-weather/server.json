@@ -1,0 +1,46 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.smarterweather/weather",
+  "title": "Smarter Weather",
+  "description": "Probabilistic weather forecasts, active alerts, and multi-model comparison from Smarter Weather.",
+  "version": "0.0.0-preview.2",
+  "repository": {
+    "url": "https://github.com/smarterweather/developer",
+    "source": "github",
+    "subfolder": "packages/mcp-weather"
+  },
+  "websiteUrl": "https://smarterweather.com/developers",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.smarterweather.com/mcp"
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@smarterweather/mcp-weather",
+      "version": "0.0.0-preview.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "SMARTERWEATHER_API_KEY",
+          "description": "Smarter Weather API key (sw_live_* or sw_test_*) with the 'mcp' scope. When set, the bridge skips the OAuth flow and forwards the key as 'Authorization: Bearer <key>' on every proxied request. When unset, the bridge runs the full MCP OAuth 2.1 + PKCE client and caches tokens at ~/.mcp-auth/. Mint keys at https://smarterweather.com/developers/api-keys.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "SMARTERWEATHER_MCP_URL",
+          "description": "Override the target MCP endpoint. Useful for development, staging, or pre-Track-F-MVP setups where the production hostname is not yet live. Precedence: positional argument > SMARTERWEATHER_MCP_URL > package default (https://mcp.smarterweather.com/mcp).",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string",
+          "default": "https://mcp.smarterweather.com/mcp"
+        }
+      ]
+    }
+  ]
+}
