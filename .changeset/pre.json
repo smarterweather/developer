@@ -6,6 +6,7 @@
     "@smarterweather/mcp-weather": "0.0.0-preview.1"
   },
   "changesets": [
+    "mcp-weather-real-bridge",
     "onboarding-correct-host-url"
   ]
 }
