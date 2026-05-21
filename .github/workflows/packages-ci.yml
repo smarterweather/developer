@@ -21,4 +21,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build --workspace=@smarterweather/${{ matrix.package }}
-      - run: node packages/${{ matrix.package }}/dist/index.js
+      # Post-build invocation smoke. mcp-weather is now a real
+      # stdio<->HTTP bridge (it would block waiting for JSON-RPC
+      # input when called with no args), so pass --version to keep
+      # the smoke a clean exit-0 check. mcp-onboarding remains the
+      # stub-prints-and-exits placeholder, so it can stay
+      # arg-less until it also grows real bridge behavior.
+      - name: Bin invocation smoke
+        run: |
+          if [ "${{ matrix.package }}" = "mcp-weather" ]; then
+            node packages/${{ matrix.package }}/dist/index.js --version
+          else
+            node packages/${{ matrix.package }}/dist/index.js
+          fi
+      - name: Unit tests
+        if: matrix.package == 'mcp-weather'
+        run: npm test --workspace=@smarterweather/${{ matrix.package }}

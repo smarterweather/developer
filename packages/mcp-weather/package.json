@@ -1,7 +1,7 @@
 {
   "name": "@smarterweather/mcp-weather",
   "version": "0.0.0-preview.1",
-  "description": "stdio bridge to the Smarter Weather hosted MCP server (sw-mcp). Preview — not yet functional.",
+  "description": "stdio bridge to the Smarter Weather hosted MCP server (sw-mcp). Thin wrapper around mcp-remote with SmarterWeather URL defaults and optional Authorization header injection.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -24,10 +24,12 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.9"
   },
   "repository": {
     "type": "git",
@@ -45,5 +47,8 @@
     "weather-api",
     "forecast",
     "smarterweather"
-  ]
+  ],
+  "dependencies": {
+    "mcp-remote": "^0.1.38"
+  }
 }
