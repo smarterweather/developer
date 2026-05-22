@@ -1,6 +1,6 @@
 {
   "name": "@smarterweather/mcp-weather",
-  "version": "0.0.0-preview.2",
+  "version": "0.0.0-preview.3",
   "mcpName": "io.github.smarterweather/weather",
   "description": "stdio bridge to the Smarter Weather hosted MCP server (sw-mcp). Thin wrapper around mcp-remote with SmarterWeather URL defaults and optional Authorization header injection.",
   "license": "MIT",

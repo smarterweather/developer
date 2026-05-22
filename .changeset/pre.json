@@ -7,6 +7,8 @@
   },
   "changesets": [
     "mcp-weather-real-bridge",
-    "onboarding-correct-host-url"
+    "mcp-weather-registry-metadata",
+    "onboarding-correct-host-url",
+    "release-workflow-dist-tag-repoint"
   ]
 }
