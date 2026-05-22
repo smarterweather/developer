@@ -1,5 +1,11 @@
 # @smarterweather/mcp-weather
 
+## 0.0.0-preview.3
+
+### Patch Changes
+
+- [#20](https://github.com/smarterweather/developer/pull/20) [`f9d9d0b`](https://github.com/smarterweather/developer/commit/f9d9d0b022dba6ea4a974a74ad68ef2034f86606) Thanks [@afisch710](https://github.com/afisch710)! - Add MCP Registry metadata: `mcpName: "io.github.smarterweather/weather"` in `package.json` and a draft `server.json` manifest declaring both the hosted streamable-HTTP endpoint (`https://mcp.smarterweather.com/mcp`) and the npm stdio bridge as installation options. Required for `mcp-publisher publish` to the [official MCP Registry](https://registry.modelcontextprotocol.io). No runtime behaviour change.
+
 ## 0.0.0-preview.2
 
 ### Minor Changes
