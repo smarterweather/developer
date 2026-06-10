@@ -65,6 +65,7 @@ info:
     | `narrations`| no      | experimental | LLM-generated narrative text for current/short-term conditions. |
     | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/SWO/MCD).   |
     | `uncertainty` | no    | experimental | NBM probabilistic sub-objects on hourly and daily forecasts (CONUS/Alaska/Hawaii only). |
+    | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
 
     `radar` and `products` (wx visual-products manifest) are **not** in the
     v1 token set. They will land in Phase 5 alongside a separate
@@ -1413,8 +1414,65 @@ components:
           $ref: '#/components/schemas/Narrations'
         guidance:
           $ref: '#/components/schemas/Guidance'
+        nowcast:
+          $ref: '#/components/schemas/Nowcast'
         meta:
           $ref: '#/components/schemas/Meta'
+
+    Nowcast:
+      type: object
+      description: |
+        Minute-scale MRMS radar precipitation nowcast for the queried
+        location. Populated when `include=nowcast` is requested.
+      properties:
+        interval_seconds:
+          type: integer
+          example: 300
+        generated_at:
+          type: string
+          format: date-time
+          description: Nowcast reference (anchor) time from the latest radar frame.
+        summary:
+          $ref: '#/components/schemas/NowcastSummary'
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/NowcastPoint'
+
+    NowcastSummary:
+      type: object
+      properties:
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: [string, "null"]
+          format: date-time
+        duration_minutes:
+          type: [integer, "null"]
+        type:
+          type: string
+        peak_intensity:
+          type: string
+          enum: [none, light, moderate, heavy]
+        already_occurring:
+          type: boolean
+
+    NowcastPoint:
+      type: object
+      required: [time, type, intensity_dbz, intensity]
+      properties:
+        time:
+          type: string
+          format: date-time
+        type:
+          type: string
+        intensity_dbz:
+          type: number
+          format: double
+        intensity:
+          type: string
+          enum: [none, light, moderate, heavy]
 
     # -----------------------------------------------------------------------
     # Location / current / hourly / daily
