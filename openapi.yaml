@@ -392,10 +392,12 @@ paths:
 
         ### Site filter
 
-        `site` is an optional 4-character ICAO radar site identifier
-        (e.g., `KLOT`, `KTLX`). Empty `site` returns one feature per
-        active radar cell across the network; setting `site` filters
-        to that ICAO. Site IDs are uppercased server-side.
+        `site` is an optional NEXRAD radar site code. The storm-track
+        pipeline keys on the 3-letter site code (e.g., `LOT`, `TLX`);
+        a 4-letter ICAO (e.g., `KLOT`) is also accepted. Empty `site`
+        returns one feature per active radar cell across the network;
+        setting `site` filters to that radar. Site IDs are uppercased
+        server-side.
 
         ### Detailed mode
 
@@ -434,14 +436,16 @@ paths:
           in: query
           required: false
           description: |
-            Optional 4-character ICAO radar site code (e.g., `KLOT`).
-            Empty returns active cells across all radar sites.
+            Optional NEXRAD radar site code. The storm-track pipeline keys
+            on the 3-letter site code (e.g., `LOT`); a 4-letter ICAO (e.g.,
+            `KLOT`) is also accepted. Empty returns active cells across all
+            radar sites.
           schema:
             type: string
-            pattern: '^[A-Za-z][A-Za-z0-9]{3}$'
-            minLength: 4
+            pattern: '^[A-Za-z][A-Za-z0-9]{2,3}$'
+            minLength: 3
             maxLength: 4
-          example: "KLOT"
+          example: "LOT"
         - name: detailed
           in: query
           required: false
@@ -2619,8 +2623,8 @@ components:
           example: "A1"
         site_id:
           type: string
-          description: 4-character ICAO radar site code that produced the cell.
-          example: "KTLX"
+          description: 3-letter NEXRAD radar site code that produced the cell.
+          example: "TLX"
         scan_time:
           type: string
           format: date-time
