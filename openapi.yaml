@@ -599,6 +599,176 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/nexrad/features:
+    get:
+      operationId: getNexradFeatures
+      summary: Get NEXRAD Level III algorithm-detection overlays as GeoJSON.
+      description: |
+        Returns a GeoJSON `FeatureCollection` of NEXRAD Level III
+        algorithm-detection overlays — Hail Index, Mesocyclone, and
+        Tornado Vortex Signature (TVS) — for a single radar site. Each
+        feature carries `site_id` plus the product-specific detection
+        payload (e.g. probability-of-hail / max hail size, mesocyclone
+        or TVS strength) in a forward-compat `properties` bag. Treat
+        unknown keys as opaque additive data.
+
+        ### Product selector
+
+        `product` is required and selects which detection layer to
+        return: `hail_index`, `mesocyclone`, or `tvs`.
+
+        ### Site selector
+
+        `site` is the 3-letter Level III radar site code (e.g. `TLX`);
+        a 4-letter ICAO (e.g. `KTLX`) is also accepted and uppercased
+        server-side. As an alternative to `site`, pass `lat` + `lon`
+        together to resolve the nearest radar server-side.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=30,
+        stale-while-revalidate=30`.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Storms]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product
+          in: query
+          required: true
+          description: |
+            Detection product to return. One of `hail_index`,
+            `mesocyclone`, `tvs`.
+          schema:
+            type: string
+            enum: [hail_index, mesocyclone, tvs]
+          example: "hail_index"
+        - name: site
+          in: query
+          required: false
+          description: |
+            NEXRAD Level III radar site code. 3-letter (e.g. `TLX`) or
+            4-letter ICAO (e.g. `KTLX`); uppercased server-side. Omit to
+            use the `lat`/`lon` nearest-radar fallback.
+          schema:
+            type: string
+            pattern: '^[A-Za-z][A-Za-z0-9]{2,3}$'
+            minLength: 3
+            maxLength: 4
+          example: "TLX"
+        - name: lat
+          in: query
+          required: false
+          description: |
+            Latitude for nearest-radar resolution. Must be provided
+            together with `lon`; ignored when `site` is set.
+          schema:
+            type: number
+            format: double
+          example: 35.33
+        - name: lon
+          in: query
+          required: false
+          description: |
+            Longitude for nearest-radar resolution. Must be provided
+            together with `lat`; ignored when `site` is set.
+          schema:
+            type: number
+            format: double
+          example: -97.28
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            detections exist for the product/site (200, not 404).
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/NexradFeaturesFeatureCollection'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/tropical:
+    get:
+      operationId: getTropical
+      summary: Get the aggregated NHC tropical overlay as GeoJSON.
+      description: |
+        Returns a single GeoJSON `FeatureCollection` aggregating the
+        latest National Hurricane Center tropical overlay: forecast cone,
+        track line, forecast points, and coastal watch/warning segments
+        for every active storm, plus the 7-day Tropical Weather Outlook
+        (TWO) areas. Each feature carries a `kind` property the client
+        uses to pick its renderer (`cone`, `track`, `points`,
+        `watch_warning`, `two`); the `properties` bag is forward-compat.
+
+        The endpoint takes no parameters.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=60,
+        stale-while-revalidate=60`.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Storms]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            tropical systems or outlook areas are active (200, not 404).
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/TropicalFeatureCollection'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/record-events:
     get:
       operationId: getRecordEvents
@@ -2429,6 +2599,73 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GeoJSONReportsFeature'
+      additionalProperties: true
+
+    NexradFeaturesFeatureCollection:
+      type: object
+      description: |
+        GeoJSON FeatureCollection of NEXRAD Level III algorithm-detection
+        overlays (Hail Index / Mesocyclone / TVS). Returned as
+        `application/geo+json` from `GET /v1/nexrad/features`.
+
+        Each feature carries `site_id` plus product-specific detection
+        fields in a forward-compat `properties` bag; clients should treat
+        unknown keys as opaque additive data and never fail-closed on
+        their presence.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONOpaqueFeature'
+      additionalProperties: true
+
+    TropicalFeatureCollection:
+      type: object
+      description: |
+        GeoJSON FeatureCollection aggregating the latest NHC tropical
+        overlay (cone / track / points / watch-warning per active storm
+        plus 7-day TWO areas). Returned as `application/geo+json` from
+        `GET /v1/tropical`. Each feature carries a `kind` property the
+        client uses to choose its renderer; the property bag is
+        forward-compat.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONOpaqueFeature'
+      additionalProperties: true
+
+    GeoJSONOpaqueFeature:
+      type: object
+      description: |
+        Generic GeoJSON Feature with opaque geometry and a forward-compat
+        property bag. Used by overlays (NEXRAD detections, tropical) whose
+        per-feature property schema is owned by the reader pipeline and
+        may evolve without a sw-api release. Treat `geometry` and all
+        `properties` keys as opaque additive data.
+      required: [type, geometry, properties]
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        geometry:
+          type: object
+          description: |
+            GeoJSON geometry (Point / LineString / Polygon / Multi*).
+            Treat as opaque GeoJSON; pass through to the renderer
+            unchanged.
+          additionalProperties: true
+        properties:
+          type: object
+          additionalProperties: true
       additionalProperties: true
 
     GeoJSONReportsFeature:
