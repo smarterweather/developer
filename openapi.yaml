@@ -2121,6 +2121,21 @@ components:
           items:
             $ref: '#/components/schemas/DailyThreat'
           description: Per-day hazard callouts (winter, severe, heat, etc.).
+        relative_day:
+          type: integer
+          description: |
+            Signed calendar offset from the local current date at request time
+            (-1 = yesterday, 0 = today, 1 = tomorrow). Before 6 AM local an
+            extra entry with `relative_day: -1` prepends the in-progress
+            overnight row.
+        active_period:
+          type: [string, "null"]
+          enum: [day, night]
+          description: |
+            Non-null on exactly the row containing the current local time
+            (`day` during 06:00–17:59, `night` during 18:00–05:59). Clients
+            use this with `relative_day` to label rows Today/Tonight without
+            wall-clock heuristics.
         uncertainty:
           description: |
             Optional NBM probabilistic sub-object for this day. Populated only
