@@ -3174,7 +3174,8 @@ components:
       type: object
       x-stability: experimental
       description: |
-        LLM-generated narrative text for current and short-term conditions.
+        Rule-based narrative text for current and short-term conditions,
+        generated deterministically from the blended forecast (not an LLM).
 
         **Experimental.** Field shapes and prose styling may change during
         Phase 2 closed beta without notice; the 90-day breaking-change
@@ -3182,7 +3183,14 @@ components:
       properties:
         current:
           type: string
-          description: Short narrative describing the current conditions.
+          description: |
+            Time-of-day-aware summary of current conditions. Weaves in, when
+            available, a generic active-alert urgency cue, imminent-precip
+            nowcast, the current observation, the next-few-hours trend, and a
+            time-aware high/low (today's high during the day; tonight's low and
+            tomorrow's high in the evening). Temperatures follow the requested
+            `units`. Requires `current` data; `daily` adds the high/low,
+            `alerts` the urgency cue, and `nowcast` the imminent-precip cue.
         short_term:
           type: string
           description: Narrative covering the next few hours.
