@@ -491,6 +491,90 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/observations:
+    get:
+      operationId: getObservations
+      summary: Get latest METAR station observations as GeoJSON.
+      description: |
+        Returns a GeoJSON FeatureCollection of METAR surface observations
+        ingested from MADIS. By default returns the latest observation per
+        station within the last 2 hours. Optional `station`, `hours`, and
+        bounding-box (`min_lon`, `min_lat`, `max_lon`, `max_lat`) filters
+        are forwarded to the reader.
+      tags: [Observations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - name: station
+          in: query
+          schema:
+            type: string
+        - name: hours
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+        - name: min_lon
+          in: query
+          schema:
+            type: number
+        - name: min_lat
+          in: query
+          schema:
+            type: number
+        - name: max_lon
+          in: query
+          schema:
+            type: number
+        - name: max_lat
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: GeoJSON FeatureCollection of METAR observations.
+          content:
+            application/geo+json:
+              schema:
+                type: object
+        '502':
+          $ref: '#/components/responses/Problem502'
+
+  /v1/observations/nearest:
+    get:
+      operationId: getObservationsNearest
+      summary: Get nearest METAR station observations.
+      description: |
+        Returns the N nearest METAR stations to a point, deduplicated to
+        the latest observation per station, sorted by distance.
+      tags: [Observations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - name: n
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 1
+      responses:
+        '200':
+          description: GeoJSON FeatureCollection of nearest METAR observations.
+          content:
+            application/geo+json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '502':
+          $ref: '#/components/responses/Problem502'
+
   /v1/storm-reports:
     get:
       operationId: getStormReports
@@ -3005,6 +3089,34 @@ components:
           description: IANA timezone identifier.
         nearest_radar:
           $ref: '#/components/schemas/NearestRadar'
+        nearest_station:
+          $ref: '#/components/schemas/NearestStation'
+
+    NearestStation:
+      type: object
+      description: Metadata for the nearest METAR observation station.
+      required: [id, lat, lon, distance_km]
+      properties:
+        id:
+          type: string
+          description: ICAO station identifier (e.g., `KJFK`).
+          example: "KJFK"
+        name:
+          type: string
+        state:
+          type: string
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        distance_km:
+          type: number
+          format: double
+          minimum: 0
+        elevation_m:
+          type: [number, "null"]
 
     NearestRadar:
       type: object
