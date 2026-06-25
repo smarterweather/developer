@@ -3185,12 +3185,15 @@ components:
           type: string
           description: |
             Time-of-day-aware summary of current conditions. Weaves in, when
-            available, a generic active-alert urgency cue, imminent-precip
-            nowcast, the current observation, the next-few-hours trend, and a
-            time-aware high/low (today's high during the day; tonight's low and
-            tomorrow's high in the evening). Temperatures follow the requested
-            `units`. Requires `current` data; `daily` adds the high/low,
-            `alerts` the urgency cue, and `nowcast` the imminent-precip cue.
+            available, a category- and time-aware alert cue (e.g. "Elevated
+            fire-weather conditions through 1 AM."), imminent-precip nowcast, the
+            current observation, the next-few-hours trend, and a time-aware
+            high/low (today's high during the day; tonight's low and tomorrow's
+            high in the evening). Phrasing varies by location and hour for natural
+            variety but is stable between refreshes within the hour. Temperatures
+            follow the requested `units`. Requires `current` data; `daily` adds
+            the high/low, `alerts` the alert cue, and `nowcast` the
+            imminent-precip cue.
         short_term:
           type: string
           description: Narrative covering the next few hours.
