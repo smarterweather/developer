@@ -575,6 +575,51 @@ paths:
         '502':
           $ref: '#/components/responses/Problem502'
 
+  /v1/soundings:
+    get:
+      operationId: getSoundings
+      summary: Get latest RAOB radiosonde soundings as GeoJSON.
+      description: |
+        Returns a GeoJSON FeatureCollection of RAOB (radiosonde) vertical
+        soundings ingested from MADIS. By default returns the latest sounding
+        per station within the last 24 hours. Optional `station` and `hours`
+        filters are forwarded to the reader.
+
+        Heavy `profile` and `wind_profile` arrays are stripped from bulk
+        responses to keep payloads small for map overlays. Use
+        `/v1/soundings/nearest` to fetch the full vertical profile for a
+        specific site.
+
+        Each feature retains `station_id`, `observed_at`, `elevation_m`,
+        `level_count`, `wind_level_count`, and the `derived` indices object
+        (see `/v1/soundings/nearest` for field descriptions). The reader
+        also injects `valid_time` from the database column.
+      tags: [Observations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: station
+          in: query
+          schema:
+            type: string
+        - name: hours
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+      responses:
+        '200':
+          description: GeoJSON FeatureCollection of RAOB soundings (profile stripped).
+          content:
+            application/geo+json:
+              schema:
+                type: object
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/soundings/nearest:
     get:
       operationId: getSoundingsNearest
@@ -629,6 +674,8 @@ paths:
           $ref: '#/components/responses/Problem400'
         '502':
           $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
 
   /v1/storm-reports:
     get:
