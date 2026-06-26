@@ -575,6 +575,61 @@ paths:
         '502':
           $ref: '#/components/responses/Problem502'
 
+  /v1/soundings/nearest:
+    get:
+      operationId: getSoundingsNearest
+      summary: Get nearest RAOB radiosonde soundings.
+      description: |
+        Returns the N nearest RAOB (radiosonde) vertical soundings to a
+        point, deduplicated to the latest sounding per station, sorted by
+        distance. Soundings are launched at 00Z/12Z, so data can be several
+        hours old.
+
+        Each feature carries:
+
+        - `profile` — the pressure-indexed thermodynamic sounding (mandatory
+          + significant-temperature levels merged, sorted surface-first) with
+          aligned arrays `pressure_hpa`, `height_m` (null at
+          significant-temperature-only levels), `temperature_c`, `dewpoint_c`,
+          `wind_dir`, `wind_speed_kt`, plus `level_count`.
+        - `wind_profile` — a height-indexed wind sounding (mandatory +
+          significant-wind levels, sorted ascending by height MSL) with aligned
+          arrays `height_m`, `wind_dir`, `wind_speed_kt`, plus
+          `wind_level_count`. Use this for hodographs and shear.
+        - `derived` — server-computed thermodynamic/kinematic indices
+          (metric-raw, every field nullable): `sbcape`/`sbcin`,
+          `mucape`/`mucin`, `mlcape`/`mlcin` (J/kg); `lifted_index`,
+          `k_index`, `total_totals` (°C); `pwat_mm`; `freezing_level_m`;
+          `lcl_*`/`lfc_*`/`el_*` pressure and height; `bulk_shear_0_6km_kt`.
+        - station metadata: `station_id`, `observed_at`, `elevation_m`.
+
+        The full `properties` bag is forward-compatible: the reader pipeline
+        may add keys without a sw-api release, so treat unknown keys as opaque.
+      tags: [Observations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - name: n
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+            default: 1
+      responses:
+        '200':
+          description: GeoJSON FeatureCollection of nearest RAOB soundings.
+          content:
+            application/geo+json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '502':
+          $ref: '#/components/responses/Problem502'
+
   /v1/storm-reports:
     get:
       operationId: getStormReports
