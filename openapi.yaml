@@ -104,6 +104,10 @@ tags:
     description: Service health.
   - name: Meta
     description: Cross-cutting platform endpoints (deprecations, etc.).
+  - name: Agriculture
+    description: |
+      Agriculture-derived indices (Growing Degree Units / GDD) computed on
+      read from stored daily temperature extremes.
 
 security:
   - bearerAuth: []
@@ -1361,6 +1365,144 @@ paths:
                     description: Active deprecations.
                     items:
                       $ref: '#/components/schemas/Deprecation'
+
+  /v1/agriculture/growing-degree-days:
+    get:
+      operationId: getGrowingDegreeDays
+      summary: Growing Degree Units (GDU / GDD) for a point.
+      description: |
+        Returns Growing Degree Units (also called Growing Degree Days) for a
+        US point (CONUS, Alaska, Hawaii), computed on read from stored daily
+        maximum/minimum temperatures. No GDU grids are stored; the values are
+        derived per request from the temperature bundles, so a crop's
+        base/upper thresholds and the simple/modified method can be selected
+        freely without re-running the pipeline.
+
+        **Two modes:**
+
+        - **Forecast (default).** Without `season_start`, the response carries
+          a per-day GDU series across the NBM forecast horizon (`days`).
+        - **Season cumulative.** With `season_start` (a `YYYY-MM-DD` local
+          date within the ~180-day observed window), the response stitches
+          RTMA observed daily history + today's partial (hourly on-read
+          rollup) + NBM forecast, returns a `cumulative_total`, and adds a
+          per-day `cumulative_gdu` running sum. This is the number a grower
+          tracks against crop growth-stage milestones.
+
+        **Crops.** Pass a catalog `crop` id (e.g. `corn`, `soybean`,
+        `wheat_winter`, `cotton`, `alfalfa`) to use calibrated thresholds, or
+        `crop=custom` with `base_temp_c` (and optionally `upper_temp_c` /
+        `method`) to supply your own.
+
+        Every response echoes the resolved `method`, `thresholds` (always in
+        °C), and a `meta` provenance block (`day_definition`,
+        `computation_path`, `source`, `unit`, any `gaps`) so nothing is
+        silently assumed.
+
+        Launches behind the `AGRICULTURE_GDD_ENABLED` feature flag: returns
+        `404` when the flag is off.
+      tags: [Agriculture]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - name: crop
+          in: query
+          required: true
+          description: |
+            Crop catalog id (e.g. `corn`, `soybean`, `wheat_winter`,
+            `cotton`, `alfalfa`) or `custom` to supply thresholds directly.
+          schema:
+            type: string
+          example: corn
+        - name: season_start
+          in: query
+          required: false
+          description: |
+            Season/planting start as a `YYYY-MM-DD` local date. Presence
+            switches the response into cumulative season-to-date mode. Must be
+            within the ~180-day observed-history window.
+          schema:
+            type: string
+            format: date
+          example: "2026-05-01"
+        - name: days
+          in: query
+          required: false
+          description: Forecast horizon in days (default 10).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 30
+            default: 10
+        - name: day_definition
+          in: query
+          required: false
+          description: |
+            Daily boundary: `nws` (default; native NBM MaxT/MinT period
+            extremes) or `local_calendar` (midnight-to-midnight local day).
+          schema:
+            type: string
+            enum: [nws, local_calendar]
+            default: nws
+        - name: unit
+          in: query
+          required: false
+          description: |
+            Unit system for GDU + temperatures. `imperial` (default) uses
+            °F-days; `metric` uses °C-days. Thresholds are always echoed in
+            °C regardless.
+          schema:
+            type: string
+            enum: [imperial, metric]
+            default: imperial
+        - name: base_temp_c
+          in: query
+          required: false
+          description: Custom base threshold in °C. Required when `crop=custom`.
+          schema:
+            type: number
+            format: double
+        - name: upper_temp_c
+          in: query
+          required: false
+          description: |
+            Custom upper cutoff in °C (enables the modified method). Optional.
+          schema:
+            type: number
+            format: double
+        - name: method
+          in: query
+          required: false
+          description: |
+            GDU method for custom crops. Defaults based on whether
+            `upper_temp_c` is supplied.
+          schema:
+            type: string
+            enum: [simple, modified]
+        - name: include_milestones
+          in: query
+          required: false
+          description: Include the crop's growth-stage GDU milestones.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Growing Degree Units for the requested point.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrowingDegreeDays'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
 
 components:
   securitySchemes:
@@ -3617,6 +3759,175 @@ components:
         message:
           type: string
           description: Human-readable explanation. Stable for logging; clients should branch on `code`.
+
+    # -----------------------------------------------------------------------
+    # Agriculture — Growing Degree Units (GDU / GDD)
+    # -----------------------------------------------------------------------
+
+    GddThresholds:
+      type: object
+      description: Resolved GDU thresholds, always expressed in °C.
+      required: [base_temp_c]
+      properties:
+        base_temp_c:
+          type: number
+          format: double
+          description: Base (lower) temperature threshold in °C.
+        upper_temp_c:
+          type: number
+          format: double
+          description: Upper cutoff in °C (present only for the modified method).
+
+    GddGap:
+      type: object
+      description: A run of missing observed days affecting a cumulative total.
+      required: [start, end, days, filled]
+      properties:
+        start:
+          type: string
+          format: date
+          description: First missing day (inclusive).
+        end:
+          type: string
+          format: date
+          description: Last missing day (inclusive).
+        days:
+          type: integer
+          description: Number of missing days in the run.
+        filled:
+          type: string
+          description: |
+            How the gap was handled, e.g. `interpolated` (short gap filled
+            from adjacent days) or `unfilled` (long gap surfaced, not
+            silently under-counted).
+
+    GddMeta:
+      type: object
+      description: Provenance for a GDU response. Nothing is silently assumed.
+      required: [day_definition, computation_path, source, unit]
+      properties:
+        day_definition:
+          type: string
+          enum: [nws, local_calendar]
+          description: The daily boundary used.
+        computation_path:
+          type: string
+          description: |
+            How the series was assembled (e.g. forecast-only vs. stitched
+            observed + partial + forecast), for grid-vs-point transparency.
+        source:
+          type: string
+          description: Backing product mix (NBM / RTMA) used for this answer.
+        freshness:
+          type: string
+          description: Human-readable data-age hint, when available.
+        unit:
+          type: string
+          enum: [imperial, metric]
+          description: Unit system applied to numeric GDU + temperature fields.
+        approximate:
+          type: boolean
+          description: True when gaps were interpolated or coverage was partial.
+        gaps:
+          type: array
+          description: Missing-day runs affecting a cumulative total.
+          items:
+            $ref: '#/components/schemas/GddGap'
+
+    GddDay:
+      type: object
+      description: One day of GDU output.
+      required: [date, gdu]
+      properties:
+        date:
+          type: string
+          format: date
+          description: Local calendar date for this day.
+        gdu:
+          type: number
+          format: double
+          description: GDU accrued on this day, in the requested unit.
+        tmax_c:
+          type: number
+          format: double
+          description: Daily maximum temperature in °C (metric responses).
+        tmin_c:
+          type: number
+          format: double
+          description: Daily minimum temperature in °C (metric responses).
+        tmax_f:
+          type: number
+          format: double
+          description: Daily maximum temperature in °F (imperial responses).
+        tmin_f:
+          type: number
+          format: double
+          description: Daily minimum temperature in °F (imperial responses).
+        cumulative_gdu:
+          type: number
+          format: double
+          description: |
+            Running season-to-date total through this day. Present only in
+            cumulative mode (when `season_start` was supplied).
+        missing:
+          type: boolean
+          description: True when the underlying day had no temperature data.
+        interpolated:
+          type: boolean
+          description: True when this day's value was interpolated across a gap.
+
+    GddMilestone:
+      type: object
+      description: |
+        A crop growth-stage GDU hint from the catalog. Interpretation aid for
+        clients; not a server-computed threshold.
+      required: [stage, gdu]
+      properties:
+        stage:
+          type: string
+          description: Growth-stage label (e.g. `emergence`, `silking`).
+        gdu:
+          type: number
+          format: double
+          description: Cumulative GDU (requested unit) at which the stage is reached.
+
+    GrowingDegreeDays:
+      type: object
+      description: Growing Degree Units for a point, forecast or season-cumulative.
+      required: [crop, catalog_version, method, thresholds, meta, days]
+      properties:
+        crop:
+          type: string
+          description: Echoed crop id (`corn`, ..., or `custom`).
+        catalog_version:
+          type: integer
+          description: Version of the crop catalog used to resolve thresholds.
+        method:
+          type: string
+          enum: [simple, modified]
+          description: GDU method applied.
+        thresholds:
+          $ref: '#/components/schemas/GddThresholds'
+        meta:
+          $ref: '#/components/schemas/GddMeta'
+        days:
+          type: array
+          description: Per-day GDU series (chronological).
+          items:
+            $ref: '#/components/schemas/GddDay'
+        cumulative_total:
+          type: number
+          format: double
+          description: |
+            Season-to-date GDU total in the requested unit. Present only in
+            cumulative mode (when `season_start` was supplied).
+        milestones:
+          type: array
+          description: |
+            Crop growth-stage GDU hints, present when `include_milestones=true`
+            and the crop has catalog milestones.
+          items:
+            $ref: '#/components/schemas/GddMilestone'
 
   responses:
     Problem400:
