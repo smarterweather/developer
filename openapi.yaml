@@ -1624,6 +1624,115 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/point:
+    get:
+      operationId: getPointValue
+      summary: Curated point value for an allowlisted stored scalar.
+      description: |
+        Returns the latest value of a single stored gridded scalar sampled at a
+        point, with friendly output (canonical `unit`, an optional `category`
+        label, `observed_at`, and a staleness flag).
+
+        This is the one curated wrapper over the internal point-query: it serves
+        only the `(product, var)` pairs on a server-side **allowlist**, so the
+        public surface stays safe and small while every scalar widget/card is
+        onboarded by adding an allowlist entry — no new endpoint. Requesting a
+        `(product, var)` that is not allowlisted returns `404`.
+
+        ### Coverage
+
+        Each allowlisted scalar carries a coverage domain; a point outside it
+        returns `404` without an upstream call. Values are sampled from the
+        nearest grid cell (products are snapped to a ~1 km grid), so nearby
+        requests share cache entries.
+
+        ### Staleness
+
+        `approximate` is `true` when the value is older than the product's update
+        cadence allows (e.g. a SPoRT-LIS daily analysis older than ~36 h, an
+        MRMS hourly accumulation older than ~3 h).
+
+        ### Caching
+
+        Successful responses carry `Cache-Control` with a `max-age` keyed to the
+        product's cadence (SPoRT-LIS daily: 30 min; MRMS QPE hourly: 5 min). The
+        service additionally caches by `(product, var, rounded lat/lon)`.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product
+          in: query
+          required: true
+          description: |
+            Allowlisted stored product identifier (lowercase, digits,
+            underscores), e.g. `sport_rsm_0_2m_pct_conus` or
+            `mrms_qpe_24h_pass2_conus`.
+          schema:
+            type: string
+            pattern: '^[a-z0-9_]+$'
+            minLength: 1
+            maxLength: 128
+          example: sport_rsm_0_2m_pct_conus
+        - name: var
+          in: query
+          required: true
+          description: |
+            Variable identifier within the product, e.g. `rsm_0_2m_pct` or
+            `qpe_24h`.
+          schema:
+            type: string
+            pattern: '^[a-z0-9_]+$'
+            minLength: 1
+            maxLength: 128
+          example: rsm_0_2m_pct
+        - name: lat
+          in: query
+          required: true
+          description: Latitude of the point.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 41.9
+        - name: lon
+          in: query
+          required: true
+          description: Longitude of the point.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -93.6
+      responses:
+        '200':
+          description: The point value for the requested scalar.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PointValue'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -4010,6 +4119,48 @@ components:
           type: number
           format: double
           description: Cumulative GDU (requested unit) at which the stage is reached.
+
+    PointValue:
+      type: object
+      description: |
+        A single stored scalar sampled at a point, with friendly metadata. The
+        wire shape for GET /v1/point.
+      required: [product, var, value, approximate]
+      properties:
+        product:
+          type: string
+          description: Echoed product identifier.
+          example: sport_rsm_0_2m_pct_conus
+        var:
+          type: string
+          description: Echoed variable identifier.
+          example: rsm_0_2m_pct
+        value:
+          type: number
+          format: double
+          description: The sampled value in `unit`.
+          example: 34.2
+        unit:
+          type: string
+          description: Canonical unit of `value` (clients convert for display).
+          example: percentile
+        category:
+          type: string
+          description: |
+            Optional human category the value falls into (e.g. soil-moisture
+            `dry`/`normal`/`moist`). Omitted for scalars without categories.
+          example: dry
+        observed_at:
+          type: string
+          format: date-time
+          description: Valid time of the sampled value.
+          example: "2026-06-30T12:00:00Z"
+        approximate:
+          type: boolean
+          description: |
+            True when the value is older than the product's update cadence
+            allows (stale).
+          example: false
 
     GrowingDegreeDays:
       type: object
