@@ -92,6 +92,10 @@ servers:
 tags:
   - name: Weather
     description: Public weather data endpoints.
+  - name: Observations
+    description: |
+      Surface observations and upper-air soundings sampled at or nearest to a
+      point.
   - name: Alerts
     description: NWS weather alert lookups.
   - name: Storms
@@ -1627,24 +1631,47 @@ paths:
   /v1/point:
     get:
       operationId: getPointValue
-      summary: Curated point value for an allowlisted stored scalar.
+      summary: Curated point value(s) for allowlisted stored data.
       description: |
-        Returns the latest value of a single stored gridded scalar sampled at a
-        point, with friendly output (canonical `unit`, an optional `category`
-        label, `observed_at`, and a staleness flag).
+        Returns the latest value of allowlisted stored data sampled at a point,
+        with friendly output (canonical `unit`, an optional `category` label,
+        `observed_at`, and a staleness flag).
 
         This is the one curated wrapper over the internal point-query: it serves
         only the `(product, var)` pairs on a server-side **allowlist**, so the
-        public surface stays safe and small while every scalar widget/card is
+        public surface stays safe and small while every widget/card is
         onboarded by adding an allowlist entry — no new endpoint. Requesting a
-        `(product, var)` that is not allowlisted returns `404`.
+        `(product, var)` that is not allowlisted returns `404` (single form) or
+        a per-item `not_allowlisted` status (batch form).
+
+        ### Data kinds (transparent to the caller)
+
+        The allowlist entry's kind selects the internal resolution — a
+        **scalar** raster/OM cell, or a vector **zone** (point-in-polygon
+        outlook, e.g. SPC categorical / fire-weather). Both collapse to one
+        answer at a location and share one envelope: `value`/`unit` are present
+        for scalars and ordinal bands, `category`/`label` name the band, and a
+        point in no band is a valid answer with `value: null` and
+        `category: "none"` (not a 404).
+
+        ### Single vs. batch
+
+        - **Single** — `product` + `var` + `lat` + `lon` returns one
+          `PointValue`.
+        - **Batch** — `select` (multiple `(product, var)`) and/or `points`
+          (multiple locations) returns a `PointBatchResponse` of per-point,
+          per-value items, each with a `status`. One request can populate a
+          whole family card (several metrics) or a map of locations; partial
+          conditions (out of domain, not allowlisted, no data) are reported
+          per item and never fail the whole request.
 
         ### Coverage
 
-        Each allowlisted scalar carries a coverage domain; a point outside it
-        returns `404` without an upstream call. Values are sampled from the
-        nearest grid cell (products are snapped to a ~1 km grid), so nearby
-        requests share cache entries.
+        Each allowlisted entry carries a coverage domain; a point outside it
+        returns `404` (single) or an `out_of_domain` item (batch) without an
+        upstream call. Scalar values are sampled from the nearest grid cell
+        (products are snapped to a ~1 km grid), so nearby requests share cache
+        entries.
 
         ### Staleness
 
@@ -1667,11 +1694,13 @@ paths:
       parameters:
         - name: product
           in: query
-          required: true
+          required: false
           description: |
             Allowlisted stored product identifier (lowercase, digits,
-            underscores), e.g. `sport_rsm_0_2m_pct_conus` or
-            `mrms_qpe_24h_pass2_conus`.
+            underscores), e.g. `sport_rsm_0_2m_pct_conus`,
+            `mrms_qpe_24h_pass2_conus`, or the outlook `spc_day1_categorical`.
+            Single form: pair with `var` + `lat` + `lon`. Ignored when `select`
+            is provided.
           schema:
             type: string
             pattern: '^[a-z0-9_]+$'
@@ -1680,10 +1709,11 @@ paths:
           example: sport_rsm_0_2m_pct_conus
         - name: var
           in: query
-          required: true
+          required: false
           description: |
-            Variable identifier within the product, e.g. `rsm_0_2m_pct` or
-            `qpe_24h`.
+            Variable identifier within the product, e.g. `rsm_0_2m_pct`,
+            `qpe_24h`, or `risk` for zone outlooks. Ignored when `select` is
+            provided.
           schema:
             type: string
             pattern: '^[a-z0-9_]+$'
@@ -1692,8 +1722,8 @@ paths:
           example: rsm_0_2m_pct
         - name: lat
           in: query
-          required: true
-          description: Latitude of the point.
+          required: false
+          description: Latitude of the point (single form). Ignored when `points` is provided.
           schema:
             type: number
             format: double
@@ -1702,17 +1732,61 @@ paths:
           example: 41.9
         - name: lon
           in: query
-          required: true
-          description: Longitude of the point.
+          required: false
+          description: Longitude of the point (single form). Ignored when `points` is provided.
           schema:
             type: number
             format: double
             minimum: -180
             maximum: 180
           example: -93.6
+        - name: select
+          in: query
+          required: false
+          description: |
+            Batch form. One or more `product:var` selectors (each individually
+            allowlisted). Repeat the parameter or comma-join within a single
+            value, e.g.
+            `select=sport_rsm_0_2m_pct_conus:rsm_0_2m_pct&select=spc_day1_categorical:risk`.
+            Presence of `select` (or `points`) switches the response to
+            `PointBatchResponse`. Max 25 selectors; points × selectors ≤ 500.
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 25
+            items:
+              type: string
+              pattern: '^[a-z0-9_]+:[a-z0-9_]+(,[a-z0-9_]+:[a-z0-9_]+)*$'
+              minLength: 3
+              maxLength: 1024
+          example: [sport_rsm_0_2m_pct_conus:rsm_0_2m_pct, spc_day1_categorical:risk]
+        - name: points
+          in: query
+          required: false
+          description: |
+            Batch form. One or more `lat,lon` locations. Repeat the parameter
+            for multiple points (Go query parsing rejects `;`), e.g.
+            `points=41.9,-93.6&points=42.0,-93.4`. Presence of `points` (or
+            `select`) switches the response to `PointBatchResponse`. Max 100
+            points; points × selectors ≤ 500.
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 100
+            items:
+              type: string
+              pattern: '^-?[0-9]+(\.[0-9]+)?,-?[0-9]+(\.[0-9]+)?$'
+              minLength: 3
+              maxLength: 64
+          example: ["41.9,-93.6", "42.0,-93.4"]
       responses:
         '200':
-          description: The point value for the requested scalar.
+          description: |
+            The requested value(s). Single form (`product`+`var`+`lat`+`lon`)
+            returns a `PointValue`; batch form (`select` and/or `points`)
+            returns a `PointBatchResponse`.
           headers:
             RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
@@ -1723,7 +1797,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PointValue'
+                oneOf:
+                  - $ref: '#/components/schemas/PointValue'
+                  - $ref: '#/components/schemas/PointBatchResponse'
         '400':
           $ref: '#/components/responses/Problem400'
         '404':
@@ -4123,8 +4199,8 @@ components:
     PointValue:
       type: object
       description: |
-        A single stored scalar sampled at a point, with friendly metadata. The
-        wire shape for GET /v1/point.
+        A single allowlisted value sampled at a point, with friendly metadata.
+        The single-form wire shape for GET /v1/point (scalar or zone).
       required: [product, var, value, approximate]
       properties:
         product:
@@ -4136,9 +4212,12 @@ components:
           description: Echoed variable identifier.
           example: rsm_0_2m_pct
         value:
-          type: number
+          type: [number, "null"]
           format: double
-          description: The sampled value in `unit`.
+          description: |
+            The sampled value in `unit` (scalar), or the ordinal level of the
+            containing band (zone). `null` when a zone point is in no band
+            (`category: "none"`).
           example: 34.2
         unit:
           type: string
@@ -4148,12 +4227,20 @@ components:
           type: string
           description: |
             Optional human category the value falls into (e.g. soil-moisture
-            `dry`/`normal`/`moist`). Omitted for scalars without categories.
+            `dry`/`normal`/`moist`, or an outlook band like `slight`). The
+            explicit value `"none"` means a zone point is in no band. Omitted
+            for scalars without categories.
           example: dry
+        label:
+          type: string
+          description: |
+            Optional human display label for a named band (e.g. `Slight`,
+            `Elevated`). Omitted for plain scalars.
+          example: Slight
         observed_at:
           type: string
           format: date-time
-          description: Valid time of the sampled value.
+          description: Valid time of the sampled value / outlook.
           example: "2026-06-30T12:00:00Z"
         approximate:
           type: boolean
@@ -4161,6 +4248,96 @@ components:
             True when the value is older than the product's update cadence
             allows (stale).
           example: false
+
+    PointValueItem:
+      type: object
+      description: |
+        One resolved value within a PointBatchResponse. Superset of PointValue
+        with a per-item `status` so a single unavailable/out-of-domain value
+        does not fail the whole request.
+      required: [product, var, approximate, status]
+      properties:
+        product:
+          type: string
+          description: Echoed product identifier.
+          example: spc_day1_categorical
+        var:
+          type: string
+          description: Echoed variable identifier.
+          example: risk
+        value:
+          type: [number, "null"]
+          format: double
+          description: |
+            The sampled value / band ordinal. Omitted for non-`ok` items and
+            `null`/omitted for a zone point in no band.
+          example: 2
+        unit:
+          type: string
+          description: Canonical unit of `value` (clients convert for display).
+          example: mm
+        category:
+          type: string
+          description: |
+            Human category (or `"none"` for a zone point in no band). Omitted
+            when not applicable.
+          example: slight
+        label:
+          type: string
+          description: Human display label for a named band. Omitted otherwise.
+          example: Slight
+        observed_at:
+          type: string
+          format: date-time
+          description: Valid time of the sampled value / outlook.
+          example: "2026-07-01T12:00:00Z"
+        approximate:
+          type: boolean
+          description: True when the value is stale for its cadence.
+          example: false
+        status:
+          type: string
+          description: |
+            Per-item outcome. `ok` — resolved (a zone `"none"` is still `ok`).
+            `not_allowlisted` — the selector is not curated. `out_of_domain` —
+            the point is outside the product's coverage. `unavailable` — no data
+            at the point.
+          enum: [ok, not_allowlisted, out_of_domain, unavailable]
+          example: ok
+
+    PointBatchResult:
+      type: object
+      description: All requested values at one location.
+      required: [lat, lon, values]
+      properties:
+        lat:
+          type: number
+          format: double
+          description: Echoed latitude of the requested point.
+          example: 41.9
+        lon:
+          type: number
+          format: double
+          description: Echoed longitude of the requested point.
+          example: -93.6
+        values:
+          type: array
+          description: One item per requested selector, in request order.
+          items:
+            $ref: '#/components/schemas/PointValueItem'
+
+    PointBatchResponse:
+      type: object
+      description: |
+        The batch-form wire shape for GET /v1/point: per-point, per-selector
+        values. Returned when `select` and/or `points` is provided.
+      required: [results]
+      properties:
+        results:
+          type: array
+          description: One entry per requested point, in request order.
+          items:
+            $ref: '#/components/schemas/PointBatchResult'
 
     GrowingDegreeDays:
       type: object
