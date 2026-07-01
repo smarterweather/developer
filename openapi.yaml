@@ -96,6 +96,10 @@ tags:
     description: NWS weather alert lookups.
   - name: Storms
     description: Severe-weather tracking products (storm tracks, etc.).
+  - name: Products
+    description: |
+      Gridded / vector weather products and derived summaries (risk-zone
+      population exposure, etc.).
   - name: Geocode
     description: |
       Forward, reverse, and typeahead geocoding for locations within
@@ -372,6 +376,122 @@ paths:
           $ref: '#/components/responses/Problem403'
         '404':
           $ref: '#/components/responses/Problem404'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/products/{product_id}/exposure-summary:
+    get:
+      operationId: getProductExposureSummary
+      summary: Cumulative population exposure for a risk-zone product.
+      description: |
+        Returns the total population inside all risk-band polygons at or above
+        a threshold level for a risk-zone product's latest issuance — the data
+        behind headlines like "~57M under major heat risk".
+
+        Generic across every product that publishes exclusive risk-band
+        polygons (NWS HeatRisk today; SPC categorical, WPC flood, and
+        winter/cold outlooks later). Because the bands are spatially exclusive,
+        a cumulative `>= min_level` figure is a straight sum with no
+        double-counting.
+
+        ### Parameters
+
+        `min_level` is the inclusive cumulative threshold on the ordinal
+        `risk_level` (e.g. HeatRisk `3` = Major and above). When omitted the
+        upstream default (`1`, any elevated risk) applies. `valid_time` selects
+        a specific issuance (RFC3339); omit it for the latest.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=60,
+        stale-while-revalidate=60`. Edge cache key includes the query string
+        so each `min_level` / `valid_time` variant gets its own TTL.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          description: |
+            Risk-zone product identifier (lowercase, digits, underscores),
+            e.g. `heatrisk_day1_conus`.
+          schema:
+            type: string
+            pattern: '^[a-z0-9_]+$'
+            minLength: 1
+            maxLength: 128
+          example: "heatrisk_day1_conus"
+        - name: min_level
+          in: query
+          required: false
+          description: Inclusive cumulative threshold on the ordinal risk_level.
+          schema:
+            type: integer
+            minimum: 0
+          example: 3
+        - name: valid_time
+          in: query
+          required: false
+          description: RFC3339 issuance (valid_time) to summarize. Defaults to the latest.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-06-30T22:00:00Z"
+      responses:
+        '200':
+          description: Cumulative population-exposure summary.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [product_id, min_level, population, feature_count]
+                properties:
+                  product_id:
+                    type: string
+                    example: "heatrisk_day1_conus"
+                  min_level:
+                    type: integer
+                    example: 3
+                  population:
+                    type: integer
+                    format: int64
+                    description: Total population under risk_level >= min_level.
+                    example: 57000000
+                  feature_count:
+                    type: integer
+                    description: Number of risk-band polygons contributing to the sum.
+                    example: 2
+                  valid_time:
+                    type: ["string", "null"]
+                    format: date-time
+                    description: Issuance the summary was computed for (null if no features).
+                    example: "2026-06-30T22:00:00Z"
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
