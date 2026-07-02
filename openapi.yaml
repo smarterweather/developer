@@ -4248,6 +4248,13 @@ components:
             True when the value is older than the product's update cadence
             allows (stale).
           example: false
+        status:
+          type: string
+          description: |
+            Outcome of the point query. `ok` when a value is present;
+            `unavailable` when no sample exists at the location (within domain).
+          enum: [ok, unavailable]
+          example: ok
 
     PointValueItem:
       type: object
