@@ -3,7 +3,7 @@
   "name": "io.github.smarterweather/weather",
   "title": "Smarter Weather",
   "description": "Probabilistic weather forecasts, active alerts, and multi-model comparison from Smarter Weather.",
-  "version": "0.0.0-preview.2",
+  "version": "1.0.0",
   "repository": {
     "url": "https://github.com/smarterweather/developer",
     "source": "github",
@@ -20,7 +20,7 @@
     {
       "registryType": "npm",
       "identifier": "@smarterweather/mcp-weather",
-      "version": "0.0.0-preview.2",
+      "version": "1.0.0",
       "transport": {
         "type": "stdio"
       },
@@ -34,7 +34,7 @@
         },
         {
           "name": "SMARTERWEATHER_MCP_URL",
-          "description": "Override the target MCP endpoint. Useful for development, staging, or pre-Track-F-MVP setups where the production hostname is not yet live. Precedence: positional argument > SMARTERWEATHER_MCP_URL > package default (https://mcp.smarterweather.com/mcp).",
+          "description": "Override the target MCP endpoint. Useful for development or staging against a non-production sw-mcp deployment. Precedence: positional argument > SMARTERWEATHER_MCP_URL > package default (https://mcp.smarterweather.com/mcp).",
           "isRequired": false,
           "isSecret": false,
           "format": "string",

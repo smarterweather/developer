@@ -46,8 +46,8 @@ if (userArgs.includes('--version') || userArgs.includes('-v')) {
 const args = buildArgs(userArgs, {
   url: process.env.SMARTERWEATHER_MCP_URL,
   apiKey: process.env.SMARTERWEATHER_API_KEY,
-  // The prod hostname is the baked default. Pre-F.4 (cert/DNS still
-  // landing), users override via SMARTERWEATHER_MCP_URL=http://<dev-alb>/mcp;
+  // The live prod hostname is the baked default. For dev/staging,
+  // users override via SMARTERWEATHER_MCP_URL=http://<dev-alb>/mcp;
   // see README for the dev/staging snippet.
   defaultUrl: 'https://mcp.smarterweather.com/mcp',
 });

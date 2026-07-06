@@ -1,7 +1,5 @@
 # @smarterweather/mcp-weather
 
-> **Preview** — currently published under the `preview` dist-tag. Functional bridge; the URL default targets `https://mcp.smarterweather.com/mcp` and starts working when [F.4 cert/DNS](https://github.com/afisch710/SmarterWeather/issues/7148) lands. Until then, override the URL with `SMARTERWEATHER_MCP_URL` (see the **Dev / staging override** section below).
-
 A stdio-to-Streamable-HTTP bridge for the [Smarter Weather hosted MCP server](https://github.com/afisch710/SmarterWeather/issues/7148). Lets local-only MCP clients (Claude Desktop, Claude Code, Cursor, MCP Inspector, etc.) talk to `sw-mcp` over the network and authenticate via either:
 
 - **OAuth 2.1 + PKCE** (recommended for end users). The bridge runs the full MCP OAuth client — discovery, dynamic client registration, browser-based consent on `localhost`, and token caching at `~/.mcp-auth/`. You sign in once with your SmarterWeather account; tokens auto-refresh.
@@ -12,10 +10,8 @@ The package itself is a thin wrapper around [`mcp-remote`](https://www.npmjs.com
 ## Install
 
 ```bash
-npx -y @smarterweather/mcp-weather@preview --version
+npx -y @smarterweather/mcp-weather --version
 ```
-
-While the package is in pre-release, the `@preview` dist-tag is required. After GA, drop the suffix.
 
 ## Claude Desktop
 
@@ -28,7 +24,7 @@ Add to `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claud
   "mcpServers": {
     "smarterweather": {
       "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather@preview"]
+      "args": ["-y", "@smarterweather/mcp-weather"]
     }
   }
 }
@@ -43,7 +39,7 @@ When Claude Desktop starts the server, your default browser opens to a SmarterWe
   "mcpServers": {
     "smarterweather": {
       "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather@preview"],
+      "args": ["-y", "@smarterweather/mcp-weather"],
       "env": {
         "SMARTERWEATHER_API_KEY": "sw_live_…"
       }
@@ -63,7 +59,7 @@ Add to `~/.cursor/mcp.json` (the JSON shape matches Claude Desktop's `mcpServers
   "mcpServers": {
     "smarterweather": {
       "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather@preview"]
+      "args": ["-y", "@smarterweather/mcp-weather"]
     }
   }
 }
@@ -73,14 +69,14 @@ Add to `~/.cursor/mcp.json` (the JSON shape matches Claude Desktop's `mcpServers
 
 ## Dev / staging override
 
-Until F.4 cert/DNS lands, point the bridge at the dev ALB:
+To point the bridge at a non-production `sw-mcp` deployment (e.g. a dev ALB), override the URL:
 
 ```json
 {
   "mcpServers": {
     "smarterweather-dev": {
       "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather@preview"],
+      "args": ["-y", "@smarterweather/mcp-weather"],
       "env": {
         "SMARTERWEATHER_MCP_URL": "http://<dev-alb-dns>/mcp"
       }
@@ -92,7 +88,7 @@ Until F.4 cert/DNS lands, point the bridge at the dev ALB:
 Or pass the URL as a positional arg (precedence: positional > env > default):
 
 ```jsonc
-"args": ["-y", "@smarterweather/mcp-weather@preview", "http://<dev-alb-dns>/mcp"]
+"args": ["-y", "@smarterweather/mcp-weather", "http://<dev-alb-dns>/mcp"]
 ```
 
 ## Environment variables
@@ -111,7 +107,7 @@ Power users can pass any [`mcp-remote` flag](https://www.npmjs.com/package/mcp-r
 
 ```jsonc
 "args": [
-  "-y", "@smarterweather/mcp-weather@preview",
+  "-y", "@smarterweather/mcp-weather",
   "--debug",
   "--transport", "http-only"
 ]
