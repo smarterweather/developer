@@ -65,6 +65,7 @@ info:
     | `narrations`| no      | experimental | LLM-generated narrative text for current/short-term conditions. |
     | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/SWO/MCD).   |
     | `uncertainty` | no    | experimental | NBM probabilistic sub-objects on hourly and daily forecasts (CONUS/Alaska/Hawaii only). |
+    | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
 
     `radar` and `products` (wx visual-products manifest) are **not** in the
     v1 token set. They will land in Phase 5 alongside a separate
@@ -91,10 +92,18 @@ servers:
 tags:
   - name: Weather
     description: Public weather data endpoints.
+  - name: Observations
+    description: |
+      Surface observations and upper-air soundings sampled at or nearest to a
+      point.
   - name: Alerts
     description: NWS weather alert lookups.
   - name: Storms
     description: Severe-weather tracking products (storm tracks, etc.).
+  - name: Products
+    description: |
+      Gridded / vector weather products and derived summaries (risk-zone
+      population exposure, etc.).
   - name: Geocode
     description: |
       Forward, reverse, and typeahead geocoding for locations within
@@ -103,6 +112,10 @@ tags:
     description: Service health.
   - name: Meta
     description: Cross-cutting platform endpoints (deprecations, etc.).
+  - name: Agriculture
+    description: |
+      Agriculture-derived indices (Growing Degree Units / GDD) computed on
+      read from stored daily temperature extremes.
 
 security:
   - bearerAuth: []
@@ -378,6 +391,122 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/products/{product_id}/exposure-summary:
+    get:
+      operationId: getProductExposureSummary
+      summary: Cumulative population exposure for a risk-zone product.
+      description: |
+        Returns the total population inside all risk-band polygons at or above
+        a threshold level for a risk-zone product's latest issuance — the data
+        behind headlines like "~57M under major heat risk".
+
+        Generic across every product that publishes exclusive risk-band
+        polygons (NWS HeatRisk today; SPC categorical, WPC flood, and
+        winter/cold outlooks later). Because the bands are spatially exclusive,
+        a cumulative `>= min_level` figure is a straight sum with no
+        double-counting.
+
+        ### Parameters
+
+        `min_level` is the inclusive cumulative threshold on the ordinal
+        `risk_level` (e.g. HeatRisk `3` = Major and above). When omitted the
+        upstream default (`1`, any elevated risk) applies. `valid_time` selects
+        a specific issuance (RFC3339); omit it for the latest.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=60,
+        stale-while-revalidate=60`. Edge cache key includes the query string
+        so each `min_level` / `valid_time` variant gets its own TTL.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          description: |
+            Risk-zone product identifier (lowercase, digits, underscores),
+            e.g. `heatrisk_day1_conus`.
+          schema:
+            type: string
+            pattern: '^[a-z0-9_]+$'
+            minLength: 1
+            maxLength: 128
+          example: "heatrisk_day1_conus"
+        - name: min_level
+          in: query
+          required: false
+          description: Inclusive cumulative threshold on the ordinal risk_level.
+          schema:
+            type: integer
+            minimum: 0
+          example: 3
+        - name: valid_time
+          in: query
+          required: false
+          description: RFC3339 issuance (valid_time) to summarize. Defaults to the latest.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-06-30T22:00:00Z"
+      responses:
+        '200':
+          description: Cumulative population-exposure summary.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [product_id, min_level, population, feature_count]
+                properties:
+                  product_id:
+                    type: string
+                    example: "heatrisk_day1_conus"
+                  min_level:
+                    type: integer
+                    example: 3
+                  population:
+                    type: integer
+                    format: int64
+                    description: Total population under risk_level >= min_level.
+                    example: 57000000
+                  feature_count:
+                    type: integer
+                    description: Number of risk-band polygons contributing to the sum.
+                    example: 2
+                  valid_time:
+                    type: ["string", "null"]
+                    format: date-time
+                    description: Issuance the summary was computed for (null if no features).
+                    example: "2026-06-30T22:00:00Z"
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/storm-tracks:
     get:
       operationId: getStormTracks
@@ -391,10 +520,12 @@ paths:
 
         ### Site filter
 
-        `site` is an optional 4-character ICAO radar site identifier
-        (e.g., `KLOT`, `KTLX`). Empty `site` returns one feature per
-        active radar cell across the network; setting `site` filters
-        to that ICAO. Site IDs are uppercased server-side.
+        `site` is an optional NEXRAD radar site code. The storm-track
+        pipeline keys on the 3-letter site code (e.g., `LOT`, `TLX`);
+        a 4-letter ICAO (e.g., `KLOT`) is also accepted. Empty `site`
+        returns one feature per active radar cell across the network;
+        setting `site` filters to that radar. Site IDs are uppercased
+        server-side.
 
         ### Detailed mode
 
@@ -433,14 +564,16 @@ paths:
           in: query
           required: false
           description: |
-            Optional 4-character ICAO radar site code (e.g., `KLOT`).
-            Empty returns active cells across all radar sites.
+            Optional NEXRAD radar site code. The storm-track pipeline keys
+            on the 3-letter site code (e.g., `LOT`); a 4-letter ICAO (e.g.,
+            `KLOT`) is also accepted. Empty returns active cells across all
+            radar sites.
           schema:
             type: string
-            pattern: '^[A-Za-z][A-Za-z0-9]{3}$'
-            minLength: 4
+            pattern: '^[A-Za-z][A-Za-z0-9]{2,3}$'
+            minLength: 3
             maxLength: 4
-          example: "KLOT"
+          example: "LOT"
         - name: detailed
           in: query
           required: false
@@ -483,6 +616,192 @@ paths:
           $ref: '#/components/responses/Problem502'
         '503':
           $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/observations:
+    get:
+      operationId: getObservations
+      summary: Get latest METAR station observations as GeoJSON.
+      description: |
+        Returns a GeoJSON FeatureCollection of METAR surface observations
+        ingested from MADIS. By default returns the latest observation per
+        station within the last 2 hours. Optional `station`, `hours`, and
+        bounding-box (`min_lon`, `min_lat`, `max_lon`, `max_lat`) filters
+        are forwarded to the reader.
+      tags: [Observations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - name: station
+          in: query
+          schema:
+            type: string
+        - name: hours
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+        - name: min_lon
+          in: query
+          schema:
+            type: number
+        - name: min_lat
+          in: query
+          schema:
+            type: number
+        - name: max_lon
+          in: query
+          schema:
+            type: number
+        - name: max_lat
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: GeoJSON FeatureCollection of METAR observations.
+          content:
+            application/geo+json:
+              schema:
+                type: object
+        '502':
+          $ref: '#/components/responses/Problem502'
+
+  /v1/observations/nearest:
+    get:
+      operationId: getObservationsNearest
+      summary: Get nearest METAR station observations.
+      description: |
+        Returns the N nearest METAR stations to a point, deduplicated to
+        the latest observation per station, sorted by distance.
+      tags: [Observations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - name: n
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 1
+      responses:
+        '200':
+          description: GeoJSON FeatureCollection of nearest METAR observations.
+          content:
+            application/geo+json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '502':
+          $ref: '#/components/responses/Problem502'
+
+  /v1/soundings:
+    get:
+      operationId: getSoundings
+      summary: Get latest RAOB radiosonde soundings as GeoJSON.
+      description: |
+        Returns a GeoJSON FeatureCollection of RAOB (radiosonde) vertical
+        soundings ingested from MADIS. By default returns the latest sounding
+        per station within the last 24 hours. Optional `station` and `hours`
+        filters are forwarded to the reader.
+
+        Heavy `profile` and `wind_profile` arrays are stripped from bulk
+        responses to keep payloads small for map overlays. Use
+        `/v1/soundings/nearest` to fetch the full vertical profile for a
+        specific site.
+
+        Each feature retains `station_id`, `observed_at`, `elevation_m`,
+        `level_count`, `wind_level_count`, and the `derived` indices object
+        (see `/v1/soundings/nearest` for field descriptions). The reader
+        also injects `valid_time` from the database column.
+      tags: [Observations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: station
+          in: query
+          schema:
+            type: string
+        - name: hours
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+      responses:
+        '200':
+          description: GeoJSON FeatureCollection of RAOB soundings (profile stripped).
+          content:
+            application/geo+json:
+              schema:
+                type: object
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/soundings/nearest:
+    get:
+      operationId: getSoundingsNearest
+      summary: Get nearest RAOB radiosonde soundings.
+      description: |
+        Returns the N nearest RAOB (radiosonde) vertical soundings to a
+        point, deduplicated to the latest sounding per station, sorted by
+        distance. Soundings are launched at 00Z/12Z, so data can be several
+        hours old.
+
+        Each feature carries:
+
+        - `profile` — the pressure-indexed thermodynamic sounding (mandatory
+          + significant-temperature levels merged, sorted surface-first) with
+          aligned arrays `pressure_hpa`, `height_m` (null at
+          significant-temperature-only levels), `temperature_c`, `dewpoint_c`,
+          `wind_dir`, `wind_speed_kt`, plus `level_count`.
+        - `wind_profile` — a height-indexed wind sounding (mandatory +
+          significant-wind levels, sorted ascending by height MSL) with aligned
+          arrays `height_m`, `wind_dir`, `wind_speed_kt`, plus
+          `wind_level_count`. Use this for hodographs and shear.
+        - `derived` — server-computed thermodynamic/kinematic indices
+          (metric-raw, every field nullable): `sbcape`/`sbcin`,
+          `mucape`/`mucin`, `mlcape`/`mlcin` (J/kg); `lifted_index`,
+          `k_index`, `total_totals` (°C); `pwat_mm`; `freezing_level_m`;
+          `lcl_*`/`lfc_*`/`el_*` pressure and height; `bulk_shear_0_6km_kt`.
+        - station metadata: `station_id`, `observed_at`, `elevation_m`.
+
+        The full `properties` bag is forward-compatible: the reader pipeline
+        may add keys without a sw-api release, so treat unknown keys as opaque.
+      tags: [Observations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - name: n
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+            default: 1
+      responses:
+        '200':
+          description: GeoJSON FeatureCollection of nearest RAOB soundings.
+          content:
+            application/geo+json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '502':
+          $ref: '#/components/responses/Problem502'
         '504':
           $ref: '#/components/responses/Problem504'
 
@@ -579,6 +898,176 @@ paths:
                 $ref: '#/components/schemas/StormReportsFeatureCollection'
         '400':
           $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/nexrad/features:
+    get:
+      operationId: getNexradFeatures
+      summary: Get NEXRAD Level III algorithm-detection overlays as GeoJSON.
+      description: |
+        Returns a GeoJSON `FeatureCollection` of NEXRAD Level III
+        algorithm-detection overlays — Hail Index, Mesocyclone, and
+        Tornado Vortex Signature (TVS) — for a single radar site. Each
+        feature carries `site_id` plus the product-specific detection
+        payload (e.g. probability-of-hail / max hail size, mesocyclone
+        or TVS strength) in a forward-compat `properties` bag. Treat
+        unknown keys as opaque additive data.
+
+        ### Product selector
+
+        `product` is required and selects which detection layer to
+        return: `hail_index`, `mesocyclone`, or `tvs`.
+
+        ### Site selector
+
+        `site` is the 3-letter Level III radar site code (e.g. `TLX`);
+        a 4-letter ICAO (e.g. `KTLX`) is also accepted and uppercased
+        server-side. As an alternative to `site`, pass `lat` + `lon`
+        together to resolve the nearest radar server-side.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=30,
+        stale-while-revalidate=30`.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Storms]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product
+          in: query
+          required: true
+          description: |
+            Detection product to return. One of `hail_index`,
+            `mesocyclone`, `tvs`.
+          schema:
+            type: string
+            enum: [hail_index, mesocyclone, tvs]
+          example: "hail_index"
+        - name: site
+          in: query
+          required: false
+          description: |
+            NEXRAD Level III radar site code. 3-letter (e.g. `TLX`) or
+            4-letter ICAO (e.g. `KTLX`); uppercased server-side. Omit to
+            use the `lat`/`lon` nearest-radar fallback.
+          schema:
+            type: string
+            pattern: '^[A-Za-z][A-Za-z0-9]{2,3}$'
+            minLength: 3
+            maxLength: 4
+          example: "TLX"
+        - name: lat
+          in: query
+          required: false
+          description: |
+            Latitude for nearest-radar resolution. Must be provided
+            together with `lon`; ignored when `site` is set.
+          schema:
+            type: number
+            format: double
+          example: 35.33
+        - name: lon
+          in: query
+          required: false
+          description: |
+            Longitude for nearest-radar resolution. Must be provided
+            together with `lat`; ignored when `site` is set.
+          schema:
+            type: number
+            format: double
+          example: -97.28
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            detections exist for the product/site (200, not 404).
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/NexradFeaturesFeatureCollection'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/tropical:
+    get:
+      operationId: getTropical
+      summary: Get the aggregated NHC tropical overlay as GeoJSON.
+      description: |
+        Returns a single GeoJSON `FeatureCollection` aggregating the
+        latest National Hurricane Center tropical overlay: forecast cone,
+        track line, forecast points, and coastal watch/warning segments
+        for every active storm, plus the 7-day Tropical Weather Outlook
+        (TWO) areas. Each feature carries a `kind` property the client
+        uses to pick its renderer (`cone`, `track`, `points`,
+        `watch_warning`, `two`); the `properties` bag is forward-compat.
+
+        The endpoint takes no parameters.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=60,
+        stale-while-revalidate=60`.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Storms]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            tropical systems or outlook areas are active (200, not 404).
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/TropicalFeatureCollection'
         '401':
           $ref: '#/components/responses/Problem401'
         '403':
@@ -1001,6 +1490,325 @@ paths:
                     items:
                       $ref: '#/components/schemas/Deprecation'
 
+  /v1/agriculture/growing-degree-days:
+    get:
+      operationId: getGrowingDegreeDays
+      summary: Growing Degree Units (GDU / GDD) for a point.
+      description: |
+        Returns Growing Degree Units (also called Growing Degree Days) for a
+        US point (CONUS, Alaska, Hawaii), computed on read from stored daily
+        maximum/minimum temperatures. No GDU grids are stored; the values are
+        derived per request from the temperature bundles, so a crop's
+        base/upper thresholds and the simple/modified method can be selected
+        freely without re-running the pipeline.
+
+        **Two modes:**
+
+        - **Forecast (default).** Without `season_start`, the response carries
+          a per-day GDU series across the NBM forecast horizon (`days`).
+        - **Season cumulative.** With `season_start` (a `YYYY-MM-DD` local
+          date within the ~180-day observed window), the response stitches
+          RTMA observed daily history + today's partial (hourly on-read
+          rollup) + NBM forecast, returns a `cumulative_total`, and adds a
+          per-day `cumulative_gdu` running sum. This is the number a grower
+          tracks against crop growth-stage milestones.
+
+        **Crops.** Pass a catalog `crop` id (e.g. `corn`, `soybean`,
+        `wheat_winter`, `cotton`, `alfalfa`) to use calibrated thresholds, or
+        `crop=custom` with `base_temp_c` (and optionally `upper_temp_c` /
+        `method`) to supply your own.
+
+        Every response echoes the resolved `method`, `thresholds` (always in
+        °C), and a `meta` provenance block (`day_definition`,
+        `computation_path`, `source`, `unit`, any `gaps`) so nothing is
+        silently assumed.
+
+        Launches behind the `AGRICULTURE_GDD_ENABLED` feature flag: returns
+        `404` when the flag is off.
+      tags: [Agriculture]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - name: crop
+          in: query
+          required: true
+          description: |
+            Crop catalog id (e.g. `corn`, `soybean`, `wheat_winter`,
+            `cotton`, `alfalfa`) or `custom` to supply thresholds directly.
+          schema:
+            type: string
+          example: corn
+        - name: season_start
+          in: query
+          required: false
+          description: |
+            Season/planting start as a `YYYY-MM-DD` local date. Presence
+            switches the response into cumulative season-to-date mode. Must be
+            within the ~180-day observed-history window.
+          schema:
+            type: string
+            format: date
+          example: "2026-05-01"
+        - name: days
+          in: query
+          required: false
+          description: Forecast horizon in days (default 10).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 30
+            default: 10
+        - name: day_definition
+          in: query
+          required: false
+          description: |
+            Daily boundary: `nws` (default; native NBM MaxT/MinT period
+            extremes) or `local_calendar` (midnight-to-midnight local day).
+          schema:
+            type: string
+            enum: [nws, local_calendar]
+            default: nws
+        - name: unit
+          in: query
+          required: false
+          description: |
+            Unit system for GDU + temperatures. `imperial` (default) uses
+            °F-days; `metric` uses °C-days. Thresholds are always echoed in
+            °C regardless.
+          schema:
+            type: string
+            enum: [imperial, metric]
+            default: imperial
+        - name: base_temp_c
+          in: query
+          required: false
+          description: Custom base threshold in °C. Required when `crop=custom`.
+          schema:
+            type: number
+            format: double
+        - name: upper_temp_c
+          in: query
+          required: false
+          description: |
+            Custom upper cutoff in °C (enables the modified method). Optional.
+          schema:
+            type: number
+            format: double
+        - name: method
+          in: query
+          required: false
+          description: |
+            GDU method for custom crops. Defaults based on whether
+            `upper_temp_c` is supplied.
+          schema:
+            type: string
+            enum: [simple, modified]
+        - name: include_milestones
+          in: query
+          required: false
+          description: Include the crop's growth-stage GDU milestones.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Growing Degree Units for the requested point.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrowingDegreeDays'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/point:
+    get:
+      operationId: getPointValue
+      summary: Curated point value(s) for allowlisted stored data.
+      description: |
+        Returns the latest value of allowlisted stored data sampled at a point,
+        with friendly output (canonical `unit`, an optional `category` label,
+        `observed_at`, and a staleness flag).
+
+        This is the one curated wrapper over the internal point-query: it serves
+        only the `(product, var)` pairs on a server-side **allowlist**, so the
+        public surface stays safe and small while every widget/card is
+        onboarded by adding an allowlist entry — no new endpoint. Requesting a
+        `(product, var)` that is not allowlisted returns `404` (single form) or
+        a per-item `not_allowlisted` status (batch form).
+
+        ### Data kinds (transparent to the caller)
+
+        The allowlist entry's kind selects the internal resolution — a
+        **scalar** raster/OM cell, or a vector **zone** (point-in-polygon
+        outlook, e.g. SPC categorical / fire-weather). Both collapse to one
+        answer at a location and share one envelope: `value`/`unit` are present
+        for scalars and ordinal bands, `category`/`label` name the band, and a
+        point in no band is a valid answer with `value: null` and
+        `category: "none"` (not a 404).
+
+        ### Single vs. batch
+
+        - **Single** — `product` + `var` + `lat` + `lon` returns one
+          `PointValue`.
+        - **Batch** — `select` (multiple `(product, var)`) and/or `points`
+          (multiple locations) returns a `PointBatchResponse` of per-point,
+          per-value items, each with a `status`. One request can populate a
+          whole family card (several metrics) or a map of locations; partial
+          conditions (out of domain, not allowlisted, no data) are reported
+          per item and never fail the whole request.
+
+        ### Coverage
+
+        Each allowlisted entry carries a coverage domain; a point outside it
+        returns `404` (single) or an `out_of_domain` item (batch) without an
+        upstream call. Scalar values are sampled from the nearest grid cell
+        (products are snapped to a ~1 km grid), so nearby requests share cache
+        entries.
+
+        ### Staleness
+
+        `approximate` is `true` when the value is older than the product's update
+        cadence allows (e.g. a SPoRT-LIS daily analysis older than ~36 h, an
+        MRMS hourly accumulation older than ~3 h).
+
+        ### Caching
+
+        Successful responses carry `Cache-Control` with a `max-age` keyed to the
+        product's cadence (SPoRT-LIS daily: 30 min; MRMS QPE hourly: 5 min). The
+        service additionally caches by `(product, var, rounded lat/lon)`.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product
+          in: query
+          required: false
+          description: |
+            Allowlisted stored product identifier (lowercase, digits,
+            underscores), e.g. `sport_rsm_0_2m_pct_conus`,
+            `mrms_qpe_24h_pass2_conus`, or the outlook `spc_day1_categorical`.
+            Single form: pair with `var` + `lat` + `lon`. Ignored when `select`
+            is provided.
+          schema:
+            type: string
+            pattern: '^[a-z0-9_]+$'
+            minLength: 1
+            maxLength: 128
+          example: sport_rsm_0_2m_pct_conus
+        - name: var
+          in: query
+          required: false
+          description: |
+            Variable identifier within the product, e.g. `rsm_0_2m_pct`,
+            `qpe_24h`, or `risk` for zone outlooks. Ignored when `select` is
+            provided.
+          schema:
+            type: string
+            pattern: '^[a-z0-9_]+$'
+            minLength: 1
+            maxLength: 128
+          example: rsm_0_2m_pct
+        - name: lat
+          in: query
+          required: false
+          description: Latitude of the point (single form). Ignored when `points` is provided.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 41.9
+        - name: lon
+          in: query
+          required: false
+          description: Longitude of the point (single form). Ignored when `points` is provided.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -93.6
+        - name: select
+          in: query
+          required: false
+          description: |
+            Batch form. One or more `product:var` selectors (each individually
+            allowlisted). Repeat the parameter or comma-join within a single
+            value, e.g.
+            `select=sport_rsm_0_2m_pct_conus:rsm_0_2m_pct&select=spc_day1_categorical:risk`.
+            Presence of `select` (or `points`) switches the response to
+            `PointBatchResponse`. Max 25 selectors; points × selectors ≤ 500.
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 25
+            items:
+              type: string
+              pattern: '^[a-z0-9_]+:[a-z0-9_]+(,[a-z0-9_]+:[a-z0-9_]+)*$'
+              minLength: 3
+              maxLength: 1024
+          example: [sport_rsm_0_2m_pct_conus:rsm_0_2m_pct, spc_day1_categorical:risk]
+        - name: points
+          in: query
+          required: false
+          description: |
+            Batch form. One or more `lat,lon` locations. Repeat the parameter
+            for multiple points (Go query parsing rejects `;`), e.g.
+            `points=41.9,-93.6&points=42.0,-93.4`. Presence of `points` (or
+            `select`) switches the response to `PointBatchResponse`. Max 100
+            points; points × selectors ≤ 500.
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 100
+            items:
+              type: string
+              pattern: '^-?[0-9]+(\.[0-9]+)?,-?[0-9]+(\.[0-9]+)?$'
+              minLength: 3
+              maxLength: 64
+          example: ["41.9,-93.6", "42.0,-93.4"]
+      responses:
+        '200':
+          description: |
+            The requested value(s). Single form (`product`+`var`+`lat`+`lon`)
+            returns a `PointValue`; batch form (`select` and/or `points`)
+            returns a `PointBatchResponse`.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PointValue'
+                  - $ref: '#/components/schemas/PointBatchResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1413,8 +2221,65 @@ components:
           $ref: '#/components/schemas/Narrations'
         guidance:
           $ref: '#/components/schemas/Guidance'
+        nowcast:
+          $ref: '#/components/schemas/Nowcast'
         meta:
           $ref: '#/components/schemas/Meta'
+
+    Nowcast:
+      type: object
+      description: |
+        Minute-scale MRMS radar precipitation nowcast for the queried
+        location. Populated when `include=nowcast` is requested.
+      properties:
+        interval_seconds:
+          type: integer
+          example: 300
+        generated_at:
+          type: string
+          format: date-time
+          description: Nowcast reference (anchor) time from the latest radar frame.
+        summary:
+          $ref: '#/components/schemas/NowcastSummary'
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/NowcastPoint'
+
+    NowcastSummary:
+      type: object
+      properties:
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: [string, "null"]
+          format: date-time
+        duration_minutes:
+          type: [integer, "null"]
+        type:
+          type: string
+        peak_intensity:
+          type: string
+          enum: [none, light, moderate, heavy]
+        already_occurring:
+          type: boolean
+
+    NowcastPoint:
+      type: object
+      required: [time, type, intensity_dbz, intensity]
+      properties:
+        time:
+          type: string
+          format: date-time
+        type:
+          type: string
+        intensity_dbz:
+          type: number
+          format: double
+        intensity:
+          type: string
+          enum: [none, light, moderate, heavy]
 
     # -----------------------------------------------------------------------
     # Location / current / hourly / daily
@@ -1889,6 +2754,21 @@ components:
           items:
             $ref: '#/components/schemas/DailyThreat'
           description: Per-day hazard callouts (winter, severe, heat, etc.).
+        relative_day:
+          type: integer
+          description: |
+            Signed calendar offset from the local current date at request time
+            (-1 = yesterday, 0 = today, 1 = tomorrow). Before 6 AM local an
+            extra entry with `relative_day: -1` prepends the in-progress
+            overnight row.
+        active_period:
+          type: [string, "null"]
+          enum: [day, night]
+          description: |
+            Non-null on exactly the row containing the current local time
+            (`day` during 06:00–17:59, `night` during 18:00–05:59). Clients
+            use this with `relative_day` to label rows Today/Tonight without
+            wall-clock heuristics.
         uncertainty:
           description: |
             Optional NBM probabilistic sub-object for this day. Populated only
@@ -2369,6 +3249,73 @@ components:
             $ref: '#/components/schemas/GeoJSONReportsFeature'
       additionalProperties: true
 
+    NexradFeaturesFeatureCollection:
+      type: object
+      description: |
+        GeoJSON FeatureCollection of NEXRAD Level III algorithm-detection
+        overlays (Hail Index / Mesocyclone / TVS). Returned as
+        `application/geo+json` from `GET /v1/nexrad/features`.
+
+        Each feature carries `site_id` plus product-specific detection
+        fields in a forward-compat `properties` bag; clients should treat
+        unknown keys as opaque additive data and never fail-closed on
+        their presence.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONOpaqueFeature'
+      additionalProperties: true
+
+    TropicalFeatureCollection:
+      type: object
+      description: |
+        GeoJSON FeatureCollection aggregating the latest NHC tropical
+        overlay (cone / track / points / watch-warning per active storm
+        plus 7-day TWO areas). Returned as `application/geo+json` from
+        `GET /v1/tropical`. Each feature carries a `kind` property the
+        client uses to choose its renderer; the property bag is
+        forward-compat.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONOpaqueFeature'
+      additionalProperties: true
+
+    GeoJSONOpaqueFeature:
+      type: object
+      description: |
+        Generic GeoJSON Feature with opaque geometry and a forward-compat
+        property bag. Used by overlays (NEXRAD detections, tropical) whose
+        per-feature property schema is owned by the reader pipeline and
+        may evolve without a sw-api release. Treat `geometry` and all
+        `properties` keys as opaque additive data.
+      required: [type, geometry, properties]
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        geometry:
+          type: object
+          description: |
+            GeoJSON geometry (Point / LineString / Polygon / Multi*).
+            Treat as opaque GeoJSON; pass through to the renderer
+            unchanged.
+          additionalProperties: true
+        properties:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+
     GeoJSONReportsFeature:
       type: object
       description: |
@@ -2561,8 +3508,8 @@ components:
           example: "A1"
         site_id:
           type: string
-          description: 4-character ICAO radar site code that produced the cell.
-          example: "KTLX"
+          description: 3-letter NEXRAD radar site code that produced the cell.
+          example: "TLX"
         scan_time:
           type: string
           format: date-time
@@ -2691,6 +3638,34 @@ components:
           description: IANA timezone identifier.
         nearest_radar:
           $ref: '#/components/schemas/NearestRadar'
+        nearest_station:
+          $ref: '#/components/schemas/NearestStation'
+
+    NearestStation:
+      type: object
+      description: Metadata for the nearest METAR observation station.
+      required: [id, lat, lon, distance_km]
+      properties:
+        id:
+          type: string
+          description: ICAO station identifier (e.g., `KJFK`).
+          example: "KJFK"
+        name:
+          type: string
+        state:
+          type: string
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        distance_km:
+          type: number
+          format: double
+          minimum: 0
+        elevation_m:
+          type: [number, "null"]
 
     NearestRadar:
       type: object
@@ -2875,7 +3850,8 @@ components:
       type: object
       x-stability: experimental
       description: |
-        LLM-generated narrative text for current and short-term conditions.
+        Rule-based narrative text for current and short-term conditions,
+        generated deterministically from the blended forecast (not an LLM).
 
         **Experimental.** Field shapes and prose styling may change during
         Phase 2 closed beta without notice; the 90-day breaking-change
@@ -2883,7 +3859,17 @@ components:
       properties:
         current:
           type: string
-          description: Short narrative describing the current conditions.
+          description: |
+            Time-of-day-aware summary of current conditions. Weaves in, when
+            available, a category- and time-aware alert cue (e.g. "Elevated
+            fire-weather conditions through 1 AM."), imminent-precip nowcast, the
+            current observation, the next-few-hours trend, and a time-aware
+            high/low (today's high during the day; tonight's low and tomorrow's
+            high in the evening). Phrasing varies by location and hour for natural
+            variety but is stable between refreshes within the hour. Temperatures
+            follow the requested `units`. Requires `current` data; `daily` adds
+            the high/low, `alerts` the alert cue, and `nowcast` the
+            imminent-precip cue.
         short_term:
           type: string
           description: Narrative covering the next few hours.
@@ -3078,6 +4064,325 @@ components:
         message:
           type: string
           description: Human-readable explanation. Stable for logging; clients should branch on `code`.
+
+    # -----------------------------------------------------------------------
+    # Agriculture — Growing Degree Units (GDU / GDD)
+    # -----------------------------------------------------------------------
+
+    GddThresholds:
+      type: object
+      description: Resolved GDU thresholds, always expressed in °C.
+      required: [base_temp_c]
+      properties:
+        base_temp_c:
+          type: number
+          format: double
+          description: Base (lower) temperature threshold in °C.
+        upper_temp_c:
+          type: number
+          format: double
+          description: Upper cutoff in °C (present only for the modified method).
+
+    GddGap:
+      type: object
+      description: A run of missing observed days affecting a cumulative total.
+      required: [start, end, days, filled]
+      properties:
+        start:
+          type: string
+          format: date
+          description: First missing day (inclusive).
+        end:
+          type: string
+          format: date
+          description: Last missing day (inclusive).
+        days:
+          type: integer
+          description: Number of missing days in the run.
+        filled:
+          type: string
+          description: |
+            How the gap was handled, e.g. `interpolated` (short gap filled
+            from adjacent days) or `unfilled` (long gap surfaced, not
+            silently under-counted).
+
+    GddMeta:
+      type: object
+      description: Provenance for a GDU response. Nothing is silently assumed.
+      required: [day_definition, computation_path, source, unit]
+      properties:
+        day_definition:
+          type: string
+          enum: [nws, local_calendar]
+          description: The daily boundary used.
+        computation_path:
+          type: string
+          description: |
+            How the series was assembled (e.g. forecast-only vs. stitched
+            observed + partial + forecast), for grid-vs-point transparency.
+        source:
+          type: string
+          description: Backing product mix (NBM / RTMA) used for this answer.
+        freshness:
+          type: string
+          description: Human-readable data-age hint, when available.
+        unit:
+          type: string
+          enum: [imperial, metric]
+          description: Unit system applied to numeric GDU + temperature fields.
+        approximate:
+          type: boolean
+          description: True when gaps were interpolated or coverage was partial.
+        gaps:
+          type: array
+          description: Missing-day runs affecting a cumulative total.
+          items:
+            $ref: '#/components/schemas/GddGap'
+
+    GddDay:
+      type: object
+      description: One day of GDU output.
+      required: [date, gdu]
+      properties:
+        date:
+          type: string
+          format: date
+          description: Local calendar date for this day.
+        gdu:
+          type: number
+          format: double
+          description: GDU accrued on this day, in the requested unit.
+        tmax_c:
+          type: number
+          format: double
+          description: Daily maximum temperature in °C (metric responses).
+        tmin_c:
+          type: number
+          format: double
+          description: Daily minimum temperature in °C (metric responses).
+        tmax_f:
+          type: number
+          format: double
+          description: Daily maximum temperature in °F (imperial responses).
+        tmin_f:
+          type: number
+          format: double
+          description: Daily minimum temperature in °F (imperial responses).
+        cumulative_gdu:
+          type: number
+          format: double
+          description: |
+            Running season-to-date total through this day. Present only in
+            cumulative mode (when `season_start` was supplied).
+        missing:
+          type: boolean
+          description: True when the underlying day had no temperature data.
+        interpolated:
+          type: boolean
+          description: True when this day's value was interpolated across a gap.
+
+    GddMilestone:
+      type: object
+      description: |
+        A crop growth-stage GDU hint from the catalog. Interpretation aid for
+        clients; not a server-computed threshold.
+      required: [stage, gdu]
+      properties:
+        stage:
+          type: string
+          description: Growth-stage label (e.g. `emergence`, `silking`).
+        gdu:
+          type: number
+          format: double
+          description: Cumulative GDU (requested unit) at which the stage is reached.
+
+    PointValue:
+      type: object
+      description: |
+        A single allowlisted value sampled at a point, with friendly metadata.
+        The single-form wire shape for GET /v1/point (scalar or zone).
+      required: [product, var, value, approximate]
+      properties:
+        product:
+          type: string
+          description: Echoed product identifier.
+          example: sport_rsm_0_2m_pct_conus
+        var:
+          type: string
+          description: Echoed variable identifier.
+          example: rsm_0_2m_pct
+        value:
+          type: [number, "null"]
+          format: double
+          description: |
+            The sampled value in `unit` (scalar), or the ordinal level of the
+            containing band (zone). `null` when a zone point is in no band
+            (`category: "none"`).
+          example: 34.2
+        unit:
+          type: string
+          description: Canonical unit of `value` (clients convert for display).
+          example: percentile
+        category:
+          type: string
+          description: |
+            Optional human category the value falls into (e.g. soil-moisture
+            `dry`/`normal`/`moist`, or an outlook band like `slight`). The
+            explicit value `"none"` means a zone point is in no band. Omitted
+            for scalars without categories.
+          example: dry
+        label:
+          type: string
+          description: |
+            Optional human display label for a named band (e.g. `Slight`,
+            `Elevated`). Omitted for plain scalars.
+          example: Slight
+        observed_at:
+          type: string
+          format: date-time
+          description: Valid time of the sampled value / outlook.
+          example: "2026-06-30T12:00:00Z"
+        approximate:
+          type: boolean
+          description: |
+            True when the value is older than the product's update cadence
+            allows (stale).
+          example: false
+        status:
+          type: string
+          description: |
+            Outcome of the point query. `ok` when a value is present;
+            `unavailable` when no sample exists at the location (within domain).
+          enum: [ok, unavailable]
+          example: ok
+
+    PointValueItem:
+      type: object
+      description: |
+        One resolved value within a PointBatchResponse. Superset of PointValue
+        with a per-item `status` so a single unavailable/out-of-domain value
+        does not fail the whole request.
+      required: [product, var, approximate, status]
+      properties:
+        product:
+          type: string
+          description: Echoed product identifier.
+          example: spc_day1_categorical
+        var:
+          type: string
+          description: Echoed variable identifier.
+          example: risk
+        value:
+          type: [number, "null"]
+          format: double
+          description: |
+            The sampled value / band ordinal. Omitted for non-`ok` items and
+            `null`/omitted for a zone point in no band.
+          example: 2
+        unit:
+          type: string
+          description: Canonical unit of `value` (clients convert for display).
+          example: mm
+        category:
+          type: string
+          description: |
+            Human category (or `"none"` for a zone point in no band). Omitted
+            when not applicable.
+          example: slight
+        label:
+          type: string
+          description: Human display label for a named band. Omitted otherwise.
+          example: Slight
+        observed_at:
+          type: string
+          format: date-time
+          description: Valid time of the sampled value / outlook.
+          example: "2026-07-01T12:00:00Z"
+        approximate:
+          type: boolean
+          description: True when the value is stale for its cadence.
+          example: false
+        status:
+          type: string
+          description: |
+            Per-item outcome. `ok` — resolved (a zone `"none"` is still `ok`).
+            `not_allowlisted` — the selector is not curated. `out_of_domain` —
+            the point is outside the product's coverage. `unavailable` — no data
+            at the point.
+          enum: [ok, not_allowlisted, out_of_domain, unavailable]
+          example: ok
+
+    PointBatchResult:
+      type: object
+      description: All requested values at one location.
+      required: [lat, lon, values]
+      properties:
+        lat:
+          type: number
+          format: double
+          description: Echoed latitude of the requested point.
+          example: 41.9
+        lon:
+          type: number
+          format: double
+          description: Echoed longitude of the requested point.
+          example: -93.6
+        values:
+          type: array
+          description: One item per requested selector, in request order.
+          items:
+            $ref: '#/components/schemas/PointValueItem'
+
+    PointBatchResponse:
+      type: object
+      description: |
+        The batch-form wire shape for GET /v1/point: per-point, per-selector
+        values. Returned when `select` and/or `points` is provided.
+      required: [results]
+      properties:
+        results:
+          type: array
+          description: One entry per requested point, in request order.
+          items:
+            $ref: '#/components/schemas/PointBatchResult'
+
+    GrowingDegreeDays:
+      type: object
+      description: Growing Degree Units for a point, forecast or season-cumulative.
+      required: [crop, catalog_version, method, thresholds, meta, days]
+      properties:
+        crop:
+          type: string
+          description: Echoed crop id (`corn`, ..., or `custom`).
+        catalog_version:
+          type: integer
+          description: Version of the crop catalog used to resolve thresholds.
+        method:
+          type: string
+          enum: [simple, modified]
+          description: GDU method applied.
+        thresholds:
+          $ref: '#/components/schemas/GddThresholds'
+        meta:
+          $ref: '#/components/schemas/GddMeta'
+        days:
+          type: array
+          description: Per-day GDU series (chronological).
+          items:
+            $ref: '#/components/schemas/GddDay'
+        cumulative_total:
+          type: number
+          format: double
+          description: |
+            Season-to-date GDU total in the requested unit. Present only in
+            cumulative mode (when `season_start` was supplied).
+        milestones:
+          type: array
+          description: |
+            Crop growth-stage GDU hints, present when `include_milestones=true`
+            and the crop has catalog milestones.
+          items:
+            $ref: '#/components/schemas/GddMilestone'
 
   responses:
     Problem400:
