@@ -67,13 +67,13 @@ Hard rules:
 | --- | --- |
 | Base URL | `https://api.smarterweather.com` |
 | Versioning | Path-based: `/v1/*` |
-| Auth header | `X-API-Key: $SMARTERWEATHER_API_KEY` |
-| Response content type | `application/json; charset=utf-8` |
+| Auth header | `Authorization: Bearer $SMARTERWEATHER_API_KEY` (the `X-API-Key` header is **not** supported) |
+| Response content type | `application/json; charset=utf-8` (success), `application/problem+json` (errors) |
 
 ### Endpoints (planned launch surface)
 
 - `GET /v1/health` — liveness probe; unauthenticated
-- `GET /v1/weather?latitude=<lat>&longitude=<lon>` — unified response with
+- `GET /v1/weather?lat=<lat>&lon=<lon>` — unified response with
   current conditions, hourly forecast, daily forecast, active alerts, and
   radar metadata in one call
 
@@ -90,19 +90,20 @@ if (!apiKey) {
 }
 
 const res = await fetch(
-  "https://api.smarterweather.com/v1/weather?latitude=41.88&longitude=-87.63",
+  "https://api.smarterweather.com/v1/weather?lat=41.88&lon=-87.63",
   {
     headers: {
-      "X-API-Key": apiKey,
+      Authorization: `Bearer ${apiKey}`,
       Accept: "application/json",
     },
   },
 );
 
 if (!res.ok) {
-  const body = await res.json().catch(() => ({}));
+  // Errors are RFC 7807 application/problem+json documents.
+  const problem = await res.json().catch(() => ({}));
   throw new Error(
-    `SmarterWeather ${res.status}: ${body?.error?.code ?? "unknown"} - ${body?.error?.message ?? res.statusText}`,
+    `SmarterWeather ${res.status}: ${problem?.type ?? "unknown"} - ${problem?.detail ?? res.statusText}`,
   );
 }
 
@@ -119,8 +120,8 @@ api_key = os.environ["SMARTERWEATHER_API_KEY"]
 
 resp = httpx.get(
     "https://api.smarterweather.com/v1/weather",
-    params={"latitude": 41.88, "longitude": -87.63},
-    headers={"X-API-Key": api_key, "Accept": "application/json"},
+    params={"lat": 41.88, "lon": -87.63},
+    headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"},
     timeout=10.0,
 )
 resp.raise_for_status()
@@ -131,22 +132,23 @@ weather = resp.json()
 
 ```bash
 curl -sS \
-  -H "X-API-Key: $SMARTERWEATHER_API_KEY" \
-  "https://api.smarterweather.com/v1/weather?latitude=41.88&longitude=-87.63"
+  -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
+  "https://api.smarterweather.com/v1/weather?lat=41.88&lon=-87.63"
 ```
 
 ### Errors
 
-Errors return JSON with a stable shape. Always parse it; never `JSON.parse`
-without a try/catch around it.
+Errors are RFC 7807 `application/problem+json` documents with a stable
+shape. Always parse defensively; never `JSON.parse` without a try/catch
+around it.
 
 ```json
 {
-  "error": {
-    "code": "invalid_request",
-    "message": "latitude must be between -90 and 90",
-    "request_id": "req_01H..."
-  }
+  "type": "https://smarterweather.com/errors/bad-request",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "lat must be between -90 and 90",
+  "instance": "/v1/weather"
 }
 ```
 
@@ -161,22 +163,24 @@ without a try/catch around it.
 | 429 | Rate-limited | Yes — back off (see below) |
 | 5xx | Server error | Yes — exponential backoff with jitter |
 
-When surfacing errors to the user, always include `error.code` and
-`error.request_id` — Smarter Weather support can look up `request_id` to
-explain what happened.
+When surfacing errors to the user, always include the problem `type` and
+`instance` (or the `X-Request-Id` response header) — Smarter Weather
+support can look up the instance/request id to explain what happened.
 
 ### Rate limits
 
-Every authenticated response carries:
+Every authenticated response carries the IETF draft `RateLimit-*` headers:
 
-- `X-RateLimit-Limit` — requests allowed in the current window
-- `X-RateLimit-Remaining` — requests remaining in the current window
-- `X-RateLimit-Reset` — epoch seconds when the window resets
+- `RateLimit-Limit` — requests allowed in the current per-minute window
+- `RateLimit-Remaining` — requests remaining in the current window
+- `RateLimit-Reset` — seconds until the window resets
+- `RateLimit-Policy` — window + burst policy, e.g. `60;w=60;burst=60`
+- `RateLimit-Daily-Limit` / `RateLimit-Daily-Remaining` / `RateLimit-Daily-Reset` — per-day quota
 
 When you hit `429`, respect `Retry-After` (seconds) if present; otherwise
 use exponential backoff starting at 1 second with jitter, and never retry
 more than 5 times. Production code should also pre-empt 429s by checking
-`X-RateLimit-Remaining` and pacing requests when it drops near zero.
+`RateLimit-Remaining` and pacing requests when it drops near zero.
 
 ## MCP server (Phase 3)
 

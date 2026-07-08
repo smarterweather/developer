@@ -61,8 +61,8 @@ weather = sw.weather.get(latitude=41.88, longitude=-87.63)
 ```
 
 Both SDKs ship typed responses, structured error classes that mirror the
-[REST API error envelope](./rest-api.md#errors), and built-in handling of
-`X-RateLimit-*` headers.
+[RFC 7807 error model](./errors.md), and built-in handling of the
+`RateLimit-*` headers.
 
 ## Until SDKs ship
 

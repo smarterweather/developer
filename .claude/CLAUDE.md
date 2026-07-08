@@ -25,7 +25,7 @@ Two surfaces, one platform:
 
 - **REST API** at `https://api.smarterweather.com/v1/*` — call from your
   service, your script, your build pipeline. Authenticated with an API key
-  in the `X-API-Key` header.
+  passed as an HTTP Bearer token (`Authorization: Bearer sw_live_*`).
 - **MCP server** at `https://mcp.smarterweather.com/mcp`, accessed via the
   npm bridge package
   [`@smarterweather/mcp-weather`](https://www.npmjs.com/package/@smarterweather/mcp-weather).
@@ -66,13 +66,13 @@ Every Smarter Weather request needs an API key. Hard rules:
 | --- | --- |
 | Base URL | `https://api.smarterweather.com` |
 | Versioning | Path-based: `/v1/*` |
-| Auth | `X-API-Key: $SMARTERWEATHER_API_KEY` |
-| Response | `application/json; charset=utf-8` |
+| Auth | `Authorization: Bearer $SMARTERWEATHER_API_KEY` (`X-API-Key` is **not** supported) |
+| Response | `application/json; charset=utf-8` (success), `application/problem+json` (errors) |
 
 ### Planned endpoints (Phase 2 launch)
 
 - `GET /v1/health` — liveness probe; unauthenticated.
-- `GET /v1/weather?latitude=<lat>&longitude=<lon>` — unified response with
+- `GET /v1/weather?lat=<lat>&lon=<lon>` — unified response with
   current conditions, hourly forecast, daily forecast, active alerts, and
   radar metadata in a single call. Prefer it over fanning out to multiple
   endpoints; the "one call, full picture" shape is intentional.
@@ -90,19 +90,20 @@ if (!apiKey) {
 }
 
 const res = await fetch(
-  "https://api.smarterweather.com/v1/weather?latitude=41.88&longitude=-87.63",
+  "https://api.smarterweather.com/v1/weather?lat=41.88&lon=-87.63",
   {
     headers: {
-      "X-API-Key": apiKey,
+      Authorization: `Bearer ${apiKey}`,
       Accept: "application/json",
     },
   },
 );
 
 if (!res.ok) {
-  const body = await res.json().catch(() => ({}));
+  // Errors are RFC 7807 application/problem+json documents.
+  const problem = await res.json().catch(() => ({}));
   throw new Error(
-    `SmarterWeather ${res.status}: ${body?.error?.code ?? "unknown"} - ${body?.error?.message ?? res.statusText}`,
+    `SmarterWeather ${res.status}: ${problem?.type ?? "unknown"} - ${problem?.detail ?? res.statusText}`,
   );
 }
 
@@ -118,9 +119,9 @@ import httpx
 
 resp = httpx.get(
     "https://api.smarterweather.com/v1/weather",
-    params={"latitude": 41.88, "longitude": -87.63},
+    params={"lat": 41.88, "lon": -87.63},
     headers={
-        "X-API-Key": os.environ["SMARTERWEATHER_API_KEY"],
+        "Authorization": f"Bearer {os.environ['SMARTERWEATHER_API_KEY']}",
         "Accept": "application/json",
     },
     timeout=10.0,
@@ -131,16 +132,17 @@ weather = resp.json()
 
 ### Errors
 
-Always parse the error envelope; surface `error.code` and
-`error.request_id` when reporting to the user.
+Errors are RFC 7807 `application/problem+json` documents. Always parse
+the problem body; surface `type` and `instance` (or the `X-Request-Id`
+header) when reporting to the user.
 
 ```json
 {
-  "error": {
-    "code": "invalid_request",
-    "message": "latitude must be between -90 and 90",
-    "request_id": "req_01H..."
-  }
+  "type": "https://smarterweather.com/errors/bad-request",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "lat must be between -90 and 90",
+  "instance": "/v1/weather"
 }
 ```
 
@@ -154,11 +156,12 @@ Always parse the error envelope; surface `error.code` and
 
 ### Rate limits
 
-Every authenticated response carries `X-RateLimit-Limit`,
-`X-RateLimit-Remaining`, and `X-RateLimit-Reset`. On `429`, prefer
+Every authenticated response carries the IETF draft `RateLimit-Limit`,
+`RateLimit-Remaining`, `RateLimit-Reset`, and `RateLimit-Policy` headers,
+plus `RateLimit-Daily-*` for the per-day quota. On `429`, prefer
 `Retry-After` (seconds) when present; otherwise back off exponentially
 starting at 1 second with jitter, max 5 retries. Pre-empt 429s in
-production by pacing when `X-RateLimit-Remaining` drops near zero.
+production by pacing when `RateLimit-Remaining` drops near zero.
 
 ## MCP — when the user is wiring an agent
 

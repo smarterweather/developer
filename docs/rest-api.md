@@ -13,8 +13,8 @@
 | ---- | ------------- |
 | Base URL | `https://api.smarterweather.com` |
 | Versioning | Path-based: `/v1/*` |
-| Auth | API key in `X-API-Key` header |
-| Content type | `application/json; charset=utf-8` (responses) |
+| Auth | API key as an HTTP Bearer token: `Authorization: Bearer sw_live_*` |
+| Content type | `application/json; charset=utf-8` (success), `application/problem+json` (errors) |
 | Compression | `gzip`, `br` |
 | Spec | `openapi.yaml` at the root of this repo (Phase 2) |
 
@@ -26,12 +26,16 @@ ADRs land in this repo as part of the Phase 2 cutover.
 
 ## Authentication
 
-Every request requires an API key minted from the developer dashboard.
+Every request requires an API key minted from the developer dashboard,
+passed as an HTTP Bearer token ([RFC 6750](https://datatracker.ietf.org/doc/html/rfc6750)):
 
 ```bash
-curl -H "X-API-Key: $SMARTERWEATHER_API_KEY" \
-  "https://api.smarterweather.com/v1/weather?latitude=41.88&longitude=-87.63"
+curl -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
+  "https://api.smarterweather.com/v1/weather?lat=41.88&lon=-87.63"
 ```
+
+The `X-API-Key` header is **not** supported — requests carrying it
+without a Bearer token are rejected with a hint to switch.
 
 Keys are scoped to a single account and a single tier. Scoping rules,
 rotation, and revocation flows are documented in
@@ -55,28 +59,34 @@ incumbent APIs.
 
 ## Errors
 
-Errors return JSON with a stable shape:
+Errors return [RFC 7807 `application/problem+json`](https://datatracker.ietf.org/doc/html/rfc7807)
+documents with a stable shape:
 
 ```json
 {
-  "error": {
-    "code": "invalid_request",
-    "message": "latitude must be between -90 and 90",
-    "request_id": "req_01H..."
-  }
+  "type": "https://smarterweather.com/errors/bad-request",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "lat must be between -90 and 90",
+  "instance": "/v1/weather"
 }
 ```
 
-`code` values, the full error catalog, and HTTP status mapping ship with the
-Phase 2 OpenAPI spec.
+The full error-type catalog, retry guidance, and HTTP status mapping are
+in [`errors.md`](./errors.md); the wire schema is `Problem` in
+[`openapi.yaml`](../openapi.yaml).
 
 ## Rate limits
 
-Every authenticated response carries:
+Every authenticated response carries the IETF draft `RateLimit-*` headers:
 
-- `X-RateLimit-Limit` - requests allowed in the current window
-- `X-RateLimit-Remaining` - requests remaining in the current window
-- `X-RateLimit-Reset` - epoch seconds when the window resets
+- `RateLimit-Limit` - requests allowed in the current per-minute window
+- `RateLimit-Remaining` - requests remaining in the current window
+- `RateLimit-Reset` - seconds until the window resets
+- `RateLimit-Policy` - window + burst policy line, e.g. `60;w=60;burst=60`
+- `RateLimit-Daily-Limit` / `RateLimit-Daily-Remaining` / `RateLimit-Daily-Reset` - the per-day quota
+
+On `429`, honor the `Retry-After` header (seconds) before retrying.
 
 Exact limits per tier are published at
 <https://smarterweather.com/developers/limits>.
