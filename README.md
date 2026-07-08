@@ -56,8 +56,8 @@ and usage. Once you have a key, you can:
 
 ```bash
 # REST API
-curl -H "X-API-Key: $SMARTERWEATHER_API_KEY" \
-  "https://api.smarterweather.com/v1/weather?latitude=41.88&longitude=-87.63"
+curl -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
+  "https://api.smarterweather.com/v1/weather?lat=41.88&lon=-87.63"
 ```
 
 ```bash

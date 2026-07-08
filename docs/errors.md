@@ -30,7 +30,7 @@ Content-Type: application/problem+json
 Retry-After: 12
 
 {
-  "type": "https://errors.smarterweather.com/rate-limit-exceeded",
+  "type": "https://smarterweather.com/errors/rate-limit-exceeded",
   "title": "Rate limit exceeded",
   "status": 429,
   "detail": "Your key has exceeded 60 requests per minute at the free tier.",
@@ -46,29 +46,27 @@ URIs do not change meaning.
 | `type` (URI suffix)                | HTTP | When                                                                                                  | Client reaction                                                                            |
 | ---------------------------------- | ---- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `bad-request`                      | 400  | Malformed query string, missing required parameter, invalid lat/lon.                                  | Fix the request. Do not retry.                                                              |
-| `invalid-api-key`                  | 401  | `X-API-Key` missing, malformed, or not recognized.                                                    | Prompt the user to re-paste their key. Do not retry.                                        |
-| `api-key-revoked`                  | 401  | The key was explicitly revoked by its owner or by support.                                            | Surface as "key invalidated"; prompt the user to mint a new one.                            |
-| `forbidden`                        | 403  | The key authenticates, but the tier does not grant access to the requested resource.                 | Surface with an upgrade CTA pointing to `/pricing`.                                         |
-| `not-found`                        | 404  | The resource does not exist. Not used for coverage gaps (see `coverage-unavailable`).                 | Treat as permanent.                                                                         |
-| `rate-limit-exceeded`              | 429  | You hit the per-minute RPM cap for your tier.                                                         | Honor `Retry-After`; exponential backoff on subsequent hits.                                 |
-| `monthly-quota-exceeded`           | 429  | You hit your monthly request allowance on a plan without overage.                                     | Surface upgrade or wait-for-reset UX; do not retry until month rolls over.                  |
-| `coverage-unavailable`             | 503  | Coordinate or timestamp is outside current coverage. Useful for marine / polar / historical gaps.     | Treat as a soft-fail; show "no data in this region/time" UX, do not pound the endpoint.     |
+| `unauthorized`                     | 401  | Bearer token missing, malformed, not recognized, or revoked.                                          | Prompt the user to check/re-mint their key. Do not retry.                                   |
+| `forbidden`                        | 403  | The key authenticates, but its tier or scopes do not grant access to the requested resource.          | Surface with an upgrade CTA pointing to `/pricing`.                                         |
+| `not-found`                        | 404  | The resource does not exist.                                                                          | Treat as permanent.                                                                         |
+| `rate-limit-exceeded`              | 429  | You hit the per-minute or per-day cap for your tier.                                                  | Honor `Retry-After`; exponential backoff on subsequent hits.                                 |
+| `too-many-requests`                | 429  | Generic request-rate rejection outside the tier limiter.                                              | Honor `Retry-After`; exponential backoff.                                                    |
 | `internal`                         | 500  | Unhandled server error. Logged with a request id we can look up.                                      | Retry with exponential backoff (max 3); on persistent failure, open a support ticket.        |
-| `upstream-unavailable`             | 502 or 504 | A backing data source is down or timed out.                                                           | Retry with exponential backoff. Usually transient.                                          |
+| `upstream`                         | 502  | A backing data source is down or returned an invalid response.                                        | Retry with exponential backoff. Usually transient.                                          |
+| `service-unavailable`              | 503  | An auth or platform dependency is unavailable (fail-closed).                                          | Retry with exponential backoff. Usually transient.                                          |
+| `timeout`                          | 504  | The request deadline elapsed before a downstream response.                                            | Retry with exponential backoff. Usually transient.                                          |
 
-The `type` URI prefix is `https://errors.smarterweather.com/`. The
-full URI is documented and resolvable; it returns human-readable
-context for the error class. Clients should **not** attempt to
-fetch the URL at runtime -- compare it as an opaque string.
+The `type` URI prefix is `https://smarterweather.com/errors/`. Clients
+should **not** attempt to fetch the URL at runtime -- compare it as an
+opaque string.
 
 ## Retry guidance
 
 | Error class                        | Retry? |
 | ---------------------------------- | ------ |
-| `bad-request`, `invalid-api-key`, `api-key-revoked`, `forbidden`, `not-found` | No     |
-| `rate-limit-exceeded`, `monthly-quota-exceeded`                               | After `Retry-After` header (or reset window). |
-| `internal`, `upstream-unavailable`                                            | Exponential backoff, max 3 retries. |
-| `coverage-unavailable`                                                        | No -- treat as permanent for that coordinate/timestamp. |
+| `bad-request`, `unauthorized`, `forbidden`, `not-found`                       | No     |
+| `rate-limit-exceeded`, `too-many-requests`                                    | After `Retry-After` header (or reset window). |
+| `internal`, `upstream`, `service-unavailable`, `timeout`                      | Exponential backoff, max 3 retries. |
 
 Retries SHOULD use at least 250ms of initial backoff and double each
 attempt (up to ~2s cap) to avoid thundering-herd restarts after a
