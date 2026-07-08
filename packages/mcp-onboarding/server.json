@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.smarterweather/onboarding",
   "title": "Smarter Weather Developer Onboarding",
-  "description": "Agent-first onboarding to the Smarter Weather developer platform: explore plans and docs, sign up, mint API keys, configure MCP clients, and manage billing from inside an AI agent.",
-  "version": "1.0.0",
+  "description": "Agent-first onboarding to Smarter Weather: plans, docs, signup, API keys, MCP config, billing.",
+  "version": "0.0.0",
   "repository": {
     "url": "https://github.com/smarterweather/developer",
     "source": "github",
@@ -20,7 +20,7 @@
     {
       "registryType": "npm",
       "identifier": "@smarterweather/mcp-onboarding",
-      "version": "1.0.0",
+      "version": "0.0.0",
       "transport": {
         "type": "stdio"
       },

@@ -1,120 +1,83 @@
 # MCP onboarding server guide
 
-> **Preview - server not yet generally available.** The hosted onboarding
-> MCP server at `https://developers.smarterweather.com/mcp` and the
-> matching `@smarterweather/mcp-onboarding` stdio bridge ship in
-> **Phase 4** of the [public roadmap](../README.md#roadmap). The package on
-> npm today is a placeholder that prints a single status line and exits
-> cleanly.
+The "meta MCP" — the agent-first way onto the Smarter Weather platform,
+**live at `https://developers.smarterweather.com/mcp`**. Its tools walk a
+developer (and their agent) end-to-end:
 
-## What this is
-
-The "meta MCP" - an unauthenticated-on-entry MCP server whose tools walk a
-developer (and their agent) through:
-
-1. **Account creation** in the Smarter Weather developer portal.
-2. **API key provisioning** for the appropriate plan tier.
-3. **Plan selection** with usage projections based on declared intent.
-4. **SDK setup** - generates the right config snippets for the client the
-   agent is running inside (Cursor, Claude Code, Codex, Claude Desktop,
-   etc.) and writes them to disk on the developer's behalf.
+1. **Discovery** — plans, pricing, and documentation, with zero credentials.
+2. **Account creation** — a referral-tagged signup link into the developer
+   portal.
+3. **API key provisioning** — mint, list, rotate, and revoke keys after an
+   OAuth sign-in.
+4. **Client configuration** — generates the right `@smarterweather/mcp-weather`
+   config snippet for the client the agent is running inside (Cursor, Claude
+   Code, Claude Desktop, Codex, etc.).
+5. **Billing** — usage, billing status, plan upgrades, and the billing portal.
 
 The server is co-hosted with the developer portal at
-`developers.smarterweather.com/mcp` rather than living on its own subdomain
-- the `onboarding.smarterweather.com` namespace is reserved for an unrelated
-future B2B product. Path-based CloudFront routing isolates the MCP traffic
-from the portal HTML.
+`developers.smarterweather.com/mcp` rather than living on its own subdomain;
+path-based CloudFront routing isolates the MCP traffic from the portal HTML.
 
-## Install (preview)
+## Connect
 
-```bash
-npx -y @smarterweather/mcp-onboarding@preview
+### Hosted (Streamable HTTP)
+
+Clients with native remote-MCP support connect directly:
+
+```
+https://developers.smarterweather.com/mcp
 ```
 
-Today this prints:
+Anonymous connections see the three open discovery tools. Signing in via the
+advertised OAuth 2.1 flow (RFC 9728 discovery is served at
+`/.well-known/oauth-protected-resource/mcp`) unlocks the account-scoped tools.
 
-```text
-@smarterweather/mcp-onboarding (preview): not yet functional.
-Bridge to the hosted developer-onboarding MCP at https://developers.smarterweather.com/mcp
-Implementation ships in Phase 4 of the developer ecosystem rollout.
-Roadmap: https://github.com/smarterweather/developer#roadmap
+### stdio bridge (npm)
+
+For stdio-only clients:
+
+```json
+{
+  "mcpServers": {
+    "smarterweather-onboarding": {
+      "command": "npx",
+      "args": ["-y", "@smarterweather/mcp-onboarding"]
+    }
+  }
+}
 ```
 
-The placeholder is published intentionally to reserve the package name on
-npm so onboarding tutorials can reference the final shape from day one.
+Add `"env": { "SMARTERWEATHER_ONBOARDING_AUTH": "required" }` to trigger the
+OAuth browser sign-in and unlock the account-scoped tools. See the
+[package README](../packages/mcp-onboarding/README.md) for all knobs.
+
+## Tool catalog
+
+| Tool | Auth | What it does |
+| --- | --- | --- |
+| `get_plans` | none | Plan/pricing catalog with feature matrices. |
+| `get_documentation` | none | Keyword-searchable documentation index + content. |
+| `sign_up` | none | Referral-tagged signup URL into the developer portal. |
+| `create_api_key` / `list_api_keys` / `rotate_api_key` / `revoke_api_key` | OAuth | Full key lifecycle, acting as the signed-in developer. |
+| `configure_mcp` | OAuth | Ready-to-paste `@smarterweather/mcp-weather` client config for your editor/agent. |
+| `get_quickstart` | OAuth | Personalized quickstart (key + first calls). |
+| `get_usage` / `get_billing_status` | OAuth | Usage against plan limits; subscription + invoice preview. |
+| `upgrade_plan` / `open_billing_portal` | OAuth | Stripe checkout / billing portal links. |
 
 ## Auth model
 
-Unlike the weather MCP (API key), the onboarding MCP authorizes via a
-browser-callback OAuth flow against Clerk. The bridge launches a local
-loopback listener, opens the user's browser to a Clerk-hosted authorization
-page, exchanges the resulting code for a session token, and attaches that
-token to subsequent JSON-RPC messages. No user secrets touch the bridge
-process beyond the session token, and even that is held in memory only.
+- **Open tools** are served anonymously by design (aggressively rate-limited
+  per IP). No key, no account, no OAuth — an agent can evaluate the platform
+  cold.
+- **Account tools** require a Clerk OAuth 2.1 + PKCE sign-in. The server
+  never holds privileged credentials: every account-touching call is proxied
+  with the *caller's own* verified token.
+- **API keys are not accepted here.** Keys (`sw_live_*` / `sw_test_*`)
+  authenticate the weather data surfaces (`api.smarterweather.com`,
+  `mcp.smarterweather.com`); onboarding is identity-based.
 
-The end-to-end OAuth readiness work for this flow was completed in Phase 0
-- see the public-facing summary at
-<https://smarterweather.com/developers/mcp/setup>.
+## Looking for weather data?
 
-## Planned client configuration
-
-When Phase 4 ships, the canonical config snippets per client will live at
-<https://smarterweather.com/developers/mcp/setup>. Today's preview shape:
-
-### Cursor
-
-```jsonc
-{
-  "mcpServers": {
-    "smarterweather-onboarding": {
-      "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-onboarding@preview"]
-    }
-  }
-}
-```
-
-### Claude Desktop / Claude Code
-
-```jsonc
-{
-  "mcpServers": {
-    "smarterweather-onboarding": {
-      "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-onboarding@preview"]
-    }
-  }
-}
-```
-
-No `env` block is required - the OAuth handshake on first run takes care of
-session bootstrap.
-
-## Planned tool catalog (Phase 4)
-
-Tool names are subject to change pre-launch; the surface is intentionally
-narrow to keep the agent's onboarding script short and predictable.
-
-- `start_onboarding(intent)` - begins a guided session for a stated intent
-  ("personal hobby project", "production app", etc.).
-- `create_account(email)` - kicks off email verification via Clerk.
-- `select_plan(usage_projection)` - returns the recommended tier with cost
-  envelope.
-- `mint_api_key(name)` - mints an API key scoped to the active session.
-- `write_client_config(client)` - writes the right config to the right path
-  for the named MCP client and reports the result.
-
-## Why a separate package from `@smarterweather/mcp-weather`?
-
-- **Different audiences.** The weather package is "I am building with
-  weather data." The onboarding package is "I am here for the first time."
-  Mixing them would muddy both.
-- **Different auth models.** API key vs. browser OAuth - the bridges share
-  no transport code beyond the underlying MCP framing.
-- **Different lifetime.** The onboarding bridge is typically run once per
-  developer, then uninstalled. The weather bridge stays installed for the
-  life of the integration.
-
-Both packages live in the same repo for shared CI, shared release tooling
-(Changesets), and a shared governance posture; they ship to npm
-independently.
+That's [`@smarterweather/mcp-weather`](./mcp-weather.md), hosted at
+`mcp.smarterweather.com/mcp` — which this server's `configure_mcp` tool will
+set up for you.

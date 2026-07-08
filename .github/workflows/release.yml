@@ -110,3 +110,57 @@ jobs:
             echo "Repointing ${PRE_TAG} -> ${pkg_ref}"
             npm dist-tag add "${pkg_ref}" "${PRE_TAG}"
           done
+
+      # ---------------------------------------------------------------
+      # Official MCP Registry publish (registry.modelcontextprotocol.io).
+      #
+      # For every STABLE package version changesets just published, if
+      # the package directory carries a server.json manifest, sync the
+      # manifest's version fields to the published version and
+      # `mcp-publisher publish` it. Auth is GitHub OIDC (id-token:
+      # write is already on this workflow; the io.github.smarterweather/*
+      # namespace is validated from the workflow's repo owner -- no
+      # secrets needed). Prereleases are skipped: the registry entry
+      # should only ever advance to versions `npm install <pkg>`
+      # resolves by default.
+      #
+      # Failures here are deliberately non-fatal (|| warning): the npm
+      # publish already happened and must not be re-run; a registry
+      # hiccup is fixed by re-running the publish step manually
+      # (`mcp-publisher login github` locally + publish).
+      # ---------------------------------------------------------------
+      - name: Install mcp-publisher
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Publish to MCP Registry
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          set -euo pipefail
+
+          STABLE=$(echo "$PUBLISHED_PACKAGES" | jq -c '[.[] | select(.version | test("-") | not)]')
+          if [ "$(echo "$STABLE" | jq 'length')" -eq 0 ]; then
+            echo "No stable publishes in this run; skipping MCP Registry."
+            exit 0
+          fi
+
+          ./mcp-publisher login github-oidc
+
+          echo "$STABLE" | jq -r '.[] | "\(.name) \(.version)"' | while read -r name version; do
+            dir="packages/${name#@smarterweather/}"
+            manifest="${dir}/server.json"
+            if [ ! -f "$manifest" ]; then
+              echo "${name}: no server.json; skipping registry publish."
+              continue
+            fi
+            echo "Publishing ${name}@${version} to the MCP Registry..."
+            jq --arg v "$version" \
+              '.version = $v | .packages[]?.version = $v' \
+              "$manifest" > "${manifest}.tmp" && mv "${manifest}.tmp" "$manifest"
+            if ! ./mcp-publisher publish "$manifest"; then
+              echo "::warning::MCP Registry publish failed for ${name}@${version}. Re-run manually: mcp-publisher login github && mcp-publisher publish ${manifest}"
+            fi
+          done
