@@ -3,7 +3,7 @@
   "name": "io.github.smarterweather/weather",
   "title": "Smarter Weather",
   "description": "Probabilistic weather forecasts, active alerts, and multi-model comparison from Smarter Weather.",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "repository": {
     "url": "https://github.com/smarterweather/developer",
     "source": "github",
@@ -20,7 +20,7 @@
     {
       "registryType": "npm",
       "identifier": "@smarterweather/mcp-weather",
-      "version": "1.0.0",
+      "version": "0.0.0",
       "transport": {
         "type": "stdio"
       },
