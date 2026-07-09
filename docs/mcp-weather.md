@@ -247,6 +247,37 @@ catalog with full input/output schemas.
 Additions after launch follow the same deprecation policy as the
 REST API (see [REST API guide](./rest-api.md#stability-promise)).
 
+## Interactive widgets (MCP Apps)
+
+The server implements the [MCP Apps extension](https://modelcontextprotocol.io/extensions/apps/overview):
+in hosts that support it, the flagship weather tools render an
+interactive widget alongside the model's text answer.
+
+- **Enhanced tools**: `get_forecast` (current-conditions card, with
+  alert banners above it when alerts are active), `get_hourly_forecast`
+  (scrollable hourly strip), and `get_alerts` (severity-styled alert
+  banners).
+- **How it works**: the tools reference one shared app resource,
+  `ui://weather-widget/v1/index.html`, via `_meta.ui.resourceUri`, and
+  include an additive `widget` block in `structuredContent`. Hosts
+  without MCP Apps support ignore both — every tool result remains
+  complete as plain structured content, so nothing breaks in
+  non-Apps clients.
+- **Widget interactivity** is host-mediated (suggestion chips send a
+  chat prompt, alert links open in your browser, selections update
+  model context). Widgets never trigger additional billable tool
+  calls, and reading the `ui://` resource is not metered.
+- **Supported hosts** (per the official client matrix): Claude and
+  Claude Desktop, VS Code (GitHub Copilot), Microsoft 365 Copilot,
+  Goose, Postman, MCPJam, Archestra. ChatGPT uses its own Apps SDK
+  and is not covered by this extension.
+- **Theming**: the widget adopts the host's style variables and
+  light/dark theme automatically.
+
+The widget block's `component` / `props` entries follow Smarter
+Weather's published component contracts, so the same shapes power
+first-party app UI and these widgets.
+
 ## Stability promise
 
 Same as the REST API: 6 months notice for tool removals, 90 days
