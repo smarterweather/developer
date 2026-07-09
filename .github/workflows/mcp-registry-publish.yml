@@ -1,0 +1,81 @@
+# Soft GA / #9744: publish (or re-publish) Official MCP Registry manifests
+# without requiring a new npm package version.
+#
+# Root cause of the empty registry: mcp-publisher was added to release.yml
+# after the stable 0.0.0 npm publishes, so the post-publish step never ran
+# for weather or onboarding. This workflow is the recovery path and can be
+# re-run whenever a server.json needs to be pushed again.
+#
+# Auth: GitHub OIDC (id-token: write). Namespace io.github.smarterweather/*
+# is validated from the workflow's repo owner.
+
+name: mcp-registry-publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: "Comma-separated package dirs under packages/ (default: both bridges)"
+        required: false
+        default: "mcp-weather,mcp-onboarding"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: mcp-registry-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher --help >/dev/null
+
+      - name: Publish server.json manifests
+        env:
+          PACKAGE_LIST: ${{ inputs.packages }}
+        run: |
+          set -euo pipefail
+          ./mcp-publisher login github-oidc
+
+          IFS=',' read -r -a dirs <<< "$PACKAGE_LIST"
+          failed=0
+          for raw in "${dirs[@]}"; do
+            dir="$(echo "$raw" | xargs)"
+            [ -z "$dir" ] && continue
+            manifest="packages/${dir}/server.json"
+            if [ ! -f "$manifest" ]; then
+              echo "::error::Missing ${manifest}"
+              failed=1
+              continue
+            fi
+            version="$(jq -r '.version' "$manifest")"
+            name="$(jq -r '.name' "$manifest")"
+            echo "Publishing ${name}@${version} from ${manifest}..."
+            if ! ./mcp-publisher publish "$manifest"; then
+              echo "::error::MCP Registry publish failed for ${name}@${version}"
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Verify registry search
+        run: |
+          set -euo pipefail
+          # Registry indexing can lag a few seconds after publish.
+          sleep 5
+          body="$(curl -fsSL 'https://registry.modelcontextprotocol.io/v0/servers?search=smarterweather')"
+          echo "$body" | jq .
+          count="$(echo "$body" | jq '.metadata.count // (.servers | length)')"
+          if [ "$count" -lt 1 ]; then
+            echo "::warning::Registry search still empty after publish (indexing lag?). Re-check manually."
+          fi

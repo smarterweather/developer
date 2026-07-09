@@ -3,8 +3,8 @@
 > The hosted weather MCP server at
 > `https://mcp.smarterweather.com/mcp` is **live in production**,
 > serving the full 28-tool catalog with API-key and OAuth 2.1 auth.
-> The `@smarterweather/mcp-weather` npm bridge remains on the
-> `@preview` dist-tag until it is promoted; clients that speak
+> Install the stdio bridge with `npx -y @smarterweather/mcp-weather`
+> (no `@preview` suffix — `latest` is GA). Clients that speak
 > streamable HTTP natively can connect to the hosted endpoint
 > directly without the bridge.
 
@@ -35,20 +35,8 @@ shim around
 ## Install
 
 ```bash
-npx -y @smarterweather/mcp-weather@preview --version
+npx -y @smarterweather/mcp-weather --version
 ```
-
-Pre-release, the `@preview` dist-tag is required. After GA, drop
-the suffix.
-
-> **Known issue (M7-1.1 follow-up):** the `@preview` dist-tag was
-> briefly frozen on the placeholder `0.0.0-preview.1` while
-> `@latest` carried the real bridge at `0.0.0-preview.2`. The
-> automated dist-tag repoint (`release.yml`) needs an `NPM_TOKEN`
-> repo secret to run; until that's provisioned, install
-> `@smarterweather/mcp-weather@0.0.0-preview.2` explicitly (or
-> `@latest`) to get the real bridge. Tracked at
-> [SmarterWeather#8090](https://github.com/afisch710/SmarterWeather/issues/8090).
 
 ## Authentication
 
@@ -88,7 +76,7 @@ OAuth:
   "mcpServers": {
     "smarterweather": {
       "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather@preview"]
+      "args": ["-y", "@smarterweather/mcp-weather"]
     }
   }
 }
@@ -101,7 +89,7 @@ API key:
   "mcpServers": {
     "smarterweather": {
       "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather@preview"],
+      "args": ["-y", "@smarterweather/mcp-weather"],
       "env": {
         "SMARTERWEATHER_API_KEY": "sw_live_..."
       }
@@ -129,7 +117,7 @@ uses the identical `mcpServers` shape:
   "mcpServers": {
     "smarterweather": {
       "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather@preview"]
+      "args": ["-y", "@smarterweather/mcp-weather"]
     }
   }
 }
@@ -156,7 +144,7 @@ bridge at it via `SMARTERWEATHER_MCP_URL` or as a positional arg:
   "mcpServers": {
     "smarterweather-dev": {
       "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather@preview"],
+      "args": ["-y", "@smarterweather/mcp-weather"],
       "env": {
         "SMARTERWEATHER_MCP_URL": "http://<dev-alb-dns>/mcp"
       }
