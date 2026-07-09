@@ -34,7 +34,10 @@ npx -y @smarterweather/mcp-weather
 Do **not** append `@preview` — `latest` is the GA bridge. Set
 `SMARTERWEATHER_API_KEY` in the process environment for headless weather
 calls; set `SMARTERWEATHER_ONBOARDING_AUTH=required` to force onboarding
-OAuth for account-scoped tools.
+OAuth for account-scoped tools. Authenticated onboarding uses a
+pre-registered public PKCE Clerk client (DCR off); ensure port `3334` is
+free for the loopback callback. Prefer the stdio bridge over Cursor's
+native `url` OAuth for gated tools (Clerk + `cursor://` is broken).
 
 ## Auth and errors
 

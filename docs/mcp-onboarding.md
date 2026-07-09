@@ -48,8 +48,16 @@ For stdio-only clients:
 ```
 
 Add `"env": { "SMARTERWEATHER_ONBOARDING_AUTH": "required" }` to trigger the
-OAuth browser sign-in and unlock the account-scoped tools. See the
+OAuth browser sign-in and unlock the account-scoped tools. The bridge uses a
+**pre-registered public PKCE** Clerk OAuth client (no Dynamic Client
+Registration) and pins the loopback callback to
+`http://localhost:3334/oauth/callback`. See the
 [package README](../packages/mcp-onboarding/README.md) for all knobs.
+
+> **Cursor note:** Cursor's built-in Streamable HTTP OAuth (`cursor://`
+> redirect) is incompatible with Clerk today. Prefer the stdio bridge above
+> for account-scoped tools; anonymous discovery tools work with a direct
+> `url` entry.
 
 ## Tool catalog
 
