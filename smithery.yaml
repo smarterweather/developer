@@ -1,0 +1,62 @@
+# Smithery listing for the Smarter Weather hosted MCP server.
+# https://smithery.ai — remote (URL-based) publish; Smithery's gateway
+# proxies to the production endpoint below, no local install needed.
+# The stdio alternative is the @smarterweather/mcp-weather npm bridge
+# (packages/mcp-weather/), which wraps mcp-remote.
+
+version: 1
+
+name: smarterweather-weather
+displayName: Smarter Weather
+description: >-
+  Smarter Weather's 28-tool weather MCP server: blended forecasts,
+  probabilistic distributions, active NWS alerts, SPC/WPC outlooks,
+  observations, lightning, soundings, tropical, air quality, raw
+  gridded dataset queries, and rendered map/sounding imagery (radar,
+  satellite, outlooks) for visual analysis. Authenticate via OAuth 2.1
+  (Dynamic Client Registration) or a Smarter Weather API key.
+homepage: https://smarterweather.com/developers
+documentation: https://github.com/smarterweather/developer/blob/main/docs/mcp-weather.md
+
+# Hosted / remote MCP server — not installed locally.
+runtime: remote
+
+remote:
+  transport: streamable-http
+  url: https://mcp.smarterweather.com/mcp
+
+auth:
+  # OAuth 2.1 with PKCE + Dynamic Client Registration (Clerk).
+  # Bearer API keys (sw_live_* / sw_test_*) also accepted.
+  type: oauth2
+  authorizationServer: https://clerk.smarterweather.com
+  protectedResourceMetadata: https://mcp.smarterweather.com/.well-known/oauth-protected-resource
+  pkce: true
+  dynamicClientRegistration: true
+
+categories:
+  - weather
+  - data
+  - forecast
+  - geospatial
+
+keywords:
+  - weather
+  - forecast
+  - nws-alerts
+  - radar
+  - satellite
+  - severe-weather
+  - spc-outlook
+  - soundings
+  - lightning
+  - remote-mcp
+
+features:
+  tools: true
+  resources: true
+  prompts: true
+
+maintainer:
+  name: Smarter Weather
+  url: https://smarterweather.com
