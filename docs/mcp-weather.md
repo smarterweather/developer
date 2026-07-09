@@ -1,13 +1,12 @@
 # MCP weather server guide
 
-> **Preview — server not yet generally available.** The hosted
-> weather MCP server at `https://mcp.smarterweather.com/mcp`
-> starts serving production traffic when **Track F MVP** (cert /
-> DNS / prod deploy) lands. The `@smarterweather/mcp-weather` npm
-> bridge is a **functional, published preview** today: it speaks
-> OAuth 2.1 + API-key auth to whichever MCP endpoint you point it
-> at. Use `SMARTERWEATHER_MCP_URL` to override the default to a
-> dev ALB until the prod URL is live.
+> The hosted weather MCP server at
+> `https://mcp.smarterweather.com/mcp` is **live in production**,
+> serving the full 28-tool catalog with API-key and OAuth 2.1 auth.
+> The `@smarterweather/mcp-weather` npm bridge remains on the
+> `@preview` dist-tag until it is promoted; clients that speak
+> streamable HTTP natively can connect to the hosted endpoint
+> directly without the bridge.
 
 ## What this is
 
@@ -149,9 +148,8 @@ out-of-the-box; point it at the same `npx` command.
 
 ## Dev / staging override
 
-Until `mcp.smarterweather.com` is live in production (Track F),
-point the bridge at the dev ALB DNS via `SMARTERWEATHER_MCP_URL`
-or as a positional arg:
+To target a non-production deployment (e.g. a dev ALB), point the
+bridge at it via `SMARTERWEATHER_MCP_URL` or as a positional arg:
 
 ```jsonc
 {
@@ -172,17 +170,79 @@ package default.
 
 ## Tool catalog (current)
 
-The launch tool set follows the same "one call, full picture"
-philosophy as the `/v1/weather` REST endpoint, plus a small number
-of higher-level tools that benefit from agent reasoning. The
-canonical catalog lives at
-<https://smarterweather.com/developers/mcp/tools>; at minimum the
-hosted server exposes:
+The hosted server exposes **28 tools** organized around
+meteorologist workflows rather than raw endpoints. Every
+location-aware tool accepts either a free-text `location` string or
+explicit `lat`/`lon`. Call `tools/list` for the live, canonical
+catalog with full input/output schemas.
 
-- `weather/get(latitude, longitude)` — parity with `/v1/weather`.
-- `alerts/active(area)` — active NWS alerts for a CONUS area.
-- `model/compare(latitude, longitude, hours)` — probabilistic
-  comparison across NBM / HRRR / GFS / RTMA at a lead time.
+### Location
+
+- `search_locations` — geocode a free-text query (city, ZIP,
+  landmark); supports fuzzy autosuggest.
+- `reverse_geocode` — nearest place name for a lat/lon.
+
+### Forecast
+
+- `get_forecast` — the headliner: blended daily + hourly forecast,
+  alerts, and outlook context in one call (parity with
+  `/v1/weather`).
+- `get_hourly_forecast` — hour-by-hour detail for a window.
+- `get_forecast_distribution` — probabilistic spread (percentiles)
+  across ensemble members for a variable.
+- `get_time_context` — local time, sunrise/sunset, day/night
+  framing for a location.
+
+### Current conditions and observations
+
+- `get_current_conditions` — real-time analysis conditions.
+- `get_observations` — recent station observations.
+- `get_lightning_activity` — recent lightning strikes near a point.
+- `get_storm_reports` — local storm reports (wind, hail, tornado).
+- `get_sounding` — nearest model sounding profile with derived
+  severe-weather parameters (CAPE, shear, SRH, ...).
+
+### Hazards and forecaster text
+
+- `get_alerts` — active NWS alerts for a location or area, with
+  severity/event filtering.
+- `get_outlooks` — SPC convective / WPC excessive-rain / fire-weather
+  outlooks with narrative.
+- `get_forecast_discussion` — the NWS Area Forecast Discussion text.
+
+### Situational coverage
+
+- `get_tropical` — active tropical systems, track and cone.
+- `get_population_exposure` — population inside a hazard footprint.
+- `get_climate_records` — record highs/lows and normals.
+- `get_storm_cells` — storm-scale cell tracks, hail, mesocyclone and
+  TVS signatures.
+- `get_air_quality` — AQI and constituent pollutants.
+- `get_growing_degree_days` — accumulated GDD for agriculture.
+
+### Data plane (raw grids)
+
+- `list_datasets` — discover available gridded datasets.
+- `describe_dataset` — variables, extent, and freshness for one
+  dataset.
+- `query_dataset` — point-query any dataset variable time series.
+- `get_period_totals` — accumulations/aggregates over a period.
+
+### Analysis
+
+- `compare_locations` — side-by-side multi-location comparison for
+  an event or trip.
+- `find_best_window` — rank time windows against weather criteria
+  ("best 3-hour window for a run this week").
+
+### Visual
+
+- `get_map_snapshot` — rendered weather map image (PNG): pick a
+  product (radar, satellite, SPC outlooks, model fields, ...) plus
+  location/zoom, or pass a full declarative scene document layering
+  basemap + multiple weather products + alert overlays.
+- `get_sounding_chart` — rendered Skew-T + hodograph image for the
+  nearest model sounding.
 
 Additions after launch follow the same deprecation policy as the
 REST API (see [REST API guide](./rest-api.md#stability-promise)).
