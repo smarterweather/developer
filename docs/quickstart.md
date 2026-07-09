@@ -18,14 +18,14 @@ for the current numbers.
 
 ## 2. Make your first call
 
-Every request carries your key as an HTTP Bearer token in the
-`Authorization` header. The base URL is `https://api.smarterweather.com`.
+Every request carries your key in the `X-API-Key` header. The base
+URL is `https://api.smarterweather.com`.
 
 ### curl
 
 ```bash
 curl -sS https://api.smarterweather.com/v1/weather \
-  -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
+  -H "X-API-Key: $SMARTERWEATHER_API_KEY" \
   --get \
   --data-urlencode "lat=40.7128" \
   --data-urlencode "lon=-74.0060"
@@ -36,11 +36,7 @@ curl -sS https://api.smarterweather.com/v1/weather \
 ```ts
 const res = await fetch(
   `https://api.smarterweather.com/v1/weather?lat=40.7128&lon=-74.0060`,
-  {
-    headers: {
-      Authorization: `Bearer ${process.env.SMARTERWEATHER_API_KEY!}`,
-    },
-  },
+  { headers: { "X-API-Key": process.env.SMARTERWEATHER_API_KEY! } },
 );
 if (!res.ok) {
   throw new Error(`smarterweather ${res.status}: ${await res.text()}`);
@@ -57,7 +53,7 @@ import os, requests
 res = requests.get(
     "https://api.smarterweather.com/v1/weather",
     params={"lat": 40.7128, "lon": -74.0060},
-    headers={"Authorization": f"Bearer {os.environ['SMARTERWEATHER_API_KEY']}"},
+    headers={"X-API-Key": os.environ["SMARTERWEATHER_API_KEY"]},
     timeout=10,
 )
 res.raise_for_status()
