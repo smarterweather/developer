@@ -59,10 +59,19 @@ jobs:
             version="$(jq -r '.version' "$manifest")"
             name="$(jq -r '.name' "$manifest")"
             echo "Publishing ${name}@${version} from ${manifest}..."
-            if ! ./mcp-publisher publish "$manifest"; then
-              echo "::error::MCP Registry publish failed for ${name}@${version}"
-              failed=1
+            out="$(mktemp)"
+            if ./mcp-publisher publish "$manifest" >"$out" 2>&1; then
+              cat "$out"
+            else
+              cat "$out"
+              if grep -q 'cannot publish duplicate version' "$out"; then
+                echo "::notice::${name}@${version} already published; treating as success."
+              else
+                echo "::error::MCP Registry publish failed for ${name}@${version}"
+                failed=1
+              fi
             fi
+            rm -f "$out"
           done
           if [ "$failed" -ne 0 ]; then
             exit 1
