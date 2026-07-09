@@ -254,9 +254,10 @@ in hosts that support it, the flagship weather tools render an
 interactive widget alongside the model's text answer.
 
 - **Enhanced tools**: `get_forecast` (current-conditions card, with
-  alert banners above it when alerts are active), `get_hourly_forecast`
-  (scrollable hourly strip), and `get_alerts` (severity-styled alert
-  banners).
+  alert banners above it when alerts are active, plus a multi-day
+  forecast strip), `get_hourly_forecast` (scrollable hourly strip),
+  `get_alerts` (severity-styled alert banners), and `get_air_quality`
+  (AQI card with EPA category).
 - **How it works**: the tools reference one shared app resource,
   `ui://weather-widget/v1/index.html`, via `_meta.ui.resourceUri`, and
   include an additive `widget` block in `structuredContent`. Hosts
