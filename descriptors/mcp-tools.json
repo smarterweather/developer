@@ -628,6 +628,41 @@
           "alert": {
             "type": "object",
             "additionalProperties": {}
+          },
+          "widget": {
+            "type": "object",
+            "properties": {
+              "spec": {
+                "type": "string",
+                "const": "sw-ui-spec"
+              },
+              "entries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "component": {
+                      "type": "string"
+                    },
+                    "props": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "component",
+                    "props"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "spec",
+              "entries"
+            ],
+            "additionalProperties": false,
+            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore."
           }
         },
         "additionalProperties": false,
@@ -642,6 +677,12 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "ui": {
+          "resourceUri": "ui://weather-widget/v1/index.html"
+        },
+        "ui/resourceUri": "ui://weather-widget/v1/index.html"
       }
     },
     {
@@ -936,6 +977,41 @@
           "forecast": {
             "type": "object",
             "additionalProperties": {}
+          },
+          "widget": {
+            "type": "object",
+            "properties": {
+              "spec": {
+                "type": "string",
+                "const": "sw-ui-spec"
+              },
+              "entries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "component": {
+                      "type": "string"
+                    },
+                    "props": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "component",
+                    "props"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "spec",
+              "entries"
+            ],
+            "additionalProperties": false,
+            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore."
           }
         },
         "required": [
@@ -955,6 +1031,12 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "ui": {
+          "resourceUri": "ui://weather-widget/v1/index.html"
+        },
+        "ui/resourceUri": "ui://weather-widget/v1/index.html"
       }
     },
     {
@@ -1386,6 +1468,41 @@
           "forecast": {
             "type": "object",
             "additionalProperties": {}
+          },
+          "widget": {
+            "type": "object",
+            "properties": {
+              "spec": {
+                "type": "string",
+                "const": "sw-ui-spec"
+              },
+              "entries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "component": {
+                      "type": "string"
+                    },
+                    "props": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "component",
+                    "props"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "spec",
+              "entries"
+            ],
+            "additionalProperties": false,
+            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore."
           }
         },
         "required": [
@@ -1405,6 +1522,12 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "ui": {
+          "resourceUri": "ui://weather-widget/v1/index.html"
+        },
+        "ui/resourceUri": "ui://weather-widget/v1/index.html"
       }
     },
     {
