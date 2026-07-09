@@ -61,10 +61,9 @@ curl -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
 ```
 
 ```bash
-# Weather MCP bridge (functional preview; defaults to
-# https://mcp.smarterweather.com/mcp -- override via
-# SMARTERWEATHER_MCP_URL during Phase 3 rollout).
-npx -y @smarterweather/mcp-weather@preview --version
+# Weather MCP bridge (defaults to https://mcp.smarterweather.com/mcp;
+# override via SMARTERWEATHER_MCP_URL).
+npx -y @smarterweather/mcp-weather --version
 ```
 
 The full quickstart with language-specific snippets lives at

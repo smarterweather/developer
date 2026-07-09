@@ -6,10 +6,10 @@ This directory hosts the publishable npm packages in the Smarter Weather develop
 
 | Package | Purpose | Roadmap phase | Status |
 | ------- | ------- | ------------- | ------ |
-| [`@smarterweather/mcp-weather`](./mcp-weather) | stdio bridge to the hosted weather MCP server at `mcp.smarterweather.com`. Speaks MCP OAuth 2.1 + PKCE by default; falls back to API-key auth via `SMARTERWEATHER_API_KEY`. | Phase 3 | **preview (functional bridge)** — published as `@preview`. Hosted server goes live with Track F MVP. |
-| [`@smarterweather/mcp-onboarding`](./mcp-onboarding) | stdio bridge to the hosted developer-onboarding MCP server at `developers.smarterweather.com/mcp`. Authenticates via OAuth (browser callback). | Phase 4 | preview placeholder |
+| [`@smarterweather/mcp-weather`](./mcp-weather) | stdio bridge to the hosted weather MCP server at `mcp.smarterweather.com`. Speaks MCP OAuth 2.1 + PKCE by default; falls back to API-key auth via `SMARTERWEATHER_API_KEY`. | Phase 3 | **GA on `latest`** (`0.0.0`) |
+| [`@smarterweather/mcp-onboarding`](./mcp-onboarding) | stdio bridge to the hosted developer-onboarding MCP server at `developers.smarterweather.com/mcp`. Anonymous discovery by default; set `SMARTERWEATHER_ONBOARDING_AUTH=required` for OAuth. | Phase 4 | **GA on `latest`** (`0.0.0`) |
 
-`@smarterweather/mcp-weather` is a thin wrapper around [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) — see [`packages/mcp-weather/README.md`](./mcp-weather/README.md) for the install + client-config snippets. `@smarterweather/mcp-onboarding` still ships a single `console.log` placeholder that exits cleanly; the real implementation lands in Phase 4 of the [public roadmap](../README.md#roadmap).
+Both packages are thin wrappers around [`mcp-remote`](https://www.npmjs.com/package/mcp-remote). Install with `npx -y @smarterweather/mcp-weather` / `mcp-onboarding` (no `@preview` suffix).
 
 ## Adding a new package
 
@@ -44,14 +44,13 @@ The npm dist-tag API is **not** covered by OIDC trusted publishing, so this step
 
 If `NPM_TOKEN` is absent the publish step still succeeds (the package itself ships fine via OIDC), but the workflow logs a `::warning::` line with the exact `npm dist-tag add ...` commands a maintainer needs to run by hand.
 
-#### Current state (May 2026)
+#### Current state (Soft GA, 2026-07)
 
-`NPM_TOKEN` has **not** been provisioned yet, so the `@preview` dist-tag is currently frozen on the first-ever published version (`0.0.0-preview.1`, the M7-0 placeholder that prints and exits) while `@latest` correctly carries `0.0.0-preview.2` (the real bridge). To unblock `@preview` install paths in the README and the developer docs, a maintainer needs to either provision the token (per the steps above, then merge any subsequent change to trigger the post-publish step) or run the one-time fix manually:
+Both bridges have stable `0.0.0` releases on `latest`. Docs and client configs should use untagged installs (`npx -y @smarterweather/mcp-weather`). The stale `preview` tag may still point at the exit-stub (`0.0.0-preview.1`) until a maintainer runs:
 
 ```bash
-npm dist-tag add @smarterweather/mcp-weather@0.0.0-preview.2 preview
+npm dist-tag add @smarterweather/mcp-weather@0.0.0 preview
+npm dist-tag add @smarterweather/mcp-onboarding@0.0.0 preview
 ```
 
-The post-publish workflow step prints this exact command in its `::warning::` block on every release, so the in-CI fallback works too.
-
-Once any package in this repo cuts a non-prerelease release (via `npx changeset pre exit` followed by a stable `changeset` + version PR), the post-publish repoint step becomes a no-op for that package -- `latest` correctly tracks the stable release and Changesets honors `publishConfig.tag` for subsequent prereleases.
+(or `npm dist-tag rm <pkg> preview`). Tracked at [SmarterWeather#8090](https://github.com/smarterweather/SmarterWeather/issues/8090) / [#9743](https://github.com/smarterweather/SmarterWeather/issues/9743).

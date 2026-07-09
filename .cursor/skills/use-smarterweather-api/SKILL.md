@@ -195,7 +195,7 @@ Claude Desktop, Codex), wire the weather server in via the npm bridge:
   "mcpServers": {
     "smarterweather-weather": {
       "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather@preview"],
+      "args": ["-y", "@smarterweather/mcp-weather"],
       "env": { "SMARTERWEATHER_API_KEY": "<from shell, not pasted here>" }
     }
   }

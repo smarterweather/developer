@@ -1,0 +1,55 @@
+# Documentation-only Smithery remote listing for the onboarding MCP.
+# Publish separately from the weather listing (root smithery.yaml):
+#
+#   npx -y @smithery/cli mcp publish \
+#     "https://developers.smarterweather.com/mcp" \
+#     -n smarterweather/onboarding
+#
+# Do not replace or merge into smithery.yaml — Soft GA keeps weather and
+# onboarding as distinct directory entries (#7150 M4 / #9745).
+
+version: 1
+
+name: smarterweather-onboarding
+displayName: Smarter Weather Developer Onboarding
+description: >-
+  Agent-first onboarding to Smarter Weather: discover plans and docs
+  anonymously, then OAuth to mint API keys, paste MCP client config,
+  check usage, and open billing — all from inside an IDE agent.
+homepage: https://smarterweather.com/developers
+documentation: https://github.com/smarterweather/developer/blob/main/docs/mcp-onboarding.md
+
+runtime: remote
+
+remote:
+  transport: streamable-http
+  url: https://developers.smarterweather.com/mcp
+
+auth:
+  type: oauth2
+  authorizationServer: https://clerk.smarterweather.com
+  protectedResourceMetadata: https://developers.smarterweather.com/.well-known/oauth-protected-resource
+  pkce: true
+  dynamicClientRegistration: true
+
+categories:
+  - developer-tools
+  - onboarding
+  - weather
+
+keywords:
+  - onboarding
+  - api-keys
+  - mcp-config
+  - billing
+  - agent-native
+  - remote-mcp
+
+features:
+  tools: true
+  resources: true
+  prompts: false
+
+maintainer:
+  name: Smarter Weather
+  url: https://smarterweather.com
