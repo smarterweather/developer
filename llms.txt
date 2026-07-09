@@ -15,7 +15,7 @@ Account-scoped tools (API key minting, billing) unlock after OAuth 2.1 sign-in.
 - [Quickstart](https://github.com/smarterweather/developer/blob/main/docs/quickstart.md): mint a key and make your first REST and MCP calls
 - [REST API guide](https://github.com/smarterweather/developer/blob/main/docs/rest-api.md): auth, endpoints, rate-limit headers, pagination
 - [OpenAPI specification](https://github.com/smarterweather/developer/blob/main/openapi.yaml): full machine-readable contract for api.smarterweather.com
-- [Weather MCP server guide](https://github.com/smarterweather/developer/blob/main/docs/mcp-weather.md): hosted endpoint, tool catalog, stdio bridge (@smarterweather/mcp-weather)
+- [Weather MCP server guide](https://github.com/smarterweather/developer/blob/main/docs/mcp-weather.md): hosted endpoint, the 28-tool catalog (forecasts, alerts, outlooks, raw dataset queries, rendered radar/satellite map + sounding imagery), stdio bridge (@smarterweather/mcp-weather)
 - [Onboarding MCP server guide](https://github.com/smarterweather/developer/blob/main/docs/mcp-onboarding.md): agent-first signup, key provisioning, client config (@smarterweather/mcp-onboarding)
 - [Agent integration guide](https://github.com/smarterweather/developer/blob/main/docs/agent-integration.md): patterns for wiring Smarter Weather into AI agents
 - [Error model](https://github.com/smarterweather/developer/blob/main/docs/errors.md): RFC 7807 problem details and retry semantics

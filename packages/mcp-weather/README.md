@@ -30,7 +30,7 @@ Add to `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claud
 }
 ```
 
-When Claude Desktop starts the server, your default browser opens to a SmarterWeather sign-in flow. After consent, the bridge caches the access + refresh tokens locally and Claude Desktop sees the full tool catalog (`weather/get`, etc.).
+When Claude Desktop starts the server, your default browser opens to a SmarterWeather sign-in flow. After consent, the bridge caches the access + refresh tokens locally and Claude Desktop sees the full tool catalog (`get_forecast`, `get_alerts`, `get_map_snapshot`, etc.).
 
 ### API key
 
