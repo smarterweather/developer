@@ -174,7 +174,7 @@ weather tools during a session, install the bridge:
   "mcpServers": {
     "smarterweather-weather": {
       "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather@preview"],
+      "args": ["-y", "@smarterweather/mcp-weather"],
       "env": { "SMARTERWEATHER_API_KEY": "<inherited from shell>" }
     }
   }
