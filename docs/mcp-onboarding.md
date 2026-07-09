@@ -76,6 +76,28 @@ OAuth browser sign-in and unlock the account-scoped tools. See the
   authenticate the weather data surfaces (`api.smarterweather.com`,
   `mcp.smarterweather.com`); onboarding is identity-based.
 
+## Interactive widgets (MCP Apps)
+
+The server implements the [MCP Apps extension](https://modelcontextprotocol.io/extensions/apps/overview):
+in hosts that support it, selected onboarding tools render an interactive
+widget alongside the model's text answer.
+
+- **Enhanced tools**: `sign_up` (account CTA), `get_usage` (usage dashboard),
+  `configure_mcp` (paste-ready client config), `upgrade_plan` and
+  `open_billing_portal` (Stripe Checkout / portal CTAs). Sign-in itself
+  remains the host OAuth reconnect flow — not a widget.
+- **How it works**: the tools reference one shared app resource,
+  `ui://onboarding-widget/v1/index.html`, via `_meta.ui.resourceUri`, and
+  include an additive `widget` block in `structuredContent`. Hosts without
+  MCP Apps support ignore both — every tool result remains complete as
+  plain text content.
+- **Hybrid gating**: `sign_up` carries the widget pre-auth; gated tools
+  only advertise `_meta.ui` when the session is OAuth-authenticated.
+  Reading the `ui://` resource is anonymous and unmetered.
+- **Widget interactivity** is host-mediated (upgrade chips send a chat
+  prompt; signup / checkout buttons open URLs via the host). Widgets never
+  trigger additional billable tool calls.
+
 ## Looking for weather data?
 
 That's [`@smarterweather/mcp-weather`](./mcp-weather.md), hosted at
