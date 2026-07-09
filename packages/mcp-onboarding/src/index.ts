@@ -14,10 +14,12 @@
 //   Authenticated (SMARTERWEATHER_ONBOARDING_AUTH=required): the
 //   bridge appends ?auth=required to the target URL; the server then
 //   401-challenges the first request, which kicks off mcp-remote's
-//   OAuth client (DCR + PKCE + browser consent + token cache at
-//   ~/.mcp-auth/). After the browser dance, account-scoped tools
-//   (create_api_key, get_usage, upgrade_plan, ...) appear alongside
-//   the open ones.
+//   OAuth client (pre-registered public PKCE client_id + loopback
+//   callback on port 3334 + browser consent + token cache at
+//   ~/.mcp-auth/). Production Clerk keeps Dynamic Client Registration
+//   OFF; the bridge skips DCR via --static-oauth-client-info. After
+//   the browser dance, account-scoped tools (create_api_key,
+//   get_usage, upgrade_plan, ...) appear alongside the open ones.
 //
 // All argv assembly lives in ./args.ts so it stays unit-testable.
 
@@ -47,6 +49,7 @@ if (userArgs.includes('--version') || userArgs.includes('-v')) {
 const args = buildArgs(userArgs, {
   url: process.env.SMARTERWEATHER_ONBOARDING_MCP_URL,
   authMode: process.env.SMARTERWEATHER_ONBOARDING_AUTH,
+  oauthClientId: process.env.SMARTERWEATHER_ONBOARDING_OAUTH_CLIENT_ID,
   defaultUrl: 'https://developers.smarterweather.com/mcp',
 });
 

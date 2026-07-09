@@ -23,6 +23,8 @@ No account, no key, no auth. The open discovery tools (`get_plans`, `get_documen
 
 Set `SMARTERWEATHER_ONBOARDING_AUTH=required` to unlock the account-scoped tools (`create_api_key`, `list_api_keys`, `rotate_api_key`, `revoke_api_key`, `configure_mcp`, `get_usage`, `get_billing_status`, `upgrade_plan`, `open_billing_portal`). The first request triggers an OAuth 2.1 + PKCE browser sign-in (Clerk); tokens cache at `~/.mcp-auth/`.
 
+Production Clerk keeps **Dynamic Client Registration off**. The bridge uses a pre-registered public PKCE OAuth client (`client_id` baked into the package) and pins the mcp-remote loopback callback to `http://localhost:3334/oauth/callback` so it matches the Clerk app’s redirect URI. No client secret is required or shipped.
+
 ```json
 {
   "mcpServers": {
@@ -37,14 +39,17 @@ Set `SMARTERWEATHER_ONBOARDING_AUTH=required` to unlock the account-scoped tools
 }
 ```
 
+Ensure port `3334` is free when authenticating; if mcp-remote falls back to a random port, Clerk will reject the redirect.
+
 ## Configuration
 
 | Env var | Default | Purpose |
 | --- | --- | --- |
 | `SMARTERWEATHER_ONBOARDING_MCP_URL` | `https://developers.smarterweather.com/mcp` | Target endpoint override (dev/staging). A positional URL argument takes precedence over both. |
 | `SMARTERWEATHER_ONBOARDING_AUTH` | *(unset)* | `required` → opt into the OAuth challenge and account-scoped tools. |
+| `SMARTERWEATHER_ONBOARDING_OAUTH_CLIENT_ID` | `PQcxOLVZg5kxzhoC` | Override the pre-registered Clerk OAuth client_id (staging / alternate apps). |
 
-Any extra CLI arguments (`--debug`, `--transport http-only`, `--header X:y`, …) pass through verbatim to `mcp-remote`.
+Any extra CLI arguments (`--debug`, `--transport http-only`, `--header X:y`, …) pass through verbatim to `mcp-remote`. If you already pass a callback port or `--static-oauth-client-info`, the bridge will not double-inject them.
 
 `--version` prints the bridge version plus the bundled `mcp-remote` version and exits.
 
