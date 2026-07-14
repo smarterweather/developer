@@ -19,7 +19,10 @@ Canonical machine-readable contracts:
 ## Preferred onboarding path
 
 1. Connect to the **onboarding MCP** with no credentials.
-2. Call `get_plans` / `get_documentation` / `sign_up`.
+2. Call `get_plans` / `get_documentation` / `sign_up`. The platform is in
+   limited preview: `sign_up` returns a request-access URL; the user
+   receives an email invitation once approved and creates their account
+   from it.
 3. Complete Clerk OAuth when the host prompts.
 4. Call `create_api_key` (idempotent) and `configure_mcp`.
 5. Use the returned key against the weather MCP or REST API.
