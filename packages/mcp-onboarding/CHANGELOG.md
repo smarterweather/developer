@@ -1,5 +1,11 @@
 # @smarterweather/mcp-onboarding
 
+## 0.0.2
+
+### Patch Changes
+
+- [#39](https://github.com/smarterweather/developer/pull/39) [`8f1b289`](https://github.com/smarterweather/developer/commit/8f1b289634a8a702fa8d9346dd3576cafb305a4c) Thanks [@afisch710](https://github.com/afisch710)! - When `SMARTERWEATHER_ONBOARDING_AUTH=required`, pin the mcp-remote OAuth callback to port `3334` and pass `--static-oauth-client-info` with the pre-registered public PKCE Clerk `client_id` (`PQcxOLVZg5kxzhoC`, overridable via `SMARTERWEATHER_ONBOARDING_OAUTH_CLIENT_ID`). Production Clerk keeps Dynamic Client Registration off; the bridge no longer depends on DCR.
+
 ## 0.0.1
 
 ### Patch Changes
