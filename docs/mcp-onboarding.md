@@ -5,8 +5,10 @@ The "meta MCP" — the agent-first way onto the Smarter Weather platform,
 developer (and their agent) end-to-end:
 
 1. **Discovery** — plans, pricing, and documentation, with zero credentials.
-2. **Account creation** — a referral-tagged signup link into the developer
-   portal.
+2. **Account creation** — a referral-tagged request-access link into the
+   developer portal. The platform is in **limited preview**: submit your
+   email, and account creation completes via an emailed invitation once
+   approved.
 3. **API key provisioning** — mint, list, rotate, and revoke keys after an
    OAuth sign-in.
 4. **Client configuration** — generates the right `@smarterweather/mcp-weather`
@@ -65,7 +67,7 @@ Registration) and pins the loopback callback to
 | --- | --- | --- |
 | `get_plans` | none | Plan/pricing catalog with feature matrices. |
 | `get_documentation` | none | Keyword-searchable documentation index + content. |
-| `sign_up` | none | Referral-tagged signup URL into the developer portal. |
+| `sign_up` | none | Referral-tagged request-access URL into the developer portal (limited preview: invitation emailed on approval). |
 | `create_api_key` / `list_api_keys` / `rotate_api_key` / `revoke_api_key` | OAuth | Full key lifecycle, acting as the signed-in developer. |
 | `configure_mcp` | OAuth | Ready-to-paste `@smarterweather/mcp-weather` client config for your editor/agent. |
 | `get_quickstart` | OAuth | Personalized quickstart (key + first calls). |
