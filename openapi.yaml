@@ -138,6 +138,56 @@ paths:
               schema:
                 $ref: '#/components/schemas/Health'
 
+  /v1/status:
+    get:
+      operationId: getStatus
+      summary: Platform data-freshness status.
+      description: |
+        Returns the current data-freshness status of the weather platform:
+        an overall state, per-source states, open incidents, and any active
+        provider advisories.
+
+        Every source is continuously evaluated against its expected
+        publication cadence across the ingestion, processing, and serving
+        stages. States:
+
+        - `ok` — data is flowing within its expected cadence.
+        - `degraded` — data is staler than expected but below outage
+          thresholds.
+        - `outage` — data has been stale long enough to be considered an
+          outage. The `incident.cause` field attributes it (e.g.
+          `provider_outage` vs `processing_delay`).
+        - `no_signal` — the monitor has no signal for this source
+          (instrumentation gap, not necessarily a data gap).
+
+        The document regenerates about every 5 minutes; responses carry
+        `Cache-Control: public, max-age=60`. This endpoint does **not**
+        require authentication, so it stays reachable during the incidents
+        it describes — agents and integrations should consult it before
+        reporting weather data as current, and may relay `advisories`
+        entries to end users.
+      tags: [Meta]
+      security: []
+      responses:
+        '200':
+          description: Current platform status document.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformStatus'
+        '502':
+          description: The status document could not be retrieved.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: Platform status is not configured in this environment.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
   /v1/weather:
     get:
       operationId: getWeather
@@ -2135,6 +2185,108 @@ components:
           type: string
           format: uri
           description: A URI reference identifying the specific occurrence.
+
+    PlatformStatus:
+      type: object
+      description: |
+        Platform data-freshness status document, regenerated ~every 5
+        minutes by the freshness monitor. Additional fields may be added
+        over time; consumers must ignore unknown fields.
+      required: [version, generated_at, overall, sources]
+      properties:
+        version:
+          type: integer
+          description: Document schema version.
+          example: 1
+        generated_at:
+          type: string
+          format: date-time
+          description: When this document was generated (UTC).
+        overall:
+          type: string
+          enum: [ok, degraded, outage, no_signal]
+          description: |
+            Worst state across customer-facing sources. `ok` means all
+            customer-facing weather data is flowing within its expected
+            cadence.
+        sources:
+          type: array
+          description: Per-source freshness states.
+          items:
+            $ref: '#/components/schemas/PlatformStatusSource'
+        advisories:
+          type: array
+          description: |
+            Active advisories relayed from upstream data providers (e.g.
+            NOAA/NWS service notices) that may explain or foreshadow data
+            gaps.
+          items:
+            $ref: '#/components/schemas/PlatformStatusAdvisory'
+
+    PlatformStatusSource:
+      type: object
+      required: [source_id, name, provider_id, state, severity]
+      properties:
+        source_id:
+          type: string
+          description: Stable source identifier.
+          example: goes
+        name:
+          type: string
+          description: Human-readable source name.
+          example: GOES ABI Satellite Imagery
+        provider_id:
+          type: string
+          description: Upstream data provider identifier.
+          example: noaa
+        state:
+          type: string
+          enum: [ok, degraded, outage, no_signal]
+        severity:
+          type: string
+          enum: [customer_facing, internal]
+          description: |
+            Whether staleness of this source is visible to end customers
+            (`customer_facing`) or only affects internal products
+            (`internal`).
+        incident:
+          type: object
+          description: Present when state is not `ok` and an incident is open.
+          properties:
+            cause:
+              type: string
+              description: |
+                Root-cause attribution, e.g. `provider_outage` (upstream
+                stopped publishing), `processing_delay` (data arrived but
+                is stuck in the pipeline), `serving_delay`, or
+                `poller_stale` (our polling stopped; provider state
+                unknown).
+              example: provider_outage
+            since:
+              type: string
+              format: date-time
+              description: When the incident opened (UTC).
+            status:
+              type: string
+              description: Incident lifecycle status (e.g. open, recovering).
+
+    PlatformStatusAdvisory:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Advisory headline from the provider.
+        provider_id:
+          type: string
+          example: noaa
+        url:
+          type: string
+          format: uri
+          description: Link to the provider's advisory.
+        published_at:
+          type: string
+          format: date-time
+          description: When the provider published the advisory (UTC).
 
     Deprecation:
       type: object
