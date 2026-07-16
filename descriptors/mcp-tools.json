@@ -2188,6 +2188,10 @@
                     "no_signal"
                   ]
                 },
+                "warming": {
+                  "type": "boolean",
+                  "description": "true when no_signal only means monitoring is still warming up (not an outage)."
+                },
                 "severity": {
                   "type": "string"
                 },
