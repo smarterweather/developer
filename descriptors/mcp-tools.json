@@ -984,7 +984,7 @@
               "detailed"
             ],
             "default": "standard",
-            "description": "standard: compact response (~5-10KB). detailed: preserves CAPE, UV, day/night periods, extra hourly fields (~12-20KB)."
+            "description": "standard: compact response (~5-10KB); daily includes day_precip_probability / night_precip_probability when available (precip_probability is max of day/night). detailed: also preserves CAPE, UV, full day/night period objects, extra hourly fields (~12-20KB)."
           }
         },
         "additionalProperties": false,
