@@ -403,6 +403,27 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/input_examples": [
+          {
+            "location": "Boulder, CO",
+            "criteria": {
+              "min_temperature": 55,
+              "max_wind_speed": 15,
+              "max_precipitation_probability": 20
+            },
+            "hours": 72,
+            "activity_duration_hours": 3
+          },
+          {
+            "location": "Girdwood, AK",
+            "criteria": {
+              "max_precipitation_probability": 30
+            },
+            "daylight_only": true
+          }
+        ]
       }
     },
     {
@@ -1731,6 +1752,52 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/input_examples": [
+          {
+            "location": "Tulsa, OK",
+            "product": "nexrad_l3:TLX:N0B",
+            "zoom": 8
+          },
+          {
+            "lat": 39.74,
+            "lon": -104.99,
+            "product": "goes_truecolor_conus",
+            "zoom": 5
+          },
+          {
+            "scene": {
+              "scene": "1.0",
+              "view": {
+                "center": {
+                  "lat": 43.8,
+                  "lon": -91.2
+                },
+                "zoom": 8
+              },
+              "layers": [
+                {
+                  "type": "weather",
+                  "product": "goes_truecolor_conus"
+                },
+                {
+                  "type": "weather",
+                  "product": "nexrad_l3:ARX:N0B"
+                },
+                {
+                  "type": "alerts",
+                  "filter": {
+                    "events": [
+                      "Tornado Warning"
+                    ]
+                  },
+                  "onError": "skip"
+                }
+              ]
+            }
+          }
+        ]
       }
     },
     {
@@ -3205,6 +3272,21 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/input_examples": [
+          {
+            "query": "Springfield"
+          },
+          {
+            "query": "bost",
+            "fuzzy": true,
+            "limit": 3
+          },
+          {
+            "query": "50219"
+          }
+        ]
       }
     }
   ]
