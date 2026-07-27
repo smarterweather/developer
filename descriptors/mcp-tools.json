@@ -2961,7 +2961,7 @@
     {
       "name": "query_dataset",
       "title": "Query dataset",
-      "description": "Raw time series from a specific dataset for specific variables at a point. Power-user access to any gridded product (NBM, HRRR, GFS, RTMA, MRMS, air quality, ...). Time modes: hours (next N hours, default 24), time_start+time_end (explicit ISO-8601 window), or latest=true (single most-recent value). reference_time pins a specific model run. For blended forecasts use get_forecast instead. Examples: {\"location\": \"Denver\", \"dataset_id\": \"hrrr_surface\", \"variables\": [\"temperature_2m\"], \"hours\": 18} or {\"lat\": 41.4, \"lon\": -92.9, \"dataset_id\": \"rtma_conus\", \"variables\": [\"temperature_2m\"], \"latest\": true}.",
+      "description": "Raw time series from a specific dataset for specific variables at a point. Power-user access to any gridded product (NBM, HRRR, GFS, RTMA, MRMS, air quality, ...). Time modes: hours (next N hours, default 24), time_start+time_end (explicit ISO-8601 window), or latest=true (single most-recent value). reference_time pins a specific model run, and each returned series reports the run that served it (reference_time, or reference_times when a series mixes runs) — check it before comparing two runs, since a run older than about 48 hours may no longer be available. For blended forecasts use get_forecast instead. Examples: {\"location\": \"Denver\", \"dataset_id\": \"hrrr_surface\", \"variables\": [\"temperature_2m\"], \"hours\": 18} or {\"lat\": 41.4, \"lon\": -92.9, \"dataset_id\": \"rtma_conus\", \"variables\": [\"temperature_2m\"], \"latest\": true}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3075,6 +3075,17 @@
                       ]
                     }
                   }
+                },
+                "reference_time": {
+                  "type": "string",
+                  "description": "Model run behind every value in this series."
+                },
+                "reference_times": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Distinct runs, when this series mixes more than one."
                 }
               },
               "required": [
