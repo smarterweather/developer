@@ -1561,7 +1561,10 @@ paths:
           RTMA observed daily history + today's partial (hourly on-read
           rollup) + NBM forecast, returns a `cumulative_total`, and adds a
           per-day `cumulative_gdu` running sum. This is the number a grower
-          tracks against crop growth-stage milestones.
+          tracks against crop growth-stage milestones. If part of the season
+          window has no observed data, the per-day series still comes back
+          `200` but `cumulative_total` is omitted and `meta.gaps` carries an
+          `unfilled` span — a partial sum is not a season total.
 
         **Crops.** Pass a catalog `crop` id (e.g. `corn`, `soybean`,
         `wheat_winter`, `cotton`, `alfalfa`) to use calibrated thresholds, or
@@ -4527,7 +4530,13 @@ components:
           format: double
           description: |
             Season-to-date GDU total in the requested unit. Present only in
-            cumulative mode (when `season_start` was supplied).
+            cumulative mode (when `season_start` was supplied), and omitted
+            even then when `meta.gaps` contains an `unfilled` span: those days
+            have no observed data, so the sum would under-count the season.
+            Treat an absent total on a `season_start` request as "season total
+            unavailable" and fall back to the per-day series, which is still
+            good for the days it covers. `meta.gaps` names the window that was
+            lost.
         milestones:
           type: array
           description: |
