@@ -1862,6 +1862,113 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/outlooks:
+    get:
+      operationId: getOutlookDetail
+      summary: SPC convective outlook detail for a location and day.
+      description: |
+        Returns everything the Storm Prediction Center says about one
+        outlook day at a point: the categorical risk band, the
+        probability of each severe hazard, whether the location falls in
+        the hatched significant-severe area, and the forecaster's full
+        written discussion.
+
+        This is the drill-down behind a risk area on a map. `GET
+        /v1/weather?include=outlooks` already reports the single
+        worst-case risk level at a location; this endpoint expands that
+        into the per-hazard breakdown and the reasoning behind it.
+
+        ### Probabilities
+
+        Days 1 and 2 are issued as separate `tornado`, `wind`, and `hail`
+        products, so `probabilities` holds one entry per hazard. Day 3
+        and beyond issue a single combined `probabilistic` product and
+        yield one entry. Values are fractional (`0.15` = 15%).
+
+        SPC delineates significant severe as its own polygon rather than
+        an attribute of the probability area. Where the two overlap they
+        are reported as a single entry carrying both the probability and
+        `significant: true`, so a 15% hail area with a hatched overlay
+        reads as one hazard rather than two.
+
+        ### Narrative
+
+        `narrative` carries the SWO discussion for the requested day
+        (`SWODY1`/`SWODY2`/`SWODY3`, or `SWOD48` for days 4-8). It is
+        ingested separately from the outlook polygons, so it may be
+        absent for a few minutes after a new issuance, and it is omitted
+        rather than erroring when unavailable.
+
+        ### Empty results
+
+        A location outside every outlook polygon is a valid answer: `200`
+        with an empty `probabilities` array and no `categorical`. Only an
+        upstream failure produces an error.
+
+        ### Caching
+
+        Successful responses are cacheable for 5 minutes. SPC reissues
+        the day 1 outlook a handful of times a day.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Weather]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitude in decimal degrees.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 35.48
+        - name: lon
+          in: query
+          required: true
+          description: Longitude in decimal degrees.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -97.53
+        - name: day
+          in: query
+          required: false
+          description: |
+            Outlook day to describe, where 1 is today. Defaults to 1.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 8
+            default: 1
+          example: 1
+      responses:
+        '200':
+          description: Outlook detail for the requested day and location.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutlookDetail'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -3340,6 +3447,70 @@ components:
         expires:
           type: string
           format: date-time
+        significant:
+          type: boolean
+          description: |
+            The location falls inside SPC's hatched significant-severe
+            area for this hazard — tornadoes of EF2+, hail 2 in or
+            larger, or wind gusts of 65 kt or more.
+
+            SPC ships this as its own polygon, so it is reported here as
+            a flag on the hazard it qualifies rather than as a separate
+            entry. Absent (or `false`) outside the hatched area.
+
+    OutlookDetail:
+      type: object
+      description: |
+        Drill-down detail for one SPC convective outlook day at a
+        location: the categorical risk band, each probabilistic hazard,
+        and the forecaster's written discussion.
+
+        Everything except `day` is optional. A point can sit inside a
+        categorical polygon with no probabilistic coverage, and the
+        narrative is ingested separately from the polygons so it can lag
+        a fresh issuance.
+      required: [day, probabilities]
+      properties:
+        day:
+          type: integer
+          minimum: 1
+          maximum: 8
+          description: The outlook day this detail describes (1 = today).
+        categorical:
+          $ref: '#/components/schemas/Outlook'
+        probabilities:
+          type: array
+          description: |
+            One entry per probabilistic hazard covering the point. Days
+            1-2 break these out as `tornado`, `wind`, and `hail`; day 3
+            and beyond issue a single combined `probabilistic` product.
+            Empty when no probabilistic polygon covers the location.
+          items:
+            $ref: '#/components/schemas/Outlook'
+        narrative:
+          $ref: '#/components/schemas/OutlookNarrative'
+
+    OutlookNarrative:
+      type: object
+      description: |
+        The SPC forecaster's written discussion for an outlook day, as
+        issued in the corresponding SWO text product.
+      properties:
+        awips_id:
+          type: string
+          description: |
+            AWIPS identifier of the source product — `SWODY1`, `SWODY2`,
+            `SWODY3` for the single-day outlooks, `SWOD48` for days 4-8.
+          example: "SWODY1"
+        issued_at:
+          type: string
+          format: date-time
+        body:
+          type: string
+          description: Full narrative text as written by the forecaster.
+        summary:
+          type: string
+          description: Short generated summary, when one is available.
 
     StormTracksFeatureCollection:
       type: object
