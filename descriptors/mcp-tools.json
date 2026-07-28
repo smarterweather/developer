@@ -1605,7 +1605,7 @@
     {
       "name": "get_lightning_activity",
       "title": "Get lightning activity",
-      "description": "Real-time lightning near a location: GLM satellite flash count (30km/10min) and MRMS ground-truth lightning density + 30-minute probability. The summary field is ready-to-use. Only call when storms may be active or the user asks about lightning. Example: {\"location\": \"Tampa\"}.",
+      "description": "Real-time lightning near a location: GLM satellite flash count (30km/10min) and MRMS ground-truth lightning density + 30-minute probability. The summary field is ready-to-use. A zero flash count means no lightning inside that window -- report it as a quiet observation scoped to the window in `scope`, never as a data gap. Only call when storms may be active or the user asks about lightning. Example: {\"location\": \"Tampa\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1653,6 +1653,10 @@
             ],
             "additionalProperties": false
           },
+          "scope": {
+            "type": "string",
+            "description": "Area and time window searched, so a zero count is unambiguous to report."
+          },
           "lightning": {
             "type": "object",
             "additionalProperties": {}
@@ -1660,6 +1664,7 @@
         },
         "required": [
           "location",
+          "scope",
           "lightning"
         ],
         "additionalProperties": false,
@@ -2269,7 +2274,10 @@
                       "type": "string"
                     },
                     "since": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "number"
+                      ]
                     },
                     "status": {
                       "type": "string"
@@ -2615,6 +2623,10 @@
             ],
             "additionalProperties": false
           },
+          "summary": {
+            "type": "string",
+            "description": "Ready-to-use one-liner. States explicitly when nothing was detected."
+          },
           "tracks": {
             "type": "object",
             "additionalProperties": {}
@@ -2626,6 +2638,7 @@
         },
         "required": [
           "location",
+          "summary",
           "detections"
         ],
         "additionalProperties": false,
