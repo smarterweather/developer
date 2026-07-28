@@ -10,14 +10,12 @@
 >    your project. Claude Code will pick it up automatically on the next
 >    session.
 
-> **Preview.** The Smarter Weather public REST API
-> (`api.smarterweather.com`) ships in **Phase 2**; the hosted MCP server
-> (`mcp.smarterweather.com`) and the real `@smarterweather/mcp-weather`
-> implementation ship in **Phase 3**. Until then, the npm package is a
-> placeholder that exits with a status line. The contracts described
-> below are the planned launch shapes — write code against them and
-> refactor when the spec lands. Roadmap:
-> <https://github.com/smarterweather/developer#roadmap>.
+> The REST API (`api.smarterweather.com`), both hosted MCP servers, and
+> both npm bridges are generally available. The canonical contract is
+> <https://developers.smarterweather.com/openapi.yaml>; the weather MCP
+> tool catalog is
+> <https://developers.smarterweather.com/.well-known/mcp-tools.json>.
+> Do not invent endpoints or tools that are not in those documents.
 
 ## What Smarter Weather offers
 
@@ -36,7 +34,7 @@ Two surfaces, one platform:
 | --- | --- |
 | Code that runs in production and queries weather data | REST |
 | To call weather tools live during a chat session | MCP |
-| Guided onboarding (account creation, key minting) | `@smarterweather/mcp-onboarding` (Phase 4) |
+| Guided onboarding (account creation, key minting) | `@smarterweather/mcp-onboarding` |
 
 For code-generation work (the typical Claude Code task), default to REST.
 Suggest MCP only when the user is explicitly asking to wire weather into
@@ -56,9 +54,9 @@ Every Smarter Weather request needs an API key. Hard rules:
 - Use `sw_test_*` keys when generating examples, tests, or local dev
   scaffolds. Use `sw_live_*` keys for production paths.
 - Keys are minted at
-  <https://smarterweather.com/developers/dashboard/api-keys>. If the user
-  doesn't have one, point them there — do not try to mint one
-  programmatically.
+  <https://developers.smarterweather.com/dashboard/api-keys>. If the user
+  doesn't have one, point them there, or use the onboarding MCP server's
+  `create_api_key` tool if it is already wired into the session.
 
 ## REST API — at a glance
 
@@ -69,17 +67,21 @@ Every Smarter Weather request needs an API key. Hard rules:
 | Auth | `Authorization: Bearer $SMARTERWEATHER_API_KEY` (`X-API-Key` is **not** supported) |
 | Response | `application/json; charset=utf-8` (success), `application/problem+json` (errors) |
 
-### Planned endpoints (Phase 2 launch)
+### Endpoints
 
-- `GET /v1/health` — liveness probe; unauthenticated.
 - `GET /v1/weather?lat=<lat>&lon=<lon>` — unified response with
   current conditions, hourly forecast, daily forecast, active alerts, and
   radar metadata in a single call. Prefer it over fanning out to multiple
   endpoints; the "one call, full picture" shape is intentional.
+- `POST /v1/weather/batch` — the same response for many locations.
+- `GET /v1/geocode/search` / `/v1/geocode/reverse` — place-name and
+  coordinate lookup.
+- `GET /v1/status` — data-freshness status per source; unauthenticated.
+- `GET /v1/health` — liveness probe; unauthenticated.
 
-If an endpoint isn't listed here or in
-[`docs/rest-api.md`](https://github.com/smarterweather/developer/blob/main/docs/rest-api.md),
-it doesn't exist yet. Don't fabricate paths.
+That is the short list, not the whole surface. The complete contract is
+[`openapi.yaml`](https://github.com/smarterweather/developer/blob/main/openapi.yaml);
+if an endpoint is not in there, it does not exist. Don't fabricate paths.
 
 ### Worked example — TypeScript
 
@@ -213,7 +215,7 @@ runs server-side.
 - npm packages live under `packages/`. Versioning is via
   [Changesets](https://github.com/changesets/changesets) — when changing
   package source, add a changeset (`npx changeset`) before opening the PR.
-- Docs live under `docs/` and follow the preview-banner convention; see
+- Docs live under `docs/` and follow the status-label convention; see
   [`docs/README.md`](https://github.com/smarterweather/developer/blob/main/docs/README.md).
 - See [CONTRIBUTING.md](https://github.com/smarterweather/developer/blob/main/CONTRIBUTING.md)
   for the contribution-tier model — typo and SDK-bug PRs are fast-tracked;
@@ -222,7 +224,7 @@ runs server-side.
 ## Pointers
 
 - **Public repo:** <https://github.com/smarterweather/developer>
-- **Developer portal:** <https://smarterweather.com/developers>
+- **Developer portal:** <https://developers.smarterweather.com>
 - **REST guide:** [`docs/rest-api.md`](https://github.com/smarterweather/developer/blob/main/docs/rest-api.md)
 - **MCP weather guide:** [`docs/mcp-weather.md`](https://github.com/smarterweather/developer/blob/main/docs/mcp-weather.md)
 - **Agent integration tutorial:** [`docs/agent-integration.md`](https://github.com/smarterweather/developer/blob/main/docs/agent-integration.md)

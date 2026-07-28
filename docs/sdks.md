@@ -1,17 +1,20 @@
 # SDKs
 
-> **Preview - SDKs not yet shipped.** First-party SDKs land alongside the
-> Phase 2 REST API launch (TypeScript first, Python soon after, Go to
-> follow). This page reserves the documentation slot and describes the
-> planned ergonomics so SDK authors and integrators can plan against them.
+> **Not yet shipped.** First-party SDKs are the one part of the developer
+> platform that is still ahead of us — the REST API, both MCP servers, and
+> both npm stdio bridges are generally available. Until an SDK lands, call
+> the API directly; it is a plain JSON HTTP API with Bearer auth, and
+> [`quickstart.md`](./quickstart.md) has working snippets in three languages.
+> This page describes the planned ergonomics so integrators can plan against
+> them.
 
 ## Languages and timing
 
-| Language   | Package name (planned)              | Status       | Phase |
-| ---------- | ----------------------------------- | ------------ | ----- |
-| TypeScript | `@smarterweather/sdk`               | not shipped  | Phase 2 |
-| Python     | `smarterweather`                    | not shipped  | Phase 2/5 |
-| Go         | `github.com/smarterweather/sdk-go`  | not shipped  | Phase 5 |
+| Language   | Package name (planned)              | Status       |
+| ---------- | ----------------------------------- | ------------ |
+| TypeScript | `@smarterweather/sdk`               | not shipped  |
+| Python     | `smarterweather`                    | not shipped  |
+| Go         | `github.com/smarterweather/sdk-go`  | not shipped  |
 
 If you need a language we have not committed to, file an issue with the
 "feature request" template - SDK additions are demand-driven.
@@ -66,8 +69,8 @@ Both SDKs ship typed responses, structured error classes that mirror the
 
 ## Until SDKs ship
 
-Until Phase 2 lands, the recommended path is plain HTTPS calls against
-`https://api.smarterweather.com/v1/*` with whatever HTTP client your
-language already provides. The [REST API guide](./rest-api.md) is the
-canonical contract reference; the OpenAPI spec at the repo root will
-become available alongside the Phase 2 launch.
+Make plain HTTPS calls against `https://api.smarterweather.com/v1/*` with
+whatever HTTP client your language already provides. The
+[REST API guide](./rest-api.md) is the orientation reference and
+[`openapi.yaml`](../openapi.yaml) is the canonical contract — generate a
+client from it if you want types today.

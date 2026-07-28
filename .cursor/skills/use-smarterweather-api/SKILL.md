@@ -14,14 +14,6 @@ description: >-
 
 # Use the Smarter Weather Developer Platform
 
-> **Preview.** The Smarter Weather public REST API (`api.smarterweather.com`)
-> ships in Phase 2 of the platform rollout; the hosted MCP server
-> (`mcp.smarterweather.com`) and the real `@smarterweather/mcp-weather`
-> implementation ship in Phase 3. Until then, the npm package is a
-> placeholder that exits with a status line. The contract shapes below are
-> the planned launch shapes; treat them as authoritative for code structure
-> and refactor when the spec lands. Roadmap: <https://github.com/smarterweather/developer#roadmap>
-
 This skill teaches an agent how to consume Smarter Weather's developer
 APIs correctly and idiomatically. The platform offers two surfaces; pick the
 right one for the user's goal:
@@ -30,7 +22,7 @@ right one for the user's goal:
 | --- | --- |
 | Code that runs in production and calls weather endpoints from the user's own service | **REST API** (`api.smarterweather.com/v1/*`) |
 | An AI agent that calls weather tools live during a chat session | **MCP server** (`@smarterweather/mcp-weather`) wired into the user's MCP client |
-| One-time onboarding (account, key minting, client config) | `@smarterweather/mcp-onboarding` MCP — **Phase 4** |
+| One-time onboarding (account, key minting, client config) | `@smarterweather/mcp-onboarding` MCP |
 
 When in doubt, default to REST for code-generation tasks and MCP for
 agent-runtime tool calls.
@@ -55,7 +47,7 @@ Hard rules:
 - **Always** use `sw_test_*` prefixed keys when generating tests, examples,
   or local dev scaffolds. Production code uses `sw_live_*`.
 - The user can mint, rotate, and revoke keys at
-  <https://smarterweather.com/developers/dashboard/api-keys>. If they don't
+  <https://developers.smarterweather.com/dashboard/api-keys>. If they don't
   have one yet, point them there rather than trying to mint one
   programmatically.
 
@@ -70,12 +62,20 @@ Hard rules:
 | Auth header | `Authorization: Bearer $SMARTERWEATHER_API_KEY` (the `X-API-Key` header is **not** supported) |
 | Response content type | `application/json; charset=utf-8` (success), `application/problem+json` (errors) |
 
-### Endpoints (planned launch surface)
+### Endpoints
 
-- `GET /v1/health` — liveness probe; unauthenticated
+The canonical list is <https://developers.smarterweather.com/openapi.yaml>.
+If an endpoint is not in there, it does not exist — do not fabricate one.
+The ones you will reach for most:
+
 - `GET /v1/weather?lat=<lat>&lon=<lon>` — unified response with
   current conditions, hourly forecast, daily forecast, active alerts, and
   radar metadata in one call
+- `POST /v1/weather/batch` — the same response for many locations
+- `GET /v1/geocode/search` / `/v1/geocode/reverse` — place-name and
+  coordinate lookup
+- `GET /v1/status` — data-freshness status per source; unauthenticated
+- `GET /v1/health` — liveness probe; unauthenticated
 
 The "one call, full picture" shape of `/v1/weather` is intentional: most
 integrations need several views of weather at the same point. Prefer it
@@ -182,7 +182,7 @@ use exponential backoff starting at 1 second with jitter, and never retry
 more than 5 times. Production code should also pre-empt 429s by checking
 `RateLimit-Remaining` and pacing requests when it drops near zero.
 
-## MCP server (Phase 3)
+## MCP server
 
 Skip this section for code-generation tasks; jump back to REST.
 
@@ -248,7 +248,7 @@ or modify weather data.
 ## Where to learn more
 
 - Public repo (this skill's home): <https://github.com/smarterweather/developer>
-- Developer portal: <https://smarterweather.com/developers>
+- Developer portal: <https://developers.smarterweather.com>
 - REST API guide: [`docs/rest-api.md`](https://github.com/smarterweather/developer/blob/main/docs/rest-api.md)
 - MCP weather guide: [`docs/mcp-weather.md`](https://github.com/smarterweather/developer/blob/main/docs/mcp-weather.md)
 - Agent integration tutorial: [`docs/agent-integration.md`](https://github.com/smarterweather/developer/blob/main/docs/agent-integration.md)
