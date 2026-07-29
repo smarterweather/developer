@@ -66,6 +66,7 @@ info:
     | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/SWO/MCD).   |
     | `uncertainty` | no    | experimental | NBM probabilistic sub-objects on hourly and daily forecasts (CONUS/Alaska/Hawaii only). |
     | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
+    | `climate`     | no    | experimental | NCEI day-of-year normals for the location, plus per-day departure from normal on `daily[]`. |
 
     `radar` and `products` (wx visual-products manifest) are **not** in the
     v1 token set. They will land in Phase 5 alongside a separate
@@ -2587,6 +2588,22 @@ components:
           $ref: '#/components/schemas/Guidance'
         nowcast:
           $ref: '#/components/schemas/Nowcast'
+        climate:
+          allOf:
+            - $ref: '#/components/schemas/ClimateNormals'
+          description: |
+            Day-of-year climate normals for the location, populated when
+            `include=climate` is requested. Identical in shape to the
+            `GET /v1/climate/normals` body.
+
+            This block is the normals themselves — what is typical here. For
+            how the forecast compares to them, read `daily[].climate`, which
+            carries the same normals joined to each forecast day along with
+            the signed departure.
+
+            Omitted when no station with normals is near the point; that case
+            reports `coverage_limited` in `meta.warnings[]` rather than
+            failing the request.
         meta:
           $ref: '#/components/schemas/Meta'
 
@@ -3140,6 +3157,53 @@ components:
           oneOf:
             - $ref: '#/components/schemas/DailyUncertainty'
             - type: "null"
+        climate:
+          description: |
+            Optional climate sub-object for this day. Populated only when
+            `include=climate` is requested and the nearest station holds a
+            normal for the date.
+          oneOf:
+            - $ref: '#/components/schemas/DailyClimate'
+            - type: "null"
+
+    DailyClimate:
+      type: object
+      description: |
+        The day's normal paired with this forecast's departure from it.
+
+        Temperatures are in the requested `unit` system, matching `high` and
+        `low` on the same row. Departures are signed so that positive is
+        warmer than normal, and are differences rather than absolute
+        temperatures.
+
+        Every field is nullable: a station can hold a normal high without a
+        normal low, and a forecast day can fall in a gap in the station's
+        record. A `0` departure means the forecast landed exactly on the
+        normal, which is not the same as an absent one.
+
+        Station provenance for these values — which station, how far away,
+        and over what base period — lives in the top-level `climate` block.
+      properties:
+        normal_high:
+          type: [number, "null"]
+          format: double
+          description: Normal daily maximum temperature for this day of year.
+          example: 78
+        normal_low:
+          type: [number, "null"]
+          format: double
+          description: Normal daily minimum temperature for this day of year.
+          example: 58
+        high_departure:
+          type: [number, "null"]
+          format: double
+          description: Forecast high minus normal high; positive is warmer than normal.
+          example: 4
+        low_departure:
+          type: [number, "null"]
+          format: double
+          description: Forecast low minus normal low; positive is warmer than normal.
+          example: -2
 
     DailyUncertainty:
       type: object
