@@ -1968,12 +1968,12 @@ paths:
   /v1/outlooks:
     get:
       operationId: getOutlookDetail
-      summary: SPC convective outlook detail for a location and day.
+      summary: SPC outlook detail for a location, day, and hazard family.
       description: |
         Returns everything the Storm Prediction Center says about one
-        outlook day at a point: the categorical risk band, the
-        probability of each severe hazard, whether the location falls in
-        the hatched significant-severe area, and the forecaster's full
+        outlook day at a point for a hazard family: the risk band, any
+        probabilistic hazards (severe only), whether the location falls
+        in a hatched significant-severe area, and the forecaster's full
         written discussion.
 
         This is the drill-down behind a risk area on a map. `GET
@@ -1981,12 +1981,25 @@ paths:
         worst-case risk level at a location; this endpoint expands that
         into the per-hazard breakdown and the reasoning behind it.
 
+        ### Hazard families
+
+        `hazard=severe` (default) returns the convective outlook:
+        categorical risk plus tornado/wind/hail probabilities, with the
+        SWO discussion (`SWODY1`/`SWODY2`/`SWODY3`, or `SWOD48` for days
+        4-8). `hazard=fire` returns the fire-weather outlook band
+        (`ELEV`/`CRIT`/`EXTM`) and the FWD discussion (`FWDDY1`/
+        `FWDDY2`, or `FWDD38` for days 3-8). Fire polygons exist for
+        days 1-2 only, so a fire request for day 3+ may return a
+        narrative with no band.
+
         ### Probabilities
 
         Days 1 and 2 are issued as separate `tornado`, `wind`, and `hail`
         products, so `probabilities` holds one entry per hazard. Day 3
         and beyond issue a single combined `probabilistic` product and
-        yield one entry. Values are fractional (`0.15` = 15%).
+        yield one entry. Values are fractional (`0.15` = 15%). Fire
+        outlooks have no probabilistic products; `probabilities` is
+        empty for `hazard=fire`.
 
         SPC delineates significant severe as its own polygon rather than
         an attribute of the probability area. Where the two overlap they
@@ -1996,11 +2009,10 @@ paths:
 
         ### Narrative
 
-        `narrative` carries the SWO discussion for the requested day
-        (`SWODY1`/`SWODY2`/`SWODY3`, or `SWOD48` for days 4-8). It is
-        ingested separately from the outlook polygons, so it may be
-        absent for a few minutes after a new issuance, and it is omitted
-        rather than erroring when unavailable.
+        `narrative` carries the discussion for the requested family and
+        day. It is ingested separately from the outlook polygons, so it
+        may be absent for a few minutes after a new issuance, and it is
+        omitted rather than erroring when unavailable.
 
         ### Empty results
 
@@ -2051,6 +2063,18 @@ paths:
             maximum: 8
             default: 1
           example: 1
+        - name: hazard
+          in: query
+          required: false
+          description: |
+            Hazard family. `severe` (default) is the SPC convective
+            outlook; `fire` is the SPC fire-weather outlook. Matches the
+            vocabulary used by sw-mcp's `get_outlooks`.
+          schema:
+            type: string
+            enum: [severe, fire]
+            default: severe
+          example: severe
       responses:
         '200':
           description: Outlook detail for the requested day and location.
