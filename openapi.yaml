@@ -116,6 +116,10 @@ tags:
     description: |
       Agriculture-derived indices (Growing Degree Units / GDD) computed on
       read from stored daily temperature extremes.
+  - name: Climate
+    description: |
+      Climatology: long-period day-of-year statistics describing what is
+      typical at a location, as distinct from what is forecast.
 
 security:
   - bearerAuth: []
@@ -1672,6 +1676,104 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GrowingDegreeDays'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/climate/normals:
+    get:
+      operationId: getClimateNormals
+      summary: Day-of-year climate normals for a point.
+      description: |
+        Returns the 1991-2020 NOAA/NCEI daily climate normals — the average
+        high, low and mean temperature for each calendar day — for the station
+        nearest a US point.
+
+        **Normals are climatology, not forecast.** They describe a 30-year base
+        period, carry no valid time, and do not change day to day. Use them to
+        answer "is tomorrow warmer than usual here?", not "how warm will it
+        be?".
+
+        **They describe a station, not your point.** Normals are computed from
+        station records, so the response always names the station it used and
+        how far away it is (`station.distance_km`). Past 50 km the response
+        sets `meta.approximate`; past 150 km no station is considered
+        representative and the endpoint returns `404`. Read `distance_km`
+        before attributing a normal to a specific location — NOAA's own use
+        limitation is that representativeness degrades with distance, and
+        elevation differences matter more than the distance alone suggests.
+
+        **Coverage.** Roughly 7,400 US stations including Alaska, Hawaii and
+        the territories. Remote points may have no station within range.
+
+        Days inside the requested range that the station has no record for are
+        still returned, with the temperature fields omitted and counted in
+        `meta.missing_days`, so the series stays aligned with the dates you
+        asked for.
+
+        Launches behind the `CLIMATE_NORMALS_ENABLED` feature flag: returns
+        `404` when the flag is off.
+      tags: [Climate]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - name: start
+          in: query
+          required: false
+          description: |
+            First calendar day of the range, `YYYY-MM-DD`. Must be supplied
+            together with `end`. Only the month and day are meaningful; the
+            year selects which calendar the dates are echoed on.
+          schema:
+            type: string
+            format: date
+          example: "2026-07-28"
+        - name: end
+          in: query
+          required: false
+          description: |
+            Last calendar day of the range (inclusive), `YYYY-MM-DD`. Must be
+            supplied together with `start`.
+          schema:
+            type: string
+            format: date
+          example: "2026-08-10"
+        - name: days
+          in: query
+          required: false
+          description: |
+            Range length in days starting today, used when `start` and `end`
+            are omitted. Defaults to 14 to cover the forecast horizon.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 366
+            default: 14
+        - name: unit
+          in: query
+          required: false
+          description: |
+            Unit system for temperatures. `imperial` (default) uses °F;
+            `metric` uses °C. Standard deviations are intervals and scale
+            without the freezing-point offset.
+          schema:
+            type: string
+            enum: [imperial, metric]
+            default: imperial
+      responses:
+        '200':
+          description: Climate normals for the requested point.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimateNormals'
         '400':
           $ref: '#/components/responses/Problem400'
         '404':
@@ -4715,6 +4817,160 @@ components:
             and the crop has catalog milestones.
           items:
             $ref: '#/components/schemas/GddMilestone'
+
+    ClimateNormalsStation:
+      type: object
+      description: |
+        The station a normals series was drawn from. Normals describe this
+        station, not necessarily the point you asked about.
+      required: [station_id, latitude, longitude, distance_km]
+      properties:
+        station_id:
+          type: string
+          description: GHCN station identifier.
+          example: USW00094728
+        name:
+          type: string
+          description: Station name as published by NCEI.
+          example: NEW YORK CNTRL PK
+        state:
+          type: string
+          description: Two-letter state or territory code.
+          example: NY
+        latitude:
+          type: number
+          format: double
+          description: Station latitude.
+          example: 40.7789
+        longitude:
+          type: number
+          format: double
+          description: Station longitude.
+          example: -73.9692
+        elevation_m:
+          type: number
+          format: double
+          description: |
+            Station elevation in metres. Worth comparing against your point:
+            an elevation difference biases normals more than distance does.
+          example: 42.7
+        distance_km:
+          type: number
+          format: double
+          description: |
+            Great-circle distance from the requested point to the station.
+            The single number that says how much to trust this series.
+          example: 3.4
+
+    ClimateNormalsMeta:
+      type: object
+      description: Provenance for a normals response.
+      required: [source, unit]
+      properties:
+        normals_period:
+          type: string
+          description: Base period the normals were computed over.
+          example: "1991-2020"
+        source:
+          type: string
+          description: |
+            Where the values came from: `station` for the NCEI station
+            product, `grid` for gridded normals, `mixed` when a series draws
+            on both.
+          example: station
+        unit:
+          type: string
+          enum: [imperial, metric]
+          description: Unit system applied to the temperature fields.
+        approximate:
+          type: boolean
+          description: |
+            True when the station is far enough away (>50 km) that the normals
+            may not represent the requested point.
+        missing_days:
+          type: integer
+          description: |
+            How many days in the requested range the station holds no normal
+            for. Those days are still present in `days` with their
+            temperature fields omitted.
+
+    ClimateNormalsDay:
+      type: object
+      description: |
+        One day-of-year slice. Temperature fields are omitted when the station
+        has no value, which is not the same as a value of zero.
+      required: [date, month, day]
+      properties:
+        date:
+          type: string
+          format: date
+          description: Calendar date this slice was requested for.
+          example: "2026-07-28"
+        month:
+          type: integer
+          description: Month of the day-of-year slice (1-12).
+          example: 7
+        day:
+          type: integer
+          description: Day of month (1-31).
+          example: 28
+        normal_high:
+          type: number
+          format: double
+          description: Average daily maximum temperature.
+          example: 84.2
+        normal_low:
+          type: number
+          format: double
+          description: Average daily minimum temperature.
+          example: 69.8
+        normal_mean:
+          type: number
+          format: double
+          description: Average daily mean temperature.
+          example: 77.0
+        normal_high_stddev:
+          type: number
+          format: double
+          description: |
+            Standard deviation of the daily maximum. An interval, so it scales
+            without the freezing-point offset: 3 °C of spread is 5.4 °F.
+          example: 5.4
+        normal_low_stddev:
+          type: number
+          format: double
+          description: Standard deviation of the daily minimum.
+          example: 5.0
+        normal_mean_stddev:
+          type: number
+          format: double
+          description: Standard deviation of the daily mean.
+          example: 4.7
+        years:
+          type: integer
+          description: Years of the base period contributing to this day.
+          example: 30
+        completeness_flag:
+          type: string
+          description: NCEI per-value completeness code.
+          example: C
+
+    ClimateNormals:
+      type: object
+      description: |
+        Day-of-year climate normals for a point, resolved from the nearest
+        station with records.
+      required: [station, meta, days]
+      properties:
+        station:
+          $ref: '#/components/schemas/ClimateNormalsStation'
+        meta:
+          $ref: '#/components/schemas/ClimateNormalsMeta'
+        days:
+          type: array
+          description: Per-day normals series, in requested date order.
+          items:
+            $ref: '#/components/schemas/ClimateNormalsDay'
 
   responses:
     Problem400:
