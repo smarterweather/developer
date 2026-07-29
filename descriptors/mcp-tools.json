@@ -1975,7 +1975,7 @@
     {
       "name": "get_outlooks",
       "title": "Get hazard outlooks",
-      "description": "Hazard outlooks affecting a location. hazard=severe returns SPC convective outlooks (Day 1-8 categorical risk + tornado/wind/hail probabilities); hazard=fire returns SPC fire weather outlooks; hazard=heat returns the NWS HeatRisk index at the point (0 none .. 4 extreme, days 1-3). include_narrative=true adds the SPC forecaster narrative for the requested day (severe and fire). An empty result means no outlook covers the point -- not a failure. Examples: {\"location\": \"Moore, OK\", \"hazard\": \"severe\", \"include_narrative\": true} or {\"location\": \"Phoenix\", \"hazard\": \"heat\"}.",
+      "description": "Hazard outlooks affecting a location. hazard=severe returns SPC convective outlooks (Day 1-8 categorical risk + tornado/wind/hail probabilities); hazard=fire returns SPC fire weather outlooks; hazard=rain returns WPC Excessive Rainfall Outlook polygons (days 1-3); hazard=heat returns the NWS HeatRisk index at the point (0 none .. 4 extreme, days 1-3). include_narrative=true adds the forecaster discussion for severe (SWO), fire (FWD), or rain (QPF/QPFERD; one PIL for all days). An empty result means no outlook covers the point -- not a failure. Examples: {\"location\": \"Moore, OK\", \"hazard\": \"severe\", \"include_narrative\": true} or {\"location\": \"Phoenix\", \"hazard\": \"heat\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2002,10 +2002,11 @@
             "enum": [
               "severe",
               "fire",
+              "rain",
               "heat"
             ],
             "default": "severe",
-            "description": "Hazard family: severe = SPC convective, fire = SPC fire weather, heat = NWS HeatRisk index. (Excessive rain and winter impacts are planned expansions.)"
+            "description": "Hazard family: severe = SPC convective, fire = SPC fire weather, rain = WPC excessive rainfall, heat = NWS HeatRisk index. (Winter/WSSI is a planned expansion.)"
           },
           "day": {
             "type": "integer",
@@ -2017,7 +2018,7 @@
           "include_narrative": {
             "type": "boolean",
             "default": false,
-            "description": "Include the SPC forecaster narrative for the requested day (severe and fire)."
+            "description": "Include the forecaster narrative for the requested day (severe, fire, and rain)."
           }
         },
         "additionalProperties": false,
