@@ -66,6 +66,7 @@ info:
     | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/SWO/MCD).   |
     | `uncertainty` | no    | experimental | NBM probabilistic sub-objects on hourly and daily forecasts (CONUS/Alaska/Hawaii only). |
     | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
+    | `climate`     | no    | experimental | NCEI day-of-year normals for the location, plus per-day departure from normal on `daily[]`. |
 
     `radar` and `products` (wx visual-products manifest) are **not** in the
     v1 token set. They will land in Phase 5 alongside a separate
@@ -116,6 +117,10 @@ tags:
     description: |
       Agriculture-derived indices (Growing Degree Units / GDD) computed on
       read from stored daily temperature extremes.
+  - name: Climate
+    description: |
+      Climatology: long-period day-of-year statistics describing what is
+      typical at a location, as distinct from what is forecast.
 
 security:
   - bearerAuth: []
@@ -1561,7 +1566,10 @@ paths:
           RTMA observed daily history + today's partial (hourly on-read
           rollup) + NBM forecast, returns a `cumulative_total`, and adds a
           per-day `cumulative_gdu` running sum. This is the number a grower
-          tracks against crop growth-stage milestones.
+          tracks against crop growth-stage milestones. If part of the season
+          window has no observed data, the per-day series still comes back
+          `200` but `cumulative_total` is omitted and `meta.gaps` carries an
+          `unfilled` span — a partial sum is not a season total.
 
         **Crops.** Pass a catalog `crop` id (e.g. `corn`, `soybean`,
         `wheat_winter`, `cotton`, `alfalfa`) to use calibrated thresholds, or
@@ -1669,6 +1677,104 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GrowingDegreeDays'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/climate/normals:
+    get:
+      operationId: getClimateNormals
+      summary: Day-of-year climate normals for a point.
+      description: |
+        Returns the 1991-2020 NOAA/NCEI daily climate normals — the average
+        high, low and mean temperature for each calendar day — for the station
+        nearest a US point.
+
+        **Normals are climatology, not forecast.** They describe a 30-year base
+        period, carry no valid time, and do not change day to day. Use them to
+        answer "is tomorrow warmer than usual here?", not "how warm will it
+        be?".
+
+        **They describe a station, not your point.** Normals are computed from
+        station records, so the response always names the station it used and
+        how far away it is (`station.distance_km`). Past 50 km the response
+        sets `meta.approximate`; past 150 km no station is considered
+        representative and the endpoint returns `404`. Read `distance_km`
+        before attributing a normal to a specific location — NOAA's own use
+        limitation is that representativeness degrades with distance, and
+        elevation differences matter more than the distance alone suggests.
+
+        **Coverage.** Roughly 7,400 US stations including Alaska, Hawaii and
+        the territories. Remote points may have no station within range.
+
+        Days inside the requested range that the station has no record for are
+        still returned, with the temperature fields omitted and counted in
+        `meta.missing_days`, so the series stays aligned with the dates you
+        asked for.
+
+        Launches behind the `CLIMATE_NORMALS_ENABLED` feature flag: returns
+        `404` when the flag is off.
+      tags: [Climate]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - name: start
+          in: query
+          required: false
+          description: |
+            First calendar day of the range, `YYYY-MM-DD`. Must be supplied
+            together with `end`. Only the month and day are meaningful; the
+            year selects which calendar the dates are echoed on.
+          schema:
+            type: string
+            format: date
+          example: "2026-07-28"
+        - name: end
+          in: query
+          required: false
+          description: |
+            Last calendar day of the range (inclusive), `YYYY-MM-DD`. Must be
+            supplied together with `start`.
+          schema:
+            type: string
+            format: date
+          example: "2026-08-10"
+        - name: days
+          in: query
+          required: false
+          description: |
+            Range length in days starting today, used when `start` and `end`
+            are omitted. Defaults to 14 to cover the forecast horizon.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 366
+            default: 14
+        - name: unit
+          in: query
+          required: false
+          description: |
+            Unit system for temperatures. `imperial` (default) uses °F;
+            `metric` uses °C. Standard deviations are intervals and scale
+            without the freezing-point offset.
+          schema:
+            type: string
+            enum: [imperial, metric]
+            default: imperial
+      responses:
+        '200':
+          description: Climate normals for the requested point.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimateNormals'
         '400':
           $ref: '#/components/responses/Problem400'
         '404':
@@ -1854,6 +1960,141 @@ paths:
           $ref: '#/components/responses/Problem400'
         '404':
           $ref: '#/components/responses/Problem404'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/outlooks:
+    get:
+      operationId: getOutlookDetail
+      summary: SPC outlook detail for a location, day, and hazard family.
+      description: |
+        Returns everything the Storm Prediction Center says about one
+        outlook day at a point for a hazard family: the risk band, any
+        probabilistic hazards (severe only), whether the location falls
+        in a hatched significant-severe area, and the forecaster's full
+        written discussion.
+
+        This is the drill-down behind a risk area on a map. `GET
+        /v1/weather?include=outlooks` already reports the single
+        worst-case risk level at a location; this endpoint expands that
+        into the per-hazard breakdown and the reasoning behind it.
+
+        ### Hazard families
+
+        `hazard=severe` (default) returns the convective outlook:
+        categorical risk plus tornado/wind/hail probabilities, with the
+        SWO discussion (`SWODY1`/`SWODY2`/`SWODY3`, or `SWOD48` for days
+        4-8). `hazard=fire` returns the fire-weather outlook band
+        (`ELEV`/`CRIT`/`EXTM`) and the FWD discussion (`FWDDY1`/
+        `FWDDY2`, or `FWDD38` for days 3-8). Fire polygons exist for
+        days 1-2 only, so a fire request for day 3+ may return a
+        narrative with no band. `hazard=rain` returns the WPC Excessive
+        Rainfall Outlook band (`MRGL`/`SLGT`/`MDT`/`HIGH`) for days 1-3
+        and the QPFERD discussion (one PIL; day is selected from
+        `properties.outlook_day`).
+
+        ### Probabilities
+
+        Days 1 and 2 are issued as separate `tornado`, `wind`, and `hail`
+        products, so `probabilities` holds one entry per hazard. Day 3
+        and beyond issue a single combined `probabilistic` product and
+        yield one entry. Values are fractional (`0.15` = 15%). Fire and
+        rain outlooks have no probabilistic products; `probabilities` is
+        empty for those hazards.
+
+        SPC delineates significant severe as its own polygon rather than
+        an attribute of the probability area. Where the two overlap they
+        are reported as a single entry carrying both the probability and
+        `significant: true`, so a 15% hail area with a hatched overlay
+        reads as one hazard rather than two.
+
+        ### Narrative
+
+        `narrative` carries the discussion for the requested family and
+        day. It is ingested separately from the outlook polygons, so it
+        may be absent for a few minutes after a new issuance, and it is
+        omitted rather than erroring when unavailable.
+
+        ### Empty results
+
+        A location outside every outlook polygon is a valid answer: `200`
+        with an empty `probabilities` array and no `categorical`. Only an
+        upstream failure produces an error.
+
+        ### Caching
+
+        Successful responses are cacheable for 5 minutes. SPC reissues
+        the day 1 outlook a handful of times a day.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Weather]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitude in decimal degrees.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 35.48
+        - name: lon
+          in: query
+          required: true
+          description: Longitude in decimal degrees.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -97.53
+        - name: day
+          in: query
+          required: false
+          description: |
+            Outlook day to describe, where 1 is today. Defaults to 1.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 8
+            default: 1
+          example: 1
+        - name: hazard
+          in: query
+          required: false
+          description: |
+            Hazard family. `severe` (default) is the SPC convective
+            outlook; `fire` is the SPC fire-weather outlook; `rain` is
+            the WPC Excessive Rainfall Outlook. Matches the vocabulary
+            used by sw-mcp's `get_outlooks`.
+          schema:
+            type: string
+            enum: [severe, fire, rain]
+            default: severe
+          example: severe
+      responses:
+        '200':
+          description: Outlook detail for the requested day and location.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutlookDetail'
+        '400':
+          $ref: '#/components/responses/Problem400'
         '502':
           $ref: '#/components/responses/Problem502'
         '504':
@@ -2375,6 +2616,22 @@ components:
           $ref: '#/components/schemas/Guidance'
         nowcast:
           $ref: '#/components/schemas/Nowcast'
+        climate:
+          allOf:
+            - $ref: '#/components/schemas/ClimateNormals'
+          description: |
+            Day-of-year climate normals for the location, populated when
+            `include=climate` is requested. Identical in shape to the
+            `GET /v1/climate/normals` body.
+
+            This block is the normals themselves — what is typical here. For
+            how the forecast compares to them, read `daily[].climate`, which
+            carries the same normals joined to each forecast day along with
+            the signed departure.
+
+            Omitted when no station with normals is near the point; that case
+            reports `coverage_limited` in `meta.warnings[]` rather than
+            failing the request.
         meta:
           $ref: '#/components/schemas/Meta'
 
@@ -2928,6 +3185,53 @@ components:
           oneOf:
             - $ref: '#/components/schemas/DailyUncertainty'
             - type: "null"
+        climate:
+          description: |
+            Optional climate sub-object for this day. Populated only when
+            `include=climate` is requested and the nearest station holds a
+            normal for the date.
+          oneOf:
+            - $ref: '#/components/schemas/DailyClimate'
+            - type: "null"
+
+    DailyClimate:
+      type: object
+      description: |
+        The day's normal paired with this forecast's departure from it.
+
+        Temperatures are in the requested `unit` system, matching `high` and
+        `low` on the same row. Departures are signed so that positive is
+        warmer than normal, and are differences rather than absolute
+        temperatures.
+
+        Every field is nullable: a station can hold a normal high without a
+        normal low, and a forecast day can fall in a gap in the station's
+        record. A `0` departure means the forecast landed exactly on the
+        normal, which is not the same as an absent one.
+
+        Station provenance for these values — which station, how far away,
+        and over what base period — lives in the top-level `climate` block.
+      properties:
+        normal_high:
+          type: [number, "null"]
+          format: double
+          description: Normal daily maximum temperature for this day of year.
+          example: 78
+        normal_low:
+          type: [number, "null"]
+          format: double
+          description: Normal daily minimum temperature for this day of year.
+          example: 58
+        high_departure:
+          type: [number, "null"]
+          format: double
+          description: Forecast high minus normal high; positive is warmer than normal.
+          example: 4
+        low_departure:
+          type: [number, "null"]
+          format: double
+          description: Forecast low minus normal low; positive is warmer than normal.
+          example: -2
 
     DailyUncertainty:
       type: object
@@ -3337,6 +3641,70 @@ components:
         expires:
           type: string
           format: date-time
+        significant:
+          type: boolean
+          description: |
+            The location falls inside SPC's hatched significant-severe
+            area for this hazard — tornadoes of EF2+, hail 2 in or
+            larger, or wind gusts of 65 kt or more.
+
+            SPC ships this as its own polygon, so it is reported here as
+            a flag on the hazard it qualifies rather than as a separate
+            entry. Absent (or `false`) outside the hatched area.
+
+    OutlookDetail:
+      type: object
+      description: |
+        Drill-down detail for one SPC convective outlook day at a
+        location: the categorical risk band, each probabilistic hazard,
+        and the forecaster's written discussion.
+
+        Everything except `day` is optional. A point can sit inside a
+        categorical polygon with no probabilistic coverage, and the
+        narrative is ingested separately from the polygons so it can lag
+        a fresh issuance.
+      required: [day, probabilities]
+      properties:
+        day:
+          type: integer
+          minimum: 1
+          maximum: 8
+          description: The outlook day this detail describes (1 = today).
+        categorical:
+          $ref: '#/components/schemas/Outlook'
+        probabilities:
+          type: array
+          description: |
+            One entry per probabilistic hazard covering the point. Days
+            1-2 break these out as `tornado`, `wind`, and `hail`; day 3
+            and beyond issue a single combined `probabilistic` product.
+            Empty when no probabilistic polygon covers the location.
+          items:
+            $ref: '#/components/schemas/Outlook'
+        narrative:
+          $ref: '#/components/schemas/OutlookNarrative'
+
+    OutlookNarrative:
+      type: object
+      description: |
+        The SPC forecaster's written discussion for an outlook day, as
+        issued in the corresponding SWO text product.
+      properties:
+        awips_id:
+          type: string
+          description: |
+            AWIPS identifier of the source product — `SWODY1`, `SWODY2`,
+            `SWODY3` for the single-day outlooks, `SWOD48` for days 4-8.
+          example: "SWODY1"
+        issued_at:
+          type: string
+          format: date-time
+        body:
+          type: string
+          description: Full narrative text as written by the forecaster.
+        summary:
+          type: string
+          description: Short generated summary, when one is available.
 
     StormTracksFeatureCollection:
       type: object
@@ -4527,7 +4895,13 @@ components:
           format: double
           description: |
             Season-to-date GDU total in the requested unit. Present only in
-            cumulative mode (when `season_start` was supplied).
+            cumulative mode (when `season_start` was supplied), and omitted
+            even then when `meta.gaps` contains an `unfilled` span: those days
+            have no observed data, so the sum would under-count the season.
+            Treat an absent total on a `season_start` request as "season total
+            unavailable" and fall back to the per-day series, which is still
+            good for the days it covers. `meta.gaps` names the window that was
+            lost.
         milestones:
           type: array
           description: |
@@ -4535,6 +4909,160 @@ components:
             and the crop has catalog milestones.
           items:
             $ref: '#/components/schemas/GddMilestone'
+
+    ClimateNormalsStation:
+      type: object
+      description: |
+        The station a normals series was drawn from. Normals describe this
+        station, not necessarily the point you asked about.
+      required: [station_id, latitude, longitude, distance_km]
+      properties:
+        station_id:
+          type: string
+          description: GHCN station identifier.
+          example: USW00094728
+        name:
+          type: string
+          description: Station name as published by NCEI.
+          example: NEW YORK CNTRL PK
+        state:
+          type: string
+          description: Two-letter state or territory code.
+          example: NY
+        latitude:
+          type: number
+          format: double
+          description: Station latitude.
+          example: 40.7789
+        longitude:
+          type: number
+          format: double
+          description: Station longitude.
+          example: -73.9692
+        elevation_m:
+          type: number
+          format: double
+          description: |
+            Station elevation in metres. Worth comparing against your point:
+            an elevation difference biases normals more than distance does.
+          example: 42.7
+        distance_km:
+          type: number
+          format: double
+          description: |
+            Great-circle distance from the requested point to the station.
+            The single number that says how much to trust this series.
+          example: 3.4
+
+    ClimateNormalsMeta:
+      type: object
+      description: Provenance for a normals response.
+      required: [source, unit]
+      properties:
+        normals_period:
+          type: string
+          description: Base period the normals were computed over.
+          example: "1991-2020"
+        source:
+          type: string
+          description: |
+            Where the values came from: `station` for the NCEI station
+            product, `grid` for gridded normals, `mixed` when a series draws
+            on both.
+          example: station
+        unit:
+          type: string
+          enum: [imperial, metric]
+          description: Unit system applied to the temperature fields.
+        approximate:
+          type: boolean
+          description: |
+            True when the station is far enough away (>50 km) that the normals
+            may not represent the requested point.
+        missing_days:
+          type: integer
+          description: |
+            How many days in the requested range the station holds no normal
+            for. Those days are still present in `days` with their
+            temperature fields omitted.
+
+    ClimateNormalsDay:
+      type: object
+      description: |
+        One day-of-year slice. Temperature fields are omitted when the station
+        has no value, which is not the same as a value of zero.
+      required: [date, month, day]
+      properties:
+        date:
+          type: string
+          format: date
+          description: Calendar date this slice was requested for.
+          example: "2026-07-28"
+        month:
+          type: integer
+          description: Month of the day-of-year slice (1-12).
+          example: 7
+        day:
+          type: integer
+          description: Day of month (1-31).
+          example: 28
+        normal_high:
+          type: number
+          format: double
+          description: Average daily maximum temperature.
+          example: 84.2
+        normal_low:
+          type: number
+          format: double
+          description: Average daily minimum temperature.
+          example: 69.8
+        normal_mean:
+          type: number
+          format: double
+          description: Average daily mean temperature.
+          example: 77.0
+        normal_high_stddev:
+          type: number
+          format: double
+          description: |
+            Standard deviation of the daily maximum. An interval, so it scales
+            without the freezing-point offset: 3 °C of spread is 5.4 °F.
+          example: 5.4
+        normal_low_stddev:
+          type: number
+          format: double
+          description: Standard deviation of the daily minimum.
+          example: 5.0
+        normal_mean_stddev:
+          type: number
+          format: double
+          description: Standard deviation of the daily mean.
+          example: 4.7
+        years:
+          type: integer
+          description: Years of the base period contributing to this day.
+          example: 30
+        completeness_flag:
+          type: string
+          description: NCEI per-value completeness code.
+          example: C
+
+    ClimateNormals:
+      type: object
+      description: |
+        Day-of-year climate normals for a point, resolved from the nearest
+        station with records.
+      required: [station, meta, days]
+      properties:
+        station:
+          $ref: '#/components/schemas/ClimateNormalsStation'
+        meta:
+          $ref: '#/components/schemas/ClimateNormalsMeta'
+        days:
+          type: array
+          description: Per-day normals series, in requested date order.
+          items:
+            $ref: '#/components/schemas/ClimateNormalsDay'
 
   responses:
     Problem400:

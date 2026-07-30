@@ -5,27 +5,30 @@ TypeScript, or Python.
 
 ## 1. Mint an API key
 
-1. Sign up at <https://smarterweather.com/developers>.
-2. Open **Developer Console -> API keys** and click **New key**.
+1. Sign up at <https://developers.smarterweather.com>.
+2. Open **Dashboard -> API keys** and click **New key**.
 3. Copy the key once; it's shown exactly one time (`sw_live_...` or
    `sw_test_...`). Store it in a password manager and your app's
    secret store.
 
 Your key is tied to a **tier** (free, developer, professional,
 enterprise) which dictates your rate limit, monthly request allowance,
-and overage pricing. See [pricing](https://smarterweather.com/developers/pricing)
+and overage pricing. See [pricing](https://developers.smarterweather.com/pricing)
 for the current numbers.
 
 ## 2. Make your first call
 
-Every request carries your key in the `X-API-Key` header. The base
-URL is `https://api.smarterweather.com`.
+Every request carries your key as an HTTP Bearer token in the
+`Authorization` header. The base URL is
+`https://api.smarterweather.com`. The `X-API-Key` header is **not**
+supported — requests that send it instead of `Authorization` are
+rejected with `401`.
 
 ### curl
 
 ```bash
 curl -sS https://api.smarterweather.com/v1/weather \
-  -H "X-API-Key: $SMARTERWEATHER_API_KEY" \
+  -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
   --get \
   --data-urlencode "lat=40.7128" \
   --data-urlencode "lon=-74.0060"
@@ -36,7 +39,11 @@ curl -sS https://api.smarterweather.com/v1/weather \
 ```ts
 const res = await fetch(
   `https://api.smarterweather.com/v1/weather?lat=40.7128&lon=-74.0060`,
-  { headers: { "X-API-Key": process.env.SMARTERWEATHER_API_KEY! } },
+  {
+    headers: {
+      Authorization: `Bearer ${process.env.SMARTERWEATHER_API_KEY!}`,
+    },
+  },
 );
 if (!res.ok) {
   throw new Error(`smarterweather ${res.status}: ${await res.text()}`);
@@ -53,7 +60,9 @@ import os, requests
 res = requests.get(
     "https://api.smarterweather.com/v1/weather",
     params={"lat": 40.7128, "lon": -74.0060},
-    headers={"X-API-Key": os.environ["SMARTERWEATHER_API_KEY"]},
+    headers={
+        "Authorization": f"Bearer {os.environ['SMARTERWEATHER_API_KEY']}"
+    },
     timeout=10,
 )
 res.raise_for_status()
