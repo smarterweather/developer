@@ -1,28 +1,24 @@
 # REST API guide
 
-> **Preview - API not yet generally available.** The Smarter Weather public
-> REST API at `https://api.smarterweather.com` ships in **Phase 2** of the
-> [public roadmap](../README.md#roadmap). This page describes the planned
-> shape so SDK authors and integrators can plan against it; final shapes,
-> error envelopes, and rate-limit headers will be locked in alongside the
-> first published `openapi.yaml`.
+This page is the orientation guide. The canonical, complete contract is
+[`openapi.yaml`](../openapi.yaml) — if an endpoint is not in there, it does
+not exist.
 
 ## At a glance
 
-| Item | Planned value |
-| ---- | ------------- |
+| Item | Value |
+| ---- | ----- |
 | Base URL | `https://api.smarterweather.com` |
 | Versioning | Path-based: `/v1/*` |
-| Auth | API key as an HTTP Bearer token: `Authorization: Bearer sw_live_*` |
+| Auth | API key as an HTTP Bearer token: `Authorization: Bearer sw_live_*` / `sw_test_*` |
 | Content type | `application/json; charset=utf-8` (success), `application/problem+json` (errors) |
 | Compression | `gzip`, `br` |
-| Spec | `openapi.yaml` at the root of this repo (Phase 2) |
+| Spec | [`openapi.yaml`](../openapi.yaml), also served at <https://developers.smarterweather.com/openapi.yaml> |
+| Interactive reference | <https://developers.smarterweather.com/api/reference> |
 
 The path-based versioning policy (`/v1/`) and deprecation timelines are
-formalized in [ADR 001 (private repo)][adr-001]. Public mirrors of relevant
-ADRs land in this repo as part of the Phase 2 cutover.
-
-[adr-001]: https://github.com/smarterweather/developer/issues/2 "Phase 1b: ADR mirroring tracking issue"
+formalized in ADR 001 in the private repo; the commitments it makes are
+restated under [Stability promise](#stability-promise) below.
 
 ## Authentication
 
@@ -37,20 +33,27 @@ curl -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
 The `X-API-Key` header is **not** supported — requests carrying it
 without a Bearer token are rejected with a hint to switch.
 
-Keys are scoped to a single account and a single tier. Scoping rules,
-rotation, and revocation flows are documented in
-<https://smarterweather.com/developers/keys>.
+Keys are scoped to a single account and a single tier. Mint, rotate, and
+revoke them at <https://developers.smarterweather.com/dashboard/api-keys>,
+or let an agent do it through the onboarding MCP server's `create_api_key`
+and `rotate_api_key` tools.
 
-## Planned endpoints (Phase 2)
+## Endpoints
 
-The Phase 2 launch surface is intentionally minimal. Additional endpoints
-land in subsequent phases (alerts, history, point-and-click radar metadata,
-ensemble guidance) and will be added here as they ship.
+The full list — with parameters, schemas, and examples — is in
+[`openapi.yaml`](../openapi.yaml). The ones worth knowing before you read
+it:
 
 | Method | Path | Purpose |
 | ------ | ---- | ------- |
-| `GET`  | `/v1/health` | Liveness probe; unauthenticated. |
 | `GET`  | `/v1/weather` | Unified weather response: current conditions, hourly + daily forecasts, alerts, radar metadata. |
+| `POST` | `/v1/weather/batch` | The same response for many locations in one request. |
+| `GET`  | `/v1/alerts/{id}` | A single NWS alert by identifier. |
+| `GET`  | `/v1/observations`, `/v1/observations/nearest` | Station observations. |
+| `GET`  | `/v1/geocode/search`, `/v1/geocode/reverse`, `/v1/geocode/autosuggest` | Place-name and coordinate lookup. |
+| `GET`  | `/v1/storm-tracks`, `/v1/storm-reports`, `/v1/tropical`, `/v1/outlooks` | Severe and tropical products. |
+| `GET`  | `/v1/status` | Data-freshness status per source; unauthenticated. |
+| `GET`  | `/v1/health` | Liveness probe; unauthenticated. |
 
 The "one request, full picture" shape of `/v1/weather` is deliberate: most
 consumer integrations need several views of weather at the same point, and
@@ -72,6 +75,9 @@ documents with a stable shape:
 }
 ```
 
+Switch on `type`, never on `detail` — `detail` is free-form and changes
+between releases.
+
 The full error-type catalog, retry guidance, and HTTP status mapping are
 in [`errors.md`](./errors.md); the wire schema is `Problem` in
 [`openapi.yaml`](../openapi.yaml).
@@ -89,17 +95,16 @@ Every authenticated response carries the IETF draft `RateLimit-*` headers:
 On `429`, honor the `Retry-After` header (seconds) before retrying.
 
 Exact limits per tier are published at
-<https://smarterweather.com/developers/limits>.
+<https://developers.smarterweather.com/pricing>.
 
 ## Stability promise
 
-Once the API is GA, breaking changes follow the deprecation policy in
-[ADR 001][adr-001]:
-
 - 6 months notice before any `/v1/*` endpoint is removed.
-- 90 days notice before a breaking response-shape change.
-- Non-breaking additions ship immediately.
+- 90 days notice before a breaking request- or response-shape change.
+- Non-breaking additions (new fields, endpoints, error types) ship
+  immediately.
 
-Until GA, the surface is allowed to change without notice; track the
-[Phase 2 epic](https://github.com/smarterweather/developer/issues) for the
-GA cutover.
+Notice clocks start when the change appears in
+`https://api.smarterweather.com/.well-known/deprecations`, when the affected
+endpoints begin returning `Deprecation` and `Sunset` headers, and when it is
+posted in this repository — whichever is last.

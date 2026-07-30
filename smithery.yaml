@@ -9,7 +9,7 @@ version: 1
 name: smarterweather-weather
 displayName: Smarter Weather
 description: >-
-  Smarter Weather's 28-tool weather MCP server: blended forecasts,
+  Smarter Weather's 29-tool weather MCP server: blended forecasts,
   probabilistic distributions, active NWS alerts, SPC/WPC outlooks,
   observations, lightning, soundings, tropical, air quality, raw
   gridded dataset queries, and rendered map/sounding imagery (radar,

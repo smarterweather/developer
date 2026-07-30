@@ -2,9 +2,9 @@
 
 > The hosted weather MCP server at
 > `https://mcp.smarterweather.com/mcp` is **live in production**,
-> serving the full 28-tool catalog with API-key and OAuth 2.1 auth.
+> serving the full 29-tool catalog with API-key and OAuth 2.1 auth.
 > Install the stdio bridge with `npx -y @smarterweather/mcp-weather`
-> (no `@preview` suffix — `latest` is GA). Clients that speak
+> (untagged — `latest` is the only tag). Clients that speak
 > streamable HTTP natively can connect to the hosted endpoint
 > directly without the bridge.
 
@@ -62,7 +62,7 @@ bridge's environment. The bridge forwards the key as
 `Authorization: Bearer <key>` on every proxied request. Skips
 the browser flow entirely — useful for scripted or CI usage.
 
-Mint keys at <https://smarterweather.com/developers/api-keys>.
+Mint keys at <https://developers.smarterweather.com/dashboard/api-keys>.
 Keys need the `mcp` scope to authenticate against `sw-mcp`.
 
 ## Client configuration
@@ -158,7 +158,7 @@ package default.
 
 ## Tool catalog (current)
 
-The hosted server exposes **28 tools** organized around
+The hosted server exposes **29 tools** organized around
 meteorologist workflows rather than raw endpoints. Every
 location-aware tool accepts either a free-text `location` string or
 explicit `lat`/`lon`. Call `tools/list` for the live, canonical

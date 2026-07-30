@@ -1,11 +1,5 @@
 # Agent integration tutorial
 
-> **Preview - some referenced surfaces are not yet generally available.**
-> The agent skills and the hosted MCP servers they target ship across
-> Phase 1b, Phase 3, and Phase 4 of the [public roadmap](../README.md#roadmap).
-> The patterns below are stable; the artifacts they reference will be added
-> to this repo as each phase lands.
-
 This guide explains how to wire an AI coding agent (Cursor, Claude Code,
 Claude Desktop, Codex) into the Smarter Weather developer platform end to
 end - from "I have an account" to "my agent is calling the weather API on
@@ -47,11 +41,10 @@ The recommended onboarding flow is:
    job.
 
 Per-client config snippets live in
-[`docs/mcp-weather.md`](./mcp-weather.md#planned-client-configuration) and
-[`docs/mcp-onboarding.md`](./mcp-onboarding.md#planned-client-configuration).
-Once the hosted servers go GA, the canonical setup wizard at
-<https://smarterweather.com/developers/mcp/setup> will produce the same
-snippets pre-filled with your account details.
+[`docs/mcp-weather.md`](./mcp-weather.md) and
+[`docs/mcp-onboarding.md`](./mcp-onboarding.md). The setup page at
+<https://developers.smarterweather.com/mcp-server/setup> has one-click
+install buttons for Cursor, Claude Code, and VS Code.
 
 ## Pattern 2: Code-generation agents (Cursor, Claude Code)
 
@@ -65,12 +58,16 @@ first try.
 | ---------- | ---------------------------------- | ------ |
 | Cursor     | [`.cursor/skills/use-smarterweather-api/SKILL.md`](https://github.com/smarterweather/developer/blob/main/.cursor/skills/use-smarterweather-api/SKILL.md) | Available |
 | Claude Code| [`.claude/CLAUDE.md`](https://github.com/smarterweather/developer/blob/main/.claude/CLAUDE.md) | Available |
-| Codex CLI  | `AGENTS.md` at repo root           | Phase 5 |
+| Codex CLI  | [`AGENTS.md`](https://github.com/smarterweather/developer/blob/main/AGENTS.md) at repo root | Available |
 
 To install a skill in your own project, copy the corresponding file (or
 the whole `.cursor/skills/use-smarterweather-api/` directory for Cursor)
 into your repo at the same path. Most agents auto-discover skills the
 next time they index the project; some require a restart.
+
+Hosted equivalents, for agents that fetch rather than clone, are published
+under <https://developers.smarterweather.com/.well-known/skills/> and indexed
+in [`skills/index.json`](https://developers.smarterweather.com/.well-known/skills/index.json).
 
 ## Pattern 3 (do not do this): hard-coded keys in agent prompts
 
@@ -84,19 +81,6 @@ directly into an agent chat.** Use either:
 
 The first time you onboard via `@smarterweather/mcp-onboarding`, the
 hosted server walks the agent through the env-var path automatically.
-
-## What ships when
-
-| Artifact | Phase |
-| -------- | ----- |
-| `@smarterweather/mcp-weather` placeholder package | Phase 1b (done) |
-| `@smarterweather/mcp-onboarding` placeholder package | Phase 1b (done) |
-| Real weather MCP at `mcp.smarterweather.com/mcp` | Phase 3 |
-| `@smarterweather/mcp-weather` real implementation | Phase 3 |
-| Real onboarding MCP at `developers.smarterweather.com/mcp` | Phase 4 |
-| `@smarterweather/mcp-onboarding` real implementation | Phase 4 |
-| Cursor skill (`use-smarterweather-api`) | Phase 1b (done) |
-| Claude Code instructions (`.claude/`) | Phase 1b (done) |
 
 Watch this repository's [Releases][releases] for the artifact-by-artifact
 ship log.

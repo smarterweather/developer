@@ -4,12 +4,12 @@ This directory hosts the publishable npm packages in the Smarter Weather develop
 
 ## Packages
 
-| Package | Purpose | Roadmap phase | Status |
-| ------- | ------- | ------------- | ------ |
-| [`@smarterweather/mcp-weather`](./mcp-weather) | stdio bridge to the hosted weather MCP server at `mcp.smarterweather.com`. Speaks MCP OAuth 2.1 + PKCE by default; falls back to API-key auth via `SMARTERWEATHER_API_KEY`. | Phase 3 | **GA on `latest`** (`0.0.0`) |
-| [`@smarterweather/mcp-onboarding`](./mcp-onboarding) | stdio bridge to the hosted developer-onboarding MCP server at `developers.smarterweather.com/mcp`. Anonymous discovery by default; set `SMARTERWEATHER_ONBOARDING_AUTH=required` for OAuth. | Phase 4 | **GA on `latest`** (`0.0.0`) |
+| Package | Purpose | Status |
+| ------- | ------- | ------ |
+| [`@smarterweather/mcp-weather`](./mcp-weather) | stdio bridge to the hosted weather MCP server at `mcp.smarterweather.com`. Speaks MCP OAuth 2.1 + PKCE by default; falls back to API-key auth via `SMARTERWEATHER_API_KEY`. | GA on `latest` |
+| [`@smarterweather/mcp-onboarding`](./mcp-onboarding) | stdio bridge to the hosted developer-onboarding MCP server at `developers.smarterweather.com/mcp`. Anonymous discovery by default; set `SMARTERWEATHER_ONBOARDING_AUTH=required` for OAuth. | GA on `latest` |
 
-Both packages are thin wrappers around [`mcp-remote`](https://www.npmjs.com/package/mcp-remote). Install with `npx -y @smarterweather/mcp-weather` / `mcp-onboarding` (no `@preview` suffix).
+Both packages are thin wrappers around [`mcp-remote`](https://www.npmjs.com/package/mcp-remote). Install with `npx -y @smarterweather/mcp-weather` / `mcp-onboarding` — untagged; there is no `preview` tag to append.
 
 ## Adding a new package
 
@@ -44,13 +44,22 @@ The npm dist-tag API is **not** covered by OIDC trusted publishing, so this step
 
 If `NPM_TOKEN` is absent the publish step still succeeds (the package itself ships fine via OIDC), but the workflow logs a `::warning::` line with the exact `npm dist-tag add ...` commands a maintainer needs to run by hand.
 
-#### Current state (Soft GA, 2026-07)
+#### Current state (GA, 2026-07)
 
-Both bridges have stable `0.0.0` releases on `latest`. Docs and client configs should use untagged installs (`npx -y @smarterweather/mcp-weather`). The stale `preview` tag may still point at the exit-stub (`0.0.0-preview.1`) until a maintainer runs:
+Both bridges are GA on `latest` and both are real stdio↔Streamable-HTTP proxies — no exit-stubs remain. The `preview` dist-tag has been removed from both packages, so `latest` is the only tag either publishes.
+
+Docs and client configs must therefore use **untagged** installs:
 
 ```bash
-npm dist-tag add @smarterweather/mcp-weather@0.0.0 preview
-npm dist-tag add @smarterweather/mcp-onboarding@0.0.0 preview
+npx -y @smarterweather/mcp-weather
+npx -y @smarterweather/mcp-onboarding
 ```
 
-(or `npm dist-tag rm <pkg> preview`). Tracked at [SmarterWeather#8090](https://github.com/smarterweather/SmarterWeather/issues/8090) / [#9743](https://github.com/smarterweather/SmarterWeather/issues/9743).
+Appending `@preview` now fails to resolve rather than silently installing an old build. Verify the live tags before changing this section:
+
+```bash
+npm view @smarterweather/mcp-weather dist-tags
+npm view @smarterweather/mcp-onboarding dist-tags
+```
+
+Historical context for the tag churn: [SmarterWeather#8090](https://github.com/smarterweather/SmarterWeather/issues/8090) / [#9743](https://github.com/smarterweather/SmarterWeather/issues/9743).

@@ -5,23 +5,28 @@ documentation, example apps, the `@smarterweather/mcp-weather` and
 `@smarterweather/mcp-onboarding` packages, agent skills, and the OpenAPI
 specification for `api.smarterweather.com`.
 
-> **Preview.** The Smarter Weather REST API and hosted MCP server are not yet
-> generally available. This repository exists to publish the developer-facing
-> contracts, SDKs, and integration material as they land. Expect rapid
-> iteration on the OpenAPI surface, the dashboard, and the MCP tool catalog
-> through the launch sequence outlined in [Roadmap](#roadmap) below. Production
-> SLAs and breaking-change policies start at general availability.
+> **Generally available.** The REST API, both hosted MCP servers, and both npm
+> stdio bridges are live in production. Breaking-change policy: six months'
+> notice before removing a `/v1/*` endpoint or an MCP tool, 90 days before a
+> breaking change to a request or response shape. Non-breaking additions ship
+> immediately.
+
+| Surface | Endpoint | Auth |
+| ------- | -------- | ---- |
+| REST API | `https://api.smarterweather.com` | `Authorization: Bearer sw_live_*` / `sw_test_*` |
+| Weather MCP | `https://mcp.smarterweather.com/mcp` | API key Bearer, OAuth 2.1 + PKCE, or keyless x402 |
+| Onboarding MCP | `https://developers.smarterweather.com/mcp` | Anonymous discovery tools; OAuth for account tools |
 
 ---
 
 ## What lives here
 
-This repo will fill in over time. At bootstrap it contains governance only.
-The intended scope is:
-
 - **OpenAPI specification** (`openapi.yaml`) for the public REST API at
   `https://api.smarterweather.com`. Auto-synced from the canonical source on
-  change.
+  change. Also served at
+  <https://developers.smarterweather.com/openapi.yaml>.
+- **MCP tool descriptors** (`descriptors/mcp-tools.json`) -- the canonical
+  catalog for the weather MCP server, synced on every server change.
 - **`@smarterweather/mcp-weather`** -- npm package source for the stdio
   bridge that connects MCP clients (Cursor, Claude Desktop, Claude Code, etc.)
   to the hosted MCP endpoint at `https://mcp.smarterweather.com/mcp`. The
@@ -32,7 +37,8 @@ The intended scope is:
   `https://developers.smarterweather.com/mcp`. Provides agent-driven
   self-service account creation, API key provisioning, and SDK setup
   walkthroughs. Auth via OAuth (browser callback).
-- **Client SDKs** -- TypeScript and Python first; Go to follow.
+- **Client SDKs** -- TypeScript and Python first; Go to follow. Not yet
+  shipped; call the REST API directly in the meantime.
 - **Examples and cookbooks** -- runnable apps, agent integrations, and
   end-to-end recipes.
 - **Agent skills** --
@@ -41,7 +47,7 @@ The intended scope is:
   coding agents how to integrate the Smarter Weather APIs. Copy them to
   the same paths in your own repo to install.
 - **Documentation** -- guides under [`docs/`](./docs/) that complement the
-  developer portal at https://smarterweather.com/developers. See the
+  developer portal at https://developers.smarterweather.com. See the
   [docs index](./docs/README.md) for the current map.
 
 What does **not** live here: the Smarter Weather core service, ingestion
@@ -50,9 +56,12 @@ repository.
 
 ## Quickstart
 
-The hosted developer dashboard at https://smarterweather.com/developers is
+The hosted developer portal at https://developers.smarterweather.com is
 the source of truth for account creation, API key minting, plan management,
-and usage. Once you have a key, you can:
+and usage. Agents can do all of it without the dashboard by connecting to the
+onboarding MCP server — see [docs/mcp-onboarding.md](./docs/mcp-onboarding.md).
+
+Once you have a key:
 
 ```bash
 # REST API
@@ -67,7 +76,8 @@ npx -y @smarterweather/mcp-weather --version
 ```
 
 The full quickstart with language-specific snippets lives at
-https://smarterweather.com/developers/quickstart.
+https://developers.smarterweather.com/quickstart. Agents should start from
+[`llms.txt`](./llms.txt) or [`AGENTS.md`](./AGENTS.md).
 
 ## Getting help
 
@@ -86,19 +96,18 @@ https://smarterweather.com/developers/quickstart.
 
 ## Roadmap
 
-Smarter Weather is building the developer platform in phases; this repo
-publishes artifacts as each phase ships.
+Smarter Weather built the developer platform in phases; this repo publishes
+artifacts as each one ships.
 
-| Phase | Surface | Target |
+| Phase | Surface | Status |
 | ----- | ------- | ------ |
-| 1a | Developer dashboard, API key CRUD, billing, monitoring scaffolding | shipping |
-| 1b | This public repository (governance, SDK scaffolding, OpenAPI sync workflow) | in progress |
-| 2  | Public REST API (`sw-api`) at `api.smarterweather.com` with usage-based billing | next |
-| 2b | First-party migration of the Smarter Weather web and iOS apps onto the public API | follows Phase 2 |
-| 3  | Public MCP server (`sw-mcp`) at `mcp.smarterweather.com/mcp` + `@smarterweather/mcp-weather` | follows Phase 2 |
-| 3b | First-party `wx-chat` migration onto the public MCP | follows Phase 3 |
-| 4  | Meta MCP server (`sw-onboarding`) for agent-driven self-service onboarding + `@smarterweather/mcp-onboarding` | follows Phase 3 |
-| 5  | SDKs, expanded examples, registry distribution, community growth | ongoing |
+| 1a | Developer dashboard, API key CRUD, billing, monitoring | shipped |
+| 1b | This public repository (contracts, package sources, OpenAPI + descriptor sync) | shipped |
+| 2  | Public REST API (`sw-api`) at `api.smarterweather.com` with usage-based billing | shipped |
+| 2b | First-party migration of the Smarter Weather web and iOS apps onto the public API | shipped |
+| 3  | Public MCP server (`sw-mcp`) at `mcp.smarterweather.com/mcp` + `@smarterweather/mcp-weather` | shipped |
+| 4  | Onboarding MCP server (`sw-onboarding`) + `@smarterweather/mcp-onboarding` | shipped |
+| 5  | SDKs, expanded examples, registry distribution, community growth | in progress |
 
 The roadmap is published for transparency, not as a commitment. Dates are
 intentionally omitted -- watch this repository for releases.
@@ -127,7 +136,8 @@ for the surrounding prose.
 
 The Smarter Weather hosted APIs and services themselves are governed by
 separate Terms of Service and Developer Terms at
-https://smarterweather.com/terms and https://smarterweather.com/developers/terms.
+https://smarterweather.com/terms and
+https://developers.smarterweather.com/legal/terms.
 This repository contains client-side and documentation artifacts only; access
 to the hosted APIs requires a separate agreement.
 
