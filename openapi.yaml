@@ -4989,6 +4989,18 @@ components:
             product, `grid` for gridded normals, `mixed` when a series draws
             on both.
           example: station
+        normals_method:
+          type: string
+          enum: [official, derived]
+          description: |
+            How the normals were produced, which `source` does not answer.
+            `official` means the provider publishes them as a normals product
+            -- true of both the NCEI station normals and the NCEI gridded
+            normals, so a station/grid mix is still wholly official.
+            `derived` means they were computed from raw climate data, which is
+            a weaker claim a client should qualify. Absent when upstream does
+            not report it.
+          example: official
         unit:
           type: string
           enum: [imperial, metric]
