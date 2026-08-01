@@ -1692,28 +1692,38 @@ paths:
       summary: Day-of-year climate normals for a point.
       description: |
         Returns the 1991-2020 NOAA/NCEI daily climate normals — the average
-        high, low and mean temperature for each calendar day — for the station
-        nearest a US point.
+        high, low and mean temperature for each calendar day — for a US point.
 
         **Normals are climatology, not forecast.** They describe a 30-year base
         period, carry no valid time, and do not change day to day. Use them to
         answer "is tomorrow warmer than usual here?", not "how warm will it
         be?".
 
-        **They describe a station, not your point.** Normals are computed from
-        station records, so the response always names the station it used and
-        how far away it is (`station.distance_km`). Past 50 km the response
-        sets `meta.approximate`; past 150 km no station is considered
-        representative and the endpoint returns `404`. Read `distance_km`
-        before attributing a normal to a specific location — NOAA's own use
-        limitation is that representativeness degrades with distance, and
-        elevation differences matter more than the distance alone suggests.
+        **Where the values come from depends on the point,** and `meta.source`
+        says which. Across the contiguous US they are read from NCEI's gridded
+        normals at the requested coordinates (the nClimGrid 1/24° mesh, roughly
+        5 km), so they describe that point directly: `source` is `grid`.
+        Outside CONUS — Alaska, Hawaii, the territories — and for any day the
+        grid has no value for, they come from the nearest station record, and
+        `source` is `station`, or `mixed` where one series draws on both.
 
-        **Coverage.** Roughly 7,400 US stations including Alaska, Hawaii and
-        the territories. Remote points may have no station within range.
+        **A station-sourced normal describes the station, not your point.** The
+        response always names the station it resolved and how far away it is
+        (`station.distance_km`), since the station lookup is what anchors the
+        request either way. Past 50 km, a series carrying station-sourced
+        values sets `meta.approximate`; past 150 km no station is considered
+        representative and the endpoint returns `404`. A purely gridded series
+        is never flagged however far that station happens to sit, because the
+        grid value is the point's own normal. Where the flag does apply, NOAA's
+        own use limitation is that representativeness degrades with distance,
+        and elevation differences matter more than distance alone suggests.
 
-        Days inside the requested range that the station has no record for are
-        still returned, with the temperature fields omitted and counted in
+        **Coverage.** The gridded normals cover the contiguous US; the station
+        normals add roughly 7,400 US stations including Alaska, Hawaii and the
+        territories. Remote points outside CONUS may have no station in range.
+
+        Days inside the requested range with no normal available are still
+        returned, with the temperature fields omitted and counted in
         `meta.missing_days`, so the series stays aligned with the dates you
         asked for.
 
@@ -5008,20 +5018,26 @@ components:
         approximate:
           type: boolean
           description: |
-            True when the station is far enough away (>50 km) that the normals
-            may not represent the requested point.
+            True when a station more than 50 km away supplied values that are
+            actually being served — `station.distance_km` says how far.
+
+            It is not a plain distance test. A `grid` day is the requested
+            point's own normal, so no station distance makes it approximate,
+            and a series whose `source` is `grid` is never flagged however far
+            the named station sits. A `mixed` series is flagged, because the
+            station-sourced days in it genuinely are approximations.
         missing_days:
           type: integer
           description: |
-            How many days in the requested range the station holds no normal
-            for. Those days are still present in `days` with their
-            temperature fields omitted.
+            How many days in the requested range no normal is available for,
+            from either the grid or the station. Those days are still present
+            in `days` with their temperature fields omitted.
 
     ClimateNormalsDay:
       type: object
       description: |
-        One day-of-year slice. Temperature fields are omitted when the station
-        has no value, which is not the same as a value of zero.
+        One day-of-year slice. Temperature fields are omitted when no normal is
+        available, which is not the same as a value of zero.
       required: [date, month, day]
       properties:
         date:
@@ -5058,31 +5074,49 @@ components:
           description: |
             Standard deviation of the daily maximum. An interval, so it scales
             without the freezing-point offset: 3 °C of spread is 5.4 °F.
+
+            Always from the nearest station, including on a day whose
+            temperatures came from the grid — the gridded normals publish no
+            standard deviations. On such a day the temperatures describe your
+            point while this describes the named station, so read
+            `station.distance_km` before narrating "unusually warm" off this
+            spread. The same holds for `normal_low_stddev`,
+            `normal_mean_stddev`, `years` and `completeness_flag`.
           example: 5.4
         normal_low_stddev:
           type: number
           format: double
-          description: Standard deviation of the daily minimum.
+          description: |
+            Standard deviation of the daily minimum. Station-sourced on the
+            same terms as `normal_high_stddev`.
           example: 5.0
         normal_mean_stddev:
           type: number
           format: double
-          description: Standard deviation of the daily mean.
+          description: |
+            Standard deviation of the daily mean. Station-sourced on the same
+            terms as `normal_high_stddev`.
           example: 4.7
         years:
           type: integer
-          description: Years of the base period contributing to this day.
+          description: |
+            Years of the base period contributing to this day, at the station.
+            Station-sourced on the same terms as `normal_high_stddev`, so it
+            does not describe the depth of a gridded value.
           example: 30
         completeness_flag:
           type: string
-          description: NCEI per-value completeness code.
+          description: |
+            NCEI per-value completeness code, for the station. Station-sourced
+            on the same terms as `normal_high_stddev`.
           example: C
 
     ClimateNormals:
       type: object
       description: |
-        Day-of-year climate normals for a point, resolved from the nearest
-        station with records.
+        Day-of-year climate normals for a point, read from the gridded normals
+        across CONUS and otherwise from the nearest station with records. The
+        resolved station is always named, whichever supplied the values.
       required: [station, meta, days]
       properties:
         station:
