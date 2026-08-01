@@ -3074,9 +3074,19 @@ components:
         high:
           type: [number, "null"]
           format: double
+          description: |
+            Daytime maximum. May be null on the `relative_day: -1` overnight
+            row, whose daytime is already past: that row reports a maximum only
+            when the forecast cycle still carries one for the date, and never
+            estimates it from the overnight minimum. When `high` is null the
+            row also omits `day`.
         low:
           type: [number, "null"]
           format: double
+          description: |
+            Overnight minimum, covering 00:00–05:59 of the following calendar
+            date. Present on the `relative_day: -1` row, whose remaining
+            overnight hours are still ahead.
         conditions:
           type: string
         icon:
@@ -3182,7 +3192,10 @@ components:
             Signed calendar offset from the local current date at request time
             (-1 = yesterday, 0 = today, 1 = tomorrow). Before 6 AM local an
             extra entry with `relative_day: -1` prepends the in-progress
-            overnight row.
+            overnight row. That row always reports `low` and `night`, but
+            `high` and `day` only when the cycle still carries that date's
+            daytime maximum. Select today by `relative_day == 0` rather than by
+            position in the array, which shifts by one inside that window.
         active_period:
           type: [string, "null"]
           enum: [day, night]
