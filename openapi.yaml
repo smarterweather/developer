@@ -1692,7 +1692,8 @@ paths:
       summary: Day-of-year climate normals for a point.
       description: |
         Returns the 1991-2020 NOAA/NCEI daily climate normals — the average
-        high, low and mean temperature for each calendar day — for a US point.
+        high, low and mean temperature for each calendar day, plus the average
+        daily precipitation across the contiguous US — for a US point.
 
         **Normals are climatology, not forecast.** They describe a 30-year base
         period, carry no valid time, and do not change day to day. Use them to
@@ -1721,6 +1722,12 @@ paths:
         **Coverage.** The gridded normals cover the contiguous US; the station
         normals add roughly 7,400 US stations including Alaska, Hawaii and the
         territories. Remote points outside CONUS may have no station in range.
+
+        **Precipitation is gridded-only.** `normal_precip` has no station
+        equivalent — NCEI's station normals publish no daily precipitation
+        normal — so it appears only on days whose `source` is `grid` and is
+        omitted everywhere else, including for every point outside CONUS.
+        Temperature normals are unaffected.
 
         Days inside the requested range with no normal available are still
         returned, with the temperature fields omitted and counted in
@@ -1771,9 +1778,9 @@ paths:
           in: query
           required: false
           description: |
-            Unit system for temperatures. `imperial` (default) uses °F;
-            `metric` uses °C. Standard deviations are intervals and scale
-            without the freezing-point offset.
+            Unit system for the values. `imperial` (default) uses °F and
+            inches; `metric` uses °C and millimetres. Standard deviations are
+            intervals and scale without the freezing-point offset.
           schema:
             type: string
             enum: [imperial, metric]
@@ -5027,7 +5034,9 @@ components:
         unit:
           type: string
           enum: [imperial, metric]
-          description: Unit system applied to the temperature fields.
+          description: |
+            Unit system applied to the values: °F and inches for `imperial`,
+            °C and millimetres for `metric`.
         approximate:
           type: boolean
           description: |
@@ -5049,8 +5058,9 @@ components:
     ClimateNormalsDay:
       type: object
       description: |
-        One day-of-year slice. Temperature fields are omitted when no normal is
-        available, which is not the same as a value of zero.
+        One day-of-year slice. Fields are omitted when no normal is available,
+        which is not the same as a value of zero. `normal_precip` is
+        additionally omitted on any station-sourced day — see its description.
       required: [date, month, day]
       properties:
         date:
@@ -5110,6 +5120,26 @@ components:
             Standard deviation of the daily mean. Station-sourced on the same
             terms as `normal_high_stddev`.
           example: 4.7
+        normal_precip:
+          type: number
+          format: double
+          description: |
+            Average daily precipitation amount — inches when `unit=imperial`,
+            millimetres when `unit=metric`.
+
+            The exact inverse of `normal_high_stddev`: that is always
+            station-sourced, this is always grid-sourced. The station product
+            publishes no daily precipitation normal at all, so this field comes
+            only from the gridded CONUS product and is **omitted** on any day
+            whose `source` is `station` — which includes every point outside
+            CONUS. A series over Alaska or Hawaii carries temperatures with no
+            precipitation until gridded normals exist there.
+
+            `0` is a real value and is not the same as omitted: a daily normal
+            is a 30-year mean spread across wet and dry days, so much of the
+            arid West is a few hundredths of an inch. Do not treat a present
+            zero as missing data.
+          example: 0.11
         years:
           type: integer
           description: |
