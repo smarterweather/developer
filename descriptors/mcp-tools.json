@@ -1923,7 +1923,7 @@
     {
       "name": "get_hourly_forecast",
       "title": "Get hourly forecast",
-      "description": "Blended hourly forecast: temperature, feels-like, humidity, wind, precipitation probability/amount, conditions, and icon per hour. Snapped to the current hour so hourly[0] is \"now\". Timestamps are UTC ISO 8601; convert to the local timezone before presenting. Ask for the days you need up front -- one call with days: 4 beats four calls. ALWAYS check hourly_coverage before answering about a specific hour: it reports first_time and last_time (the window the rows actually span), sample_interval_hours (past the first day rows are every 2-3h, not every hour), and truncated: true when upstream returned less than you asked for. If the hour the user cares about is after last_time, say the forecast does not reach that far yet rather than answering from the nearest row you do have. Accepts a place name or coordinates. Examples: {\"location\": \"Portland, OR\", \"days\": 2} or {\"lat\": 41.88, \"lon\": -87.63, \"days\": 2}.",
+      "description": "Blended hourly forecast: temperature, feels-like, humidity, wind, precipitation probability/amount, conditions, and icon per hour. Snapped to the current hour so hourly[0] is \"now\". Timestamps are UTC ISO 8601; convert to the local timezone before presenting. Ask for the days you need up front -- one call with days: 4 beats four calls. ALWAYS check hourly_coverage before answering about a specific hour: it reports first_time and last_time (the window the rows actually span), sample_interval_hours (past the first day rows are every 2-3h, not every hour), and truncated: true when upstream returned less than you asked for. If the hour the user cares about is after last_time, say the forecast does not reach that far yet rather than answering from the nearest row you do have. For one stretch of time ask for that stretch with hours_from/hours_to: it comes back hour by hour even where the full range would be sampled. Accepts a place name or coordinates. Examples: {\"location\": \"Portland, OR\", \"days\": 2} or {\"lat\": 41.88, \"lon\": -87.63, \"hours_from\": 36, \"hours_to\": 48}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1950,7 +1950,19 @@
             "minimum": 1,
             "maximum": 7,
             "default": 2,
-            "description": "Days of hourly data (1-7). Default 2 (48 hours)."
+            "description": "Days of hourly data (1-7). Default 2. Widened when hours_to reaches further."
+          },
+          "hours_from": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 168,
+            "description": "Window start, in hours from now (0 = the current hour)."
+          },
+          "hours_to": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 168,
+            "description": "Window end, in hours from now, exclusive. 36 to 48 is hours 36-47."
           },
           "units": {
             "type": "string",
