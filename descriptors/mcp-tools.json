@@ -1437,7 +1437,7 @@
     {
       "name": "get_forecast_skill",
       "title": "Get forecast skill",
-      "description": "How accurate our forecasts have actually been near a location, measured against observed analysis truth. Returns bias (positive = the model runs high), mean absolute error, RMSE, and a skill score against local climatology, per model, weather variable, and forecast lead time; for probability forecasts, the Brier score and a reliability breakdown. Use this to qualify a forecast rather than assert it -- \"NBM has been running 1.8F warm at 3-day leads near you, so treat that 72 as around 70\" -- and to answer \"how much should I trust this forecast\", \"is the model biased here\", or \"how accurate were you last month\". Evidence is reported at three scopes side by side: the exact point (strongest, slowest to accumulate), the ~50km neighborhood, and the ~300km region. Prefer the most specific scope that has samples. Metrics below minimumSamples observations are withheld and listed under insufficientHistory with their count -- say that history is still accumulating rather than treating thin numbers as evidence. Coverage is a rolling recent window over verified US variables, not all of history. Entries are per model and their samples are not matched, so never conclude that one model beats another by comparing their numbers here. Each entry states the truth field it was measured against -- one designated analysis per variable -- so never compare numbers carrying different truth values either.",
+      "description": "How accurate our forecasts have actually been near a location, measured against observed analysis truth. Returns bias (positive = the model runs high), mean absolute error, RMSE, and a skill score against local climatology, per model, weather variable, and forecast lead time; for probability forecasts, the Brier score and a reliability breakdown. Use this to qualify a forecast rather than assert it -- \"NBM has been running 1.8F warm at 3-day leads near you, so treat that 72 as around 70\" -- and to answer \"how much should I trust this forecast\", \"is the model biased here\", or \"how accurate were you last month\". Evidence is reported at three scopes side by side: the exact point (strongest, slowest to accumulate), the ~50km neighborhood, and the ~300km region. Prefer the most specific scope that has samples. Metrics below minimumSamples observations are withheld and listed under insufficientHistory with their count -- say that history is still accumulating rather than treating thin numbers as evidence. Coverage is a rolling recent window over verified US variables, not all of history. Entries are per model and their samples are not matched, so never conclude that one model beats another by comparing their numbers here. Each entry states the truth field it was measured against -- one designated analysis per variable -- so never compare numbers carrying different truth values either. Each entry also states the regime it was measured under: ALL for every observation regardless of weather, or a conditioned tier such as SEA:DJF (winter) or JC:CNW (a circulation pattern). Pass the regime parameter to ask for a conditioned track record. It falls back, so asking for SEA:DJF and getting back regime ALL is a successful answer, not a missing one -- always read the regime field and qualify the claim with it, because \"NBM runs warm here in winter\" and \"NBM runs warm here\" are different statements. Regimes overlap by construction, so entries under different regimes are alternative answers to one question and must never be compared or added. Entries with a categorical block answer a yes/no question instead of an error magnitude -- did it rain, at the thresholdMm stated on the entry -- with pod (of the times it happened, how often we called it), far (of the times we called it, how often it did not happen), and frequencyBias (above 1 = we call it too often). Use these for \"will it actually rain\" questions, where a small average error means nothing if the rain lands in the wrong hour. A null rate means the sample cannot answer it -- the event has not happened, or been forecast, enough times to divide by -- and must be reported as unknown, never as zero. The counts beside it are still evidence, and for a rare event they are often the whole answer: \"it has only rained twice here in the record\" is a useful thing to say.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1461,7 +1461,7 @@
           },
           "variable": {
             "type": "string",
-            "description": "Narrow to one variable, e.g. temperature_2m, dew_point_2m, wind_speed_10m, wind_gusts_10m, cloud_cover, precipitation, precipitation_probability. Omit for everything measured at the location."
+            "description": "Narrow to one variable, e.g. temperature_2m, dew_point_2m, wind_speed_10m, wind_gusts_10m, cloud_cover, precipitation, precipitation_probability, or a thresholded rain event such as precipitation_gt_0p254mm (any measurable rain) or precipitation_gt_2p54mm. Omit for everything measured at the location."
           },
           "model": {
             "type": "string",
@@ -1475,6 +1475,10 @@
           "truth": {
             "type": "string",
             "description": "Measure against a named truth source instead of the default one for each variable, e.g. urma. Only pass this if the user asked which analysis was used or named one; the default is already the designated source, and the analyses disagree, so switching changes the numbers."
+          },
+          "regime": {
+            "type": "string",
+            "description": "Ask for a track record measured only under particular conditions, as a comma-separated preference chain, most specific first, e.g. \"JC:CNW,SEA:DJF\". SEA: is the meteorological season (DJF, MAM, JJA, SON); JC: is a circulation pattern. The most specific tier with enough observations answers and the unconditioned record is the last resort, so this never empties a result the way truth does -- it degrades. Read the regime field on each entry to see which tier actually answered. Pass this when the question is conditional (\"is it worse in winter\", \"how does it do in this pattern\"); omit it otherwise, since conditioned tiers are thinner and slower to earn numbers."
           },
           "unit": {
             "type": "string",
@@ -1550,6 +1554,9 @@
                   ]
                 },
                 "truth": {
+                  "type": "string"
+                },
+                "regime": {
                   "type": "string"
                 },
                 "metric": {
@@ -1649,6 +1656,75 @@
                     "reliability"
                   ],
                   "additionalProperties": false
+                },
+                "categorical": {
+                  "type": "object",
+                  "properties": {
+                    "samples": {
+                      "type": "number"
+                    },
+                    "thresholdMm": {
+                      "type": "number"
+                    },
+                    "baseVariable": {
+                      "type": "string"
+                    },
+                    "hits": {
+                      "type": "number"
+                    },
+                    "misses": {
+                      "type": "number"
+                    },
+                    "falseAlarms": {
+                      "type": "number"
+                    },
+                    "correctNegatives": {
+                      "type": "number"
+                    },
+                    "baseRate": {
+                      "type": "number"
+                    },
+                    "pod": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "far": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "csi": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "ets": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "frequencyBias": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "samples",
+                    "thresholdMm",
+                    "hits",
+                    "misses",
+                    "falseAlarms",
+                    "correctNegatives",
+                    "baseRate"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
@@ -1684,6 +1760,9 @@
                   ]
                 },
                 "truth": {
+                  "type": "string"
+                },
+                "regime": {
                   "type": "string"
                 },
                 "samples": {
@@ -1736,6 +1815,16 @@
           {
             "location": "Dallas, TX",
             "variable": "precipitation_probability",
+            "lead_hours": 24
+          },
+          {
+            "location": "Chicago",
+            "variable": "temperature_2m",
+            "regime": "SEA:DJF"
+          },
+          {
+            "location": "Houston",
+            "variable": "precipitation_gt_0p254mm",
             "lead_hours": 24
           }
         ]
@@ -1834,7 +1923,7 @@
     {
       "name": "get_hourly_forecast",
       "title": "Get hourly forecast",
-      "description": "Blended hourly forecast: temperature, feels-like, humidity, wind, precipitation probability/amount, conditions, and icon per hour. Snapped to the current hour so hourly[0] is \"now\". Timestamps are UTC ISO 8601; convert to the local timezone before presenting. Ask for the days you need up front -- one call with days: 4 beats four calls. ALWAYS check hourly_coverage before answering about a specific hour: it reports first_time and last_time (the window the rows actually span), sample_interval_hours (past the first day rows are every 2-3h, not every hour), and truncated: true when upstream returned less than you asked for. If the hour the user cares about is after last_time, say the forecast does not reach that far yet rather than answering from the nearest row you do have. Accepts a place name directly. Example: {\"location\": \"Chicago\", \"days\": 2}.",
+      "description": "Blended hourly forecast: temperature, feels-like, humidity, wind, precipitation probability/amount, conditions, and icon per hour. Snapped to the current hour so hourly[0] is \"now\". Timestamps are UTC ISO 8601; convert to the local timezone before presenting. Ask for the days you need up front -- one call with days: 4 beats four calls. ALWAYS check hourly_coverage before answering about a specific hour: it reports first_time and last_time (the window the rows actually span), sample_interval_hours (past the first day rows are every 2-3h, not every hour), and truncated: true when upstream returned less than you asked for. If the hour the user cares about is after last_time, say the forecast does not reach that far yet rather than answering from the nearest row you do have. For one stretch of time ask for that stretch with hours_from/hours_to: it comes back hour by hour even where the full range would be sampled. Accepts a place name or coordinates. Examples: {\"location\": \"Portland, OR\", \"days\": 2} or {\"lat\": 41.88, \"lon\": -87.63, \"hours_from\": 36, \"hours_to\": 48}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1861,7 +1950,19 @@
             "minimum": 1,
             "maximum": 7,
             "default": 2,
-            "description": "Days of hourly data (1-7). Default 2 (48 hours)."
+            "description": "Days of hourly data (1-7). Default 2. Widened when hours_to reaches further."
+          },
+          "hours_from": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 168,
+            "description": "Window start, in hours from now (0 = the current hour)."
+          },
+          "hours_to": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 168,
+            "description": "Window end, in hours from now, exclusive. 36 to 48 is hours 36-47."
           },
           "units": {
             "type": "string",
