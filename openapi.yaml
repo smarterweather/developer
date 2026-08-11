@@ -2913,8 +2913,10 @@ components:
           description: >
             Probability of measurable precipitation (0–100) for the hour.
             When `include=nowcast` is requested, near-term hours overlapping the
-            radar nowcast horizon may be floored upward so values stay consistent
-            with the nowcast section (NBM is never lowered when the nowcast is dry).
+            radar nowcast horizon are reconciled against the nowcast summary:
+            wet peak intensity may floor values upward; when peak intensity is
+            `none`, covered hours may be pulled down toward zero (unless the
+            hour already carries precip conditions).
         precip_amount:
           type: [number, "null"]
           format: double
@@ -3366,7 +3368,7 @@ components:
           description: >
             Probability of measurable precipitation (0–100) for the day or night
             period. When `include=nowcast` is requested, the active near-term
-            period may be floored upward from hourly values reconciled against
+            period may be raised or lowered from hourly values reconciled against
             the radar nowcast (NWS longer-period ≥ subperiod consistency).
         precip_total:
           type: [number, "null"]
