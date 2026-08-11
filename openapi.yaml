@@ -1292,10 +1292,16 @@ paths:
 
         ### Caching
 
-        Successful responses carry `Cache-Control: public,
+        Successful responses carry `Cache-Control: private,
         max-age=86400`. The underlying place-name <-> timezone mapping
         changes on the order of years; clients should treat this as a
         long-term cache.
+
+        `private` means your own client may store the response for the
+        full `max-age`, but shared caches (CDNs, proxies) must not:
+        every request on a partner key is metered and rate-limited
+        individually, so it has to reach the origin. The freshness
+        budget is unchanged either way.
 
         ### Auth
 
@@ -1365,8 +1371,13 @@ paths:
         Returns up to `count` location candidates whose names match the
         partial `input` string. Designed for client-side typeahead
         widgets: latency is dominated by the reader's PostGIS prefix
-        index; `Cache-Control: public, max-age=300` keeps repeated
+        index; `Cache-Control: private, max-age=300` keeps repeated
         keystrokes off the read replica.
+
+        `private` lets your own client reuse the response for the full
+        `max-age` while keeping shared caches (CDNs, proxies) out, since
+        each request on a partner key is metered and rate-limited
+        individually.
 
         ### Auth
 
@@ -1442,9 +1453,14 @@ paths:
 
         ### Caching
 
-        Successful responses carry `Cache-Control: public,
+        Successful responses carry `Cache-Control: private,
         max-age=3600`. The underlying place-name <-> ZIP mapping is
         stable on the order of months.
+
+        `private` lets your own client reuse the response for the full
+        `max-age` while keeping shared caches (CDNs, proxies) out, since
+        each request on a partner key is metered and rate-limited
+        individually.
 
         ### Auth
 
