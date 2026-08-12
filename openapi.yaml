@@ -4573,14 +4573,18 @@ components:
           description: |
             Time-of-day-aware summary of current conditions. Weaves in, when
             available, a category- and time-aware alert cue (e.g. "Elevated
-            fire-weather conditions through 1 AM."), imminent-precip nowcast, the
-            current observation, the next-few-hours trend, and a time-aware
+            fire-weather conditions through 1 AM."), imminent-precip nowcast, an
+            optional plain-language cue from an overlapping SPC Mesoscale
+            Discussion (truncated enrichment summary; not a second LLM call),
+            the current observation, the next-few-hours trend, and a time-aware
             high/low (today's high during the day; tonight's low and tomorrow's
             high in the evening). Phrasing varies by location and hour for natural
             variety but is stable between refreshes within the hour. Temperatures
             follow the requested `units`. Requires `current` data; `daily` adds
-            the high/low, `alerts` the alert cue, and `nowcast` the
-            imminent-precip cue.
+            the high/low, `alerts` the alert cue, `nowcast` the imminent-precip
+            cue, and overlapping mesoscale discussions the optional guidance cue.
+            Area Forecast Discussions and Hazardous Weather Outlooks are not
+            folded into this field.
         short_term:
           type: string
           description: Narrative covering the next few hours.
@@ -4682,6 +4686,9 @@ components:
         day_one:
           type: string
           description: Day-one hazard summary text.
+        summary:
+          type: string
+          description: Pipeline LLM overall hazard summary when enrichment has run.
         has_active_hazards:
           type: boolean
         issued_at:
