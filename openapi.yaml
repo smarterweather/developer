@@ -1094,8 +1094,9 @@ paths:
       summary: Get active SPC Mesoscale Discussion polygons as GeoJSON.
       description: |
         Returns a GeoJSON `FeatureCollection` of non-expired SPC Mesoscale
-        Discussions that have geometry. Bodies are omitted; structured
-        fields live on each feature's `properties` bag (forward-compat).
+        Discussions that have geometry. Structured fields and the bulletin
+        `body` (when fetched from S3) live on each feature's `properties`
+        bag (forward-compat).
 
         The endpoint takes no parameters. Prefer this path over the
         temporary `/v1/discussions/mesoscale` alias.
