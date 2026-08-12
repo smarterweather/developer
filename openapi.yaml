@@ -4490,7 +4490,16 @@ components:
         active_mcds:
           type: integer
           minimum: 0
-          description: Count of active SPC Mesoscale Convective Discussions overlapping the location.
+          description: |
+            Count of non-expired SPC Mesoscale Discussions whose polygons
+            overlap the location (matches `mcds` length when present).
+        mcds:
+          type: array
+          description: |
+            Distilled SPC Mesoscale Discussions overlapping the location.
+            Expired products are omitted. Cap 10 (newest first from the reader).
+          items:
+            $ref: '#/components/schemas/MCDGuidance'
         swo_day1_risk:
           type: string
           description: SPC Day-1 convective outlook categorical risk label (when active).
@@ -4528,6 +4537,35 @@ components:
         issued_at:
           type: [string, "null"]
           format: date-time
+
+    MCDGuidance:
+      type: object
+      x-stability: experimental
+      description: Distilled SPC Mesoscale Discussion overlapping the point.
+      properties:
+        mcd_number:
+          type: integer
+          description: SPC mesoscale discussion number.
+        issued_at:
+          type: [string, "null"]
+          format: date-time
+        expires_at:
+          type: [string, "null"]
+          format: date-time
+          description: End of the product valid window when parsed.
+        concerning:
+          type: string
+          description: SPC "Concerning..." line (e.g. severe potential / watch possible).
+        areas_affected:
+          type: string
+        watch_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Stated probability of watch issuance, percent.
+        summary:
+          type: string
+          description: Pipeline LLM summary when enrichment has run.
 
     # -----------------------------------------------------------------------
     # POST /v1/weather/batch
