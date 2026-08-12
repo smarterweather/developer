@@ -2164,7 +2164,7 @@
     {
       "name": "get_map_snapshot",
       "title": "Get map snapshot",
-      "description": "Render a weather map image for visual analysis. Simple form: pass `product` (a viz-catalog product_id like \"mrms_qpe_01h_pass2_conus\", \"goes_truecolor_conus\", \"spc_day1_categorical\", or \"nexrad_l3:{SITE}:{PRODUCT}\" for single-site radar, e.g. \"nexrad_l3:TLX:N0B\") plus a location and zoom (5=regional, 8=metro, 10=city). Composed form: pass `scene` -- a declarative scene document layering basemap + multiple weather products + active alerts + storm features + inline GeoJSON in one image (layers draw bottom-to-top, under basemap labels). Example scene: {\"scene\":\"1.0\",\"view\":{\"center\":{\"lat\":43.8,\"lon\":-91.2},\"zoom\":8},\"layers\":[{\"type\":\"weather\",\"product\":\"goes_truecolor_conus\"},{\"type\":\"weather\",\"product\":\"nexrad_l3:ARX:N0B\"},{\"type\":\"alerts\",\"filter\":{\"events\":[\"Tornado Warning\"]},\"onError\":\"skip\"}]}. Alert filters (all optional, AND-combined): `ids` (specific alerts), `events`, `severities`, `minSeverity` (Extreme>Severe>Moderate>Minor>Unknown). Single-site radar keys: the address is `nexrad_l3:{SITE}:{KEY}` where KEY is `N{tilt}{measurement}` and tilt 0 is the 0.5 degree sweep -- N0B reflectivity (dBZ, where and how heavy), N0G base velocity (knots toward/away from the radar), N0S storm-relative velocity (storm motion removed, so a couplet is rotation rather than translation -- prefer it for rotation questions), N0C correlation coefficient (0-1, debris and hail), N0X differential reflectivity (dB). Legacy codes (N0V, N0R, N0Q) are accepted as aliases. Not every site produces every key; when a render reports which keys a site has, retry with one of those. Product ids must be real viz-catalog entries -- shorthand like \"radar\" or \"reflectivity\" is not one. Omit `product` for the default hybrid precip still. For Alaska and Hawaii prefer a local site or `mrms_precip_hybrid_derived_alaska` over CONUS mosaics, which do not cover them. Returns the rendered image plus per-layer resolved valid times.",
+      "description": "Render a weather map image for visual analysis. Simple form: pass `product` (a viz-catalog product_id like \"mrms_qpe_01h_pass2_conus\", \"goes_truecolor_conus\", \"spc_day1_categorical\", \"hrrr_precip_hybrid_derived_conus\" (future radar), \"hrrr_subhourly_conus\" (15-min Future Radar), \"mrms_radar_nowcast_conus\", \"rtma_conus\", \"nbm_daily_temps\", or \"nexrad_l3:{SITE}:{PRODUCT}\" for single-site radar, e.g. \"nexrad_l3:TLX:N0B\") plus a location and zoom (5=regional, 8=metro, 10=city). Composed form: pass `scene` -- a declarative scene document layering basemap + multiple weather products + active alerts + storm features + inline GeoJSON in one image (layers draw bottom-to-top, under basemap labels). Example scene: {\"scene\":\"1.0\",\"view\":{\"center\":{\"lat\":43.8,\"lon\":-91.2},\"zoom\":8},\"layers\":[{\"type\":\"weather\",\"product\":\"goes_truecolor_conus\"},{\"type\":\"weather\",\"product\":\"nexrad_l3:ARX:N0B\"},{\"type\":\"alerts\",\"filter\":{\"events\":[\"Tornado Warning\"]},\"onError\":\"skip\"}]}. Alert filters (all optional, AND-combined): `ids` (specific alerts), `events`, `severities`, `minSeverity` (Extreme>Severe>Moderate>Minor>Unknown). Single-site radar keys: the address is `nexrad_l3:{SITE}:{KEY}` where KEY is `N{tilt}{measurement}` and tilt 0 is the 0.5 degree sweep -- N0B reflectivity (dBZ, where and how heavy), N0G base velocity (knots toward/away from the radar), N0S storm-relative velocity (storm motion removed, so a couplet is rotation rather than translation -- prefer it for rotation questions), N0C correlation coefficient (0-1, debris and hail), N0X differential reflectivity (dB). Legacy codes (N0V, N0R, N0Q) are accepted as aliases. Not every site produces every key; when a render reports which keys a site has, retry with one of those. Optional `time` (unix seconds): closest frame. Forecast (HRRR/nowcast/NBM) honors future times; analysis (MRMS/NEXRAD/RTMA/GOES) clamps to latest past. Pass `time` for future-radar asks — do not claim that capability is missing. Product ids must be real viz-catalog entries -- shorthand like \"radar\" or \"reflectivity\" is not one. Omit `product` for the default hybrid precip still. For Alaska and Hawaii prefer a local site or `mrms_precip_hybrid_derived_alaska` over CONUS mosaics, which do not cover them. Returns the rendered image plus per-layer resolved valid times.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2199,7 +2199,7 @@
           },
           "time": {
             "type": "integer",
-            "description": "Unix seconds; frame closest to this time (default: latest)"
+            "description": "Unix seconds; closest frame (default: latest). Forecasts honor future times."
           },
           "opacity": {
             "type": "number",
@@ -2252,35 +2252,10 @@
             "zoom": 5
           },
           {
-            "scene": {
-              "scene": "1.0",
-              "view": {
-                "center": {
-                  "lat": 43.8,
-                  "lon": -91.2
-                },
-                "zoom": 8
-              },
-              "layers": [
-                {
-                  "type": "weather",
-                  "product": "goes_truecolor_conus"
-                },
-                {
-                  "type": "weather",
-                  "product": "nexrad_l3:ARX:N0B"
-                },
-                {
-                  "type": "alerts",
-                  "filter": {
-                    "events": [
-                      "Tornado Warning"
-                    ]
-                  },
-                  "onError": "skip"
-                }
-              ]
-            }
+            "location": "Chicago, IL",
+            "product": "hrrr_precip_hybrid_derived_conus",
+            "zoom": 7,
+            "time": 1783554900
           }
         ]
       }
