@@ -4614,10 +4614,10 @@ components:
       type: object
       x-stability: experimental
       description: |
-        Distilled data from NWS forecaster text products (AFD, HWO, MCD).
-        Structured summaries rather than raw text. Canonical weather
+        NWS forecaster text products (AFD, HWO, MCD) for the point: structured
+        fields plus raw bulletin `body` when available. Canonical weather
         surface for forecaster guidance; map polygons live on
-        `GET /v1/guidance/mesoscale`.
+        `GET /v1/guidance/mesoscale` (bodies omitted there).
 
         **Experimental.** Field shapes may change during Phase 2 closed
         beta without notice; the 90-day breaking-change commitment applies
@@ -4637,8 +4637,9 @@ components:
         mcds:
           type: array
           description: |
-            Distilled SPC Mesoscale Discussions overlapping the location.
-            Expired products are omitted. Cap 10 (newest first from the reader).
+            SPC Mesoscale Discussions overlapping the location (structured
+            fields plus raw `body`). Expired products are omitted. Cap 10
+            (newest first from the reader).
           items:
             $ref: '#/components/schemas/MCDGuidance'
         swo_day1_risk:
@@ -4648,7 +4649,9 @@ components:
     AFDGuidance:
       type: object
       x-stability: experimental
-      description: Structured Area Forecast Discussion summary.
+      description: |
+        Area Forecast Discussion: structured fields plus optional raw bulletin
+        `body`.
       properties:
         synopsis:
           type: string
@@ -4663,11 +4666,16 @@ components:
         wfo:
           type: string
           description: Issuing Weather Forecast Office identifier.
+        body:
+          type: string
+          description: Full AFD bulletin text from S3 when fetched.
 
     HWOGuidance:
       type: object
       x-stability: experimental
-      description: Structured Hazardous Weather Outlook summary.
+      description: |
+        Hazardous Weather Outlook: structured fields plus optional raw bulletin
+        `body`.
       required: [has_active_hazards]
       properties:
         day_one:
@@ -4678,11 +4686,16 @@ components:
         issued_at:
           type: [string, "null"]
           format: date-time
+        body:
+          type: string
+          description: Full HWO bulletin text from S3 when fetched.
 
     MCDGuidance:
       type: object
       x-stability: experimental
-      description: Distilled SPC Mesoscale Discussion overlapping the point.
+      description: |
+        SPC Mesoscale Discussion overlapping the point: distilled properties
+        plus optional raw bulletin `body`.
       properties:
         mcd_number:
           type: integer
@@ -4707,6 +4720,9 @@ components:
         summary:
           type: string
           description: Pipeline LLM summary when enrichment has run.
+        body:
+          type: string
+          description: Full MCD bulletin text from S3 when fetched.
 
     # -----------------------------------------------------------------------
     # POST /v1/weather/batch
