@@ -1245,6 +1245,10 @@ paths:
         (TWO) areas. Each feature carries a `kind` property the client
         uses to pick its renderer (`cone`, `track`, `points`,
         `watch_warning`, `two`); the `properties` bag is forward-compat.
+        Latest TCD and TCP bulletins for active storms live on the
+        FeatureCollection foreign member `discussions[]` (joined by
+        ATCF id, e.g. text `AT1` → `AL01`). They are not copied onto
+        every cone/track/point feature.
 
         The endpoint takes no parameters.
 
@@ -4030,7 +4034,7 @@ components:
         plus 7-day TWO areas). Returned as `application/geo+json` from
         `GET /v1/tropical`. Each feature carries a `kind` property the
         client uses to choose its renderer; the property bag is
-        forward-compat.
+        forward-compat. Latest TCD/TCP bulletins are on `discussions[]`.
       required: [type, features]
       properties:
         type:
@@ -4040,7 +4044,40 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GeoJSONOpaqueFeature'
+        discussions:
+          type: array
+          description: |
+            Latest Tropical Cyclone Discussion (TCD) and Public Advisory
+            (TCP) per storm, joined by ATCF id. Omitted when none are
+            available. Not stamped on individual features.
+          items:
+            $ref: '#/components/schemas/TropicalDiscussion'
       additionalProperties: true
+
+    TropicalDiscussion:
+      type: object
+      x-stability: experimental
+      description: |
+        Latest NHC tropical text product for one storm. `storm_id` is the
+        writer key (`AT1`); `atcf` is the GIS join key (`AL01`).
+      required: [storm_id, atcf, product_type, issued_at]
+      properties:
+        storm_id:
+          type: string
+        atcf:
+          type: string
+        product_type:
+          type: string
+          enum: [TCD, TCP]
+        source_ref:
+          type: string
+        issued_at:
+          type: string
+          format: date-time
+        summary:
+          type: string
+        body:
+          type: string
 
     PrecipitationDiscussionsFeatureCollection:
       type: object
