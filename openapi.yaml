@@ -63,7 +63,8 @@ info:
     | `location`  | no      | stable    | Echo of the resolved location (lat/lon/name/tz).  |
     | `gis`       | no      | stable    | Geographic metadata (population, timezone, nearest radar site). |
     | `narrations`| no      | experimental | LLM-generated narrative text for current/short-term conditions. |
-    | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/SWO/MCD).   |
+    | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/NOW/MCD/MPD). Canonical for new clients. |
+    | `discussions` | no    | experimental | Deprecated. Prefer `include=guidance` (`guidance.mcds` / `guidance.afd`). |
     | `uncertainty` | no    | experimental | NBM probabilistic sub-objects on hourly and daily forecasts (CONUS/Alaska/Hawaii only). |
     | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
     | `climate`     | no    | experimental | NCEI day-of-year normals for the location, plus per-day departure from normal on `daily[]`. |
@@ -101,6 +102,13 @@ tags:
     description: NWS weather alert lookups.
   - name: Storms
     description: Severe-weather tracking products (storm tracks, etc.).
+  - name: Guidance
+    description: |
+      Forecaster guidance products (SPC mesoscale discussions, WPC
+      precipitation discussions, area forecast discussions, hazardous
+      weather outlooks, short-term NOW). GeoJSON overlays under
+      `/v1/guidance/*` plus the weather `include=guidance` block.
+      `/v1/discussions/*` remains a temporary alias of mesoscale only.
   - name: Products
     description: |
       Gridded / vector weather products and derived summaries (risk-zone
@@ -1081,6 +1089,150 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/guidance/mesoscale:
+    get:
+      operationId: getGuidanceMesoscale
+      summary: Get active SPC Mesoscale Discussion polygons as GeoJSON.
+      description: |
+        Returns a GeoJSON `FeatureCollection` of non-expired SPC Mesoscale
+        Discussions that have geometry. Structured fields and the bulletin
+        `body` (when fetched from S3) live on each feature's `properties`
+        bag (forward-compat).
+
+        The endpoint takes no parameters. Prefer this path over the
+        temporary `/v1/discussions/mesoscale` alias.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=60,
+        stale-while-revalidate=60`.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Guidance]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            active mesoscale discussions have geometry (200, not 404).
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/MesoscaleDiscussionsFeatureCollection'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/guidance/precipitation:
+    get:
+      operationId: getGuidancePrecipitation
+      summary: Get active WPC Mesoscale Precipitation Discussion polygons as GeoJSON.
+      description: |
+        Returns a GeoJSON `FeatureCollection` of non-expired WPC Mesoscale
+        Precipitation Discussions (MPDs) that have geometry. Structured
+        fields (`mpd_number`, `flash_flood_tier`, `concerning`, …) and the
+        bulletin `body` (when fetched from S3) live on each feature's
+        `properties` bag. This is not SPC `/v1/guidance/mesoscale`.
+
+        The endpoint takes no parameters. There is no `/v1/discussions/precipitation`
+        alias.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=60,
+        stale-while-revalidate=60`.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Guidance]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            active precipitation discussions have geometry (200, not 404).
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/PrecipitationDiscussionsFeatureCollection'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/discussions/mesoscale:
+    get:
+      operationId: getDiscussionsMesoscale
+      summary: Temporary alias for GET /v1/guidance/mesoscale.
+      deprecated: true
+      description: |
+        Temporary alias of `GET /v1/guidance/mesoscale`. Prefer the
+        guidance path for new clients.
+      tags: [Guidance]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Same body as `/v1/guidance/mesoscale`.
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/MesoscaleDiscussionsFeatureCollection'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/tropical:
     get:
       operationId: getTropical
@@ -1093,6 +1245,11 @@ paths:
         (TWO) areas. Each feature carries a `kind` property the client
         uses to pick its renderer (`cone`, `track`, `points`,
         `watch_warning`, `two`); the `properties` bag is forward-compat.
+        Latest TCD and TCP bulletins for active storms live on the
+        FeatureCollection foreign member `discussions[]` (joined by
+        ATCF id, e.g. text `AT1` → `AL01`). Latest TWO text is on the
+        same array, keyed by basin `storm_id` (`AT` / `EP` / `CP`).
+        They are not copied onto every cone/track/point feature.
 
         The endpoint takes no parameters.
 
@@ -2650,6 +2807,8 @@ components:
           $ref: '#/components/schemas/Narrations'
         guidance:
           $ref: '#/components/schemas/Guidance'
+        discussions:
+          $ref: '#/components/schemas/Discussions'
         nowcast:
           $ref: '#/components/schemas/Nowcast'
         climate:
@@ -3876,7 +4035,77 @@ components:
         plus 7-day TWO areas). Returned as `application/geo+json` from
         `GET /v1/tropical`. Each feature carries a `kind` property the
         client uses to choose its renderer; the property bag is
-        forward-compat.
+        forward-compat. Latest TCD/TCP/TWO bulletins are on `discussions[]`.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONOpaqueFeature'
+        discussions:
+          type: array
+          description: |
+            Latest Tropical Cyclone Discussion (TCD) and Public Advisory
+            (TCP) per storm, joined by ATCF id, plus the latest Tropical
+            Weather Outlook (TWO) per basin (`storm_id` is `AT`/`EP`/`CP`).
+            Omitted when none are available. Not stamped on
+            individual features.
+          items:
+            $ref: '#/components/schemas/TropicalDiscussion'
+      additionalProperties: true
+
+    TropicalDiscussion:
+      type: object
+      x-stability: experimental
+      description: |
+        Latest NHC tropical text product for one storm or basin. `storm_id`
+        is the writer key (`AT1` for TCD/TCP, `AT` for TWO). `atcf` is the
+        GIS join key (`AL01`) on storm products.
+      required: [storm_id, atcf, product_type, issued_at]
+      properties:
+        storm_id:
+          type: string
+        atcf:
+          type: string
+        product_type:
+          type: string
+          enum: [TCD, TCP, TWO]
+        source_ref:
+          type: string
+        issued_at:
+          type: string
+          format: date-time
+        summary:
+          type: string
+        body:
+          type: string
+
+    PrecipitationDiscussionsFeatureCollection:
+      type: object
+      description: |
+        GeoJSON FeatureCollection of active WPC Mesoscale Precipitation
+        Discussion polygons. Returned as `application/geo+json` from
+        `GET /v1/guidance/precipitation`. Property bags are forward-compat.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONOpaqueFeature'
+      additionalProperties: true
+
+    MesoscaleDiscussionsFeatureCollection:
+      type: object
+      description: |
+        GeoJSON FeatureCollection of active SPC Mesoscale Discussion
+        polygons. Returned as `application/geo+json` from
+        `GET /v1/guidance/mesoscale`. Property bags are forward-compat.
       required: [type, features]
       properties:
         type:
@@ -4068,6 +4297,12 @@ components:
             include `city`, `zip`. Treat as opaque -- new types may
             appear without a sw-api release.
           example: "city"
+        place_id:
+          type: [string, "null"]
+          description: |
+            Census place GEOID. Same key as the v2 basemap tile `id`.
+            Present on place results; omitted for ZIP results.
+          example: "1714000"
       additionalProperties: true
 
     StormTrackFeature:
@@ -4459,24 +4694,58 @@ components:
           description: |
             Time-of-day-aware summary of current conditions. Weaves in, when
             available, a category- and time-aware alert cue (e.g. "Elevated
-            fire-weather conditions through 1 AM."), imminent-precip nowcast, the
-            current observation, the next-few-hours trend, and a time-aware
+            fire-weather conditions through 1 AM."), imminent-precip nowcast, an
+            optional plain-language cue from an overlapping SPC Mesoscale
+            Discussion (truncated enrichment summary; not a second LLM call),
+            the current observation, the next-few-hours trend, and a time-aware
             high/low (today's high during the day; tonight's low and tomorrow's
             high in the evening). Phrasing varies by location and hour for natural
             variety but is stable between refreshes within the hour. Temperatures
             follow the requested `units`. Requires `current` data; `daily` adds
-            the high/low, `alerts` the alert cue, and `nowcast` the
-            imminent-precip cue.
+            the high/low, `alerts` the alert cue, `nowcast` the imminent-precip
+            cue, and overlapping mesoscale discussions the optional guidance cue.
+            Area Forecast Discussions and Hazardous Weather Outlooks are not
+            folded into this field.
         short_term:
           type: string
           description: Narrative covering the next few hours.
+
+    Discussions:
+      type: object
+      x-stability: experimental
+      description: |
+        Deprecated. Prefer `include=guidance` (`guidance.mcds` /
+        `guidance.afd`). Map polygons live on `GET /v1/guidance/mesoscale`.
+
+        **Experimental.** Field shapes may change during Phase 2 closed
+        beta without notice; the 90-day breaking-change commitment applies
+        at general availability per ADR 001.
+      required: [mesoscale]
+      properties:
+        mesoscale:
+          type: array
+          description: |
+            Active SPC Mesoscale Discussions whose polygons overlap the
+            location. Expired products are omitted. Cap 10 (newest first).
+          items:
+            $ref: '#/components/schemas/MCDGuidance'
+        area_forecast:
+          allOf:
+            - $ref: '#/components/schemas/AFDGuidance'
+          description: |
+            Latest Area Forecast Discussion for the WFO covering the point.
+            Omitted when no AFD is available.
 
     Guidance:
       type: object
       x-stability: experimental
       description: |
-        Distilled data from NWS forecaster text products (AFD, HWO, SWO,
-        MCD). Structured summaries rather than raw text.
+        NWS forecaster text products (AFD, HWO, NOW, MCD, MPD) for the point:
+        structured fields plus raw bulletin `body` when available. Canonical
+        weather surface for forecaster guidance; map polygons live on
+        `GET /v1/guidance/mesoscale` and `GET /v1/guidance/precipitation`
+        (bodies omitted there). `guidance.now` is the WFO short-term NOW
+        product, not the radar `nowcast` block.
 
         **Experimental.** Field shapes may change during Phase 2 closed
         beta without notice; the 90-day breaking-change commitment applies
@@ -4487,10 +4756,37 @@ components:
           $ref: '#/components/schemas/AFDGuidance'
         hwo:
           $ref: '#/components/schemas/HWOGuidance'
+        now:
+          $ref: '#/components/schemas/NOWGuidance'
         active_mcds:
           type: integer
           minimum: 0
-          description: Count of active SPC Mesoscale Convective Discussions overlapping the location.
+          description: |
+            Count of non-expired SPC Mesoscale Discussions whose polygons
+            overlap the location (matches `mcds` length when present).
+        mcds:
+          type: array
+          description: |
+            SPC Mesoscale Discussions overlapping the location (structured
+            fields plus raw `body`). Expired products are omitted. Cap 10
+            (newest first from the reader).
+          items:
+            $ref: '#/components/schemas/MCDGuidance'
+        active_mpds:
+          type: integer
+          minimum: 0
+          description: |
+            Count of non-expired WPC Mesoscale Precipitation Discussions
+            whose polygons overlap the location (matches `mpds` length when
+            present). Always emitted; not in `required` so older clients
+            keep decoding.
+        mpds:
+          type: array
+          description: |
+            WPC Mesoscale Precipitation Discussions overlapping the location.
+            Expired products are omitted. Cap 10 (newest first).
+          items:
+            $ref: '#/components/schemas/MPDGuidance'
         swo_day1_risk:
           type: string
           description: SPC Day-1 convective outlook categorical risk label (when active).
@@ -4498,7 +4794,9 @@ components:
     AFDGuidance:
       type: object
       x-stability: experimental
-      description: Structured Area Forecast Discussion summary.
+      description: |
+        Area Forecast Discussion: structured fields plus optional raw bulletin
+        `body`.
       properties:
         synopsis:
           type: string
@@ -4513,21 +4811,115 @@ components:
         wfo:
           type: string
           description: Issuing Weather Forecast Office identifier.
+        body:
+          type: string
+          description: Full AFD bulletin text from S3 when fetched.
+
+    NOWGuidance:
+      type: object
+      x-stability: experimental
+      description: |
+        WFO short-term NOW product (NWS NOW, not radar nowcast): pipeline
+        LLM `summary` plus optional raw bulletin `body`. No `key_takeaway`
+        (NOW uses the default enricher prompt).
+      properties:
+        summary:
+          type: string
+          description: Pipeline LLM summary when enrichment has run.
+        issued_at:
+          type: [string, "null"]
+          format: date-time
+        wfo:
+          type: string
+          description: Issuing Weather Forecast Office identifier.
+        body:
+          type: string
+          description: Full NOW bulletin text from S3 when fetched.
 
     HWOGuidance:
       type: object
       x-stability: experimental
-      description: Structured Hazardous Weather Outlook summary.
+      description: |
+        Hazardous Weather Outlook: structured fields plus optional raw bulletin
+        `body`.
       required: [has_active_hazards]
       properties:
         day_one:
           type: string
           description: Day-one hazard summary text.
+        summary:
+          type: string
+          description: Pipeline LLM overall hazard summary when enrichment has run.
         has_active_hazards:
           type: boolean
         issued_at:
           type: [string, "null"]
           format: date-time
+        body:
+          type: string
+          description: Full HWO bulletin text from S3 when fetched.
+
+    MCDGuidance:
+      type: object
+      x-stability: experimental
+      description: |
+        SPC Mesoscale Discussion overlapping the point: distilled properties
+        plus optional raw bulletin `body`.
+      properties:
+        mcd_number:
+          type: integer
+          description: SPC mesoscale discussion number.
+        issued_at:
+          type: [string, "null"]
+          format: date-time
+        expires_at:
+          type: [string, "null"]
+          format: date-time
+          description: End of the product valid window when parsed.
+        concerning:
+          type: string
+          description: SPC "Concerning..." line (e.g. severe potential / watch possible).
+        areas_affected:
+          type: string
+        watch_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Stated probability of watch issuance, percent.
+        summary:
+          type: string
+          description: Pipeline LLM summary when enrichment has run.
+        body:
+          type: string
+          description: Full MCD bulletin text from S3 when fetched.
+
+    MPDGuidance:
+      type: object
+      x-stability: experimental
+      description: |
+        WPC Mesoscale Precipitation Discussion overlapping the point:
+        distilled properties plus optional raw bulletin `body`.
+      properties:
+        mpd_number:
+          type: integer
+          description: WPC mesoscale precipitation discussion number.
+        issued_at:
+          type: [string, "null"]
+          format: date-time
+        expires_at:
+          type: [string, "null"]
+          format: date-time
+        concerning:
+          type: string
+        areas_affected:
+          type: string
+        flash_flood_tier:
+          type: string
+          description: Headline tier (possible / likely / occurring).
+        summary:
+          type: string
+        body:
+          type: string
 
     # -----------------------------------------------------------------------
     # POST /v1/weather/batch

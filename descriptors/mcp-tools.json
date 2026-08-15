@@ -1171,7 +1171,7 @@
     {
       "name": "get_forecast_discussion",
       "title": "Get forecast discussion",
-      "description": "Expert forecaster text products. type=afd: Area Forecast Discussion (WFO forecasters explain reasoning, uncertainty, model disagreements). type=hwo: Hazardous Weather Outlook (7-day hazard summary). type=mcd: SPC Mesoscale Discussions (real-time severe weather analysis). type=swo: SPC convective outlook discussion (why the risk areas are drawn where they are). type=fwd: SPC fire weather discussion. type=ero: WPC excessive rainfall / flash flood discussion. The last three are national products -- they need no location, and `day` selects the outlook day for swo and fwd. summary_only=true returns the pipeline LLM summary without the full body (much smaller). Examples: {\"location\": \"Des Moines\", \"type\": \"afd\"} or {\"type\": \"swo\", \"day\": 2, \"summary_only\": true}.",
+      "description": "Expert forecaster text products. type=afd: Area Forecast Discussion. type=hwo: Hazardous Weather Outlook. type=now: WFO short-term NOW. type=fwf/hls/esf: local fire weather / hurricane local statement / hydrologic discussion. type=mcd: SPC Mesoscale Discussion. type=mpd: WPC Mesoscale Precipitation Discussion (flash flood). type=swo/fwd/ero: national outlook discussions. type=tcd/tcp/tcm/twd/two: NHC tropical text (type=two is the text TWO, not GIS nhc_two). type=pmd: WPC/CPC desk discussion (pass awips_id for a specific desk, e.g. PMDSPD). type=pwo: SPC public weather outlook. National types (swo/fwd/ero/tcd/tcp/tcm/twd/two/pmd/pwo) need no location; `day` selects the outlook day for swo and fwd. summary_only=true returns the pipeline LLM summary without the full body. Examples: {\"location\": \"Des Moines\", \"type\": \"afd\"} or {\"type\": \"swo\", \"day\": 2, \"summary_only\": true}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1198,12 +1198,24 @@
             "enum": [
               "afd",
               "hwo",
+              "now",
+              "fwf",
+              "hls",
+              "esf",
               "mcd",
+              "mpd",
               "swo",
               "fwd",
-              "ero"
+              "ero",
+              "tcd",
+              "tcp",
+              "tcm",
+              "twd",
+              "two",
+              "pmd",
+              "pwo"
             ],
-            "description": "Product type: afd (WFO discussion), hwo (hazard outlook), mcd (SPC mesoscale), swo (SPC convective outlook), fwd (SPC fire weather), ero (WPC excessive rainfall)."
+            "description": "Product type: afd (WFO discussion), hwo (hazard outlook), now (short-term NOW), fwf/hls/esf (local WFO), mcd (SPC mesoscale), mpd (WPC precipitation discussion), swo (SPC convective outlook), fwd (SPC fire weather), ero (WPC excessive rainfall), tcd/tcp/tcm/twd/two (NHC tropical text; two is text TWO not GIS), pmd (desk discussion), pwo (SPC public outlook)."
           },
           "day": {
             "type": "integer",
@@ -1211,6 +1223,12 @@
             "maximum": 8,
             "default": 1,
             "description": "Outlook day for type=swo or type=fwd (1-8). Ignored for the other types; WPC files ERO days 1-3 under one product."
+          },
+          "awips_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 12,
+            "description": "Full AWIPS identifier (e.g. TCDAT1, PMDSPD). More specific than type + location. Exact source_ref match."
           },
           "wfo": {
             "type": "string",
@@ -1437,7 +1455,7 @@
     {
       "name": "get_forecast_skill",
       "title": "Get forecast skill",
-      "description": "How accurate our forecasts have actually been near a location, measured against observed analysis truth. Returns bias (positive = the model runs high), mean absolute error, RMSE, and a skill score against local climatology, per model, weather variable, and forecast lead time; for probability forecasts, the Brier score and a reliability breakdown. Use this to qualify a forecast rather than assert it -- \"NBM has been running 1.8F warm at 3-day leads near you, so treat that 72 as around 70\" -- and to answer \"how much should I trust this forecast\", \"is the model biased here\", or \"how accurate were you last month\". Evidence is reported at three scopes side by side: the exact point (strongest, slowest to accumulate), the ~50km neighborhood, and the ~300km region. Prefer the most specific scope that has samples. Metrics below minimumSamples observations are withheld and listed under insufficientHistory with their count -- say that history is still accumulating rather than treating thin numbers as evidence. Coverage is a rolling recent window over verified US variables, not all of history. Entries are per model and their samples are not matched, so never conclude that one model beats another by comparing their numbers here. Each entry states the truth field it was measured against -- one designated analysis per variable -- so never compare numbers carrying different truth values either. Each entry also states the regime it was measured under: ALL for every observation regardless of weather, or a conditioned tier such as SEA:DJF (winter) or JC:CNW (a circulation pattern). Pass the regime parameter to ask for a conditioned track record. It falls back, so asking for SEA:DJF and getting back regime ALL is a successful answer, not a missing one -- always read the regime field and qualify the claim with it, because \"NBM runs warm here in winter\" and \"NBM runs warm here\" are different statements. Regimes overlap by construction, so entries under different regimes are alternative answers to one question and must never be compared or added. Entries with a categorical block answer a yes/no question instead of an error magnitude -- did it rain, at the thresholdMm stated on the entry -- with pod (of the times it happened, how often we called it), far (of the times we called it, how often it did not happen), and frequencyBias (above 1 = we call it too often). Use these for \"will it actually rain\" questions, where a small average error means nothing if the rain lands in the wrong hour. A null rate means the sample cannot answer it -- the event has not happened, or been forecast, enough times to divide by -- and must be reported as unknown, never as zero. The counts beside it are still evidence, and for a rare event they are often the whole answer: \"it has only rained twice here in the record\" is a useful thing to say.",
+      "description": "How accurate our forecasts have actually been near a location, measured against observed analysis truth. Returns bias (positive = the model runs high), mean absolute error, RMSE, and a skill score against local climatology, per model, weather variable, and forecast lead time; for probability forecasts, the Brier score and a reliability breakdown. Use this to qualify a forecast rather than assert it -- \"NBM has been running 1.8F warm at 3-day leads near you, so treat that 72 as around 70\" -- and to answer \"how much should I trust this forecast\", \"is the model biased here\", or \"how accurate were you last month\". Evidence is reported at three scopes side by side: the exact point (strongest, slowest to accumulate), the ~50km neighborhood, and the ~300km region. Prefer the most specific scope that has samples. Metrics below minimumSamples observations are withheld and listed under insufficientHistory with their count -- say that history is still accumulating rather than treating thin numbers as evidence. Coverage is a rolling recent window over verified US variables, not all of history. Entries are per model and their samples are not matched, so never conclude that one model beats another by comparing their numbers here. Each entry states the truth field it was measured against -- one designated analysis per variable -- so never compare numbers carrying different truth values either. Each entry also states the regime it was measured under: ALL for every observation regardless of weather, or a conditioned tier such as SEA:DJF (winter), SCN1:WINDY / SCN1:WET / SCN1:QUIET (what the forecast was showing), or JC:CNW (a circulation pattern). Pass the regime parameter to ask for a conditioned track record. It falls back, so asking for SCN1:WINDY and getting back regime ALL is a successful answer, not a missing one -- always read the regime field and qualify the claim with it, because \"NBM runs warm here when it shows windy\" and \"NBM runs warm here\" are different statements. Regimes overlap by construction across families, so entries under different regimes are alternative answers to one question and must never be compared or added; within SCN1: the labels are mutually exclusive. Entries with a categorical block answer a yes/no question instead of an error magnitude -- did it rain, at the thresholdMm stated on the entry -- with pod (of the times it happened, how often we called it), far (of the times we called it, how often it did not happen), and frequencyBias (above 1 = we call it too often). Use these for \"will it actually rain\" questions, where a small average error means nothing if the rain lands in the wrong hour. A null rate means the sample cannot answer it -- the event has not happened, or been forecast, enough times to divide by -- and must be reported as unknown, never as zero. The counts beside it are still evidence, and for a rare event they are often the whole answer: \"it has only rained twice here in the record\" is a useful thing to say.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1478,7 +1496,7 @@
           },
           "regime": {
             "type": "string",
-            "description": "Ask for a track record measured only under particular conditions, as a comma-separated preference chain, most specific first, e.g. \"JC:CNW,SEA:DJF\". SEA: is the meteorological season (DJF, MAM, JJA, SON); JC: is a circulation pattern. The most specific tier with enough observations answers and the unconditioned record is the last resort, so this never empties a result the way truth does -- it degrades. Read the regime field on each entry to see which tier actually answered. Pass this when the question is conditional (\"is it worse in winter\", \"how does it do in this pattern\"); omit it otherwise, since conditioned tiers are thinner and slower to earn numbers."
+            "description": "Ask for a track record measured only under particular conditions, as a comma-separated preference chain, most specific first, e.g. \"SCN1:WINDY,SEA:JJA\". SEA: is the meteorological season (DJF, MAM, JJA, SON); SCN1: is a forecast-conditioned scenario (WINDY, WET, QUIET — mutually exclusive within the family); JC: is a circulation pattern. The most specific tier with enough observations answers and the unconditioned record is the last resort, so this never empties a result the way truth does -- it degrades. Read the regime field on each entry to see which tier actually answered. Pass this when the question is conditional (\"is it worse in winter\", \"how does it do when the model shows windy\"); omit it otherwise, since conditioned tiers are thinner and slower to earn numbers."
           },
           "unit": {
             "type": "string",
@@ -3664,7 +3682,7 @@
     {
       "name": "search_locations",
       "title": "Search locations",
-      "description": "Resolve a place query to candidate locations with coordinates. Accepts city names (\"Denver\"), city+state (\"Portland, OR\" via query), ZIP codes (\"50219\"), or partial input with fuzzy=true for autosuggest-style matching (\"bost\" -> Boston). Returns ranked candidates with lat/lon. Most weather tools accept a `location` string directly and geocode internally -- use this tool only to disambiguate (\"which Springfield?\") or to present location choices to the user. Example: {\"query\": \"Springfield\"} returns all major Springfields ranked by population.",
+      "description": "Resolve a place query to candidate locations with coordinates. Accepts city names (\"Denver\"), city+state (\"Portland, OR\" via query), ZIP codes (\"50219\"), or partial input with fuzzy=true for autosuggest-style matching (\"bost\" -> Boston). Returns ranked candidates with lat/lon. Most weather tools accept a `location` string directly and geocode internally -- use this tool only to disambiguate (\"which Springfield?\") or to present location choices to the user. Example: {\"query\": \"Springfield\"} returns all major Springfields ranked by place importance.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3729,6 +3747,9 @@
                   "type": "string"
                 },
                 "type": {
+                  "type": "string"
+                },
+                "place_id": {
                   "type": "string"
                 }
               },
