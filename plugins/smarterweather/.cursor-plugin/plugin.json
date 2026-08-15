@@ -1,0 +1,12 @@
+{
+  "name": "smarterweather",
+  "displayName": "Smarter Weather",
+  "version": "1.0.0",
+  "description": "Hosted weather MCP plus playbooks for forecasts, alerts, and REST vs MCP.",
+  "author": {
+    "name": "Smarter Weather",
+    "email": "ops@smarterweather.com"
+  },
+  "license": "MIT",
+  "keywords": ["weather", "mcp", "forecast", "alerts"]
+}

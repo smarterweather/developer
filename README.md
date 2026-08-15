@@ -41,11 +41,13 @@ specification for `api.smarterweather.com`.
   shipped; call the REST API directly in the meantime.
 - **Examples and cookbooks** -- runnable apps, agent integrations, and
   end-to-end recipes.
-- **Agent skills** --
+- **Agent Plugin** -- [`plugins/smarterweather/`](./plugins/smarterweather/)
+  is an [Agent Plugins 1.0](https://agent-plugins.org/) package: skills plus
+  MCP connection config for the hosted weather server. Cursor Marketplace
+  discovery uses [`.cursor-plugin/marketplace.json`](./.cursor-plugin/marketplace.json).
   [`.cursor/skills/use-smarterweather-api/`](./.cursor/skills/use-smarterweather-api/SKILL.md)
-  and [`.claude/CLAUDE.md`](./.claude/CLAUDE.md) content that teaches AI
-  coding agents how to integrate the Smarter Weather APIs. Copy them to
-  the same paths in your own repo to install.
+  is a pointer at those skills; [`.claude/CLAUDE.md`](./.claude/CLAUDE.md)
+  remains a follow-up refresh.
 - **Documentation** -- guides under [`docs/`](./docs/) that complement the
   developer portal at https://developers.smarterweather.com. See the
   [docs index](./docs/README.md) for the current map.

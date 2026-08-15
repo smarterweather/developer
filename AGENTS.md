@@ -14,6 +14,7 @@ Canonical machine-readable contracts:
 
 - OpenAPI: [`openapi.yaml`](./openapi.yaml)
 - Weather MCP tool descriptors: [`descriptors/mcp-tools.json`](./descriptors/mcp-tools.json)
+- Agent Plugin (skills + MCP config): [`plugins/smarterweather/`](./plugins/smarterweather/)
 - Agent doc index: [`llms.txt`](./llms.txt)
 
 ## Preferred onboarding path
@@ -61,5 +62,6 @@ native `url` OAuth for gated tools (Clerk + `cursor://` is broken).
 
 - Invent endpoints or tools not listed in OpenAPI / `tools/list`.
 - Paste live API keys into committed config files.
-- Edit `openapi.yaml` or `descriptors/mcp-tools.json` in this repo — they
-  are mirrored from the private monorepo.
+- Edit `openapi.yaml`, `descriptors/mcp-tools.json`, or
+  `plugins/smarterweather/skills/` as the source of truth — they are
+  mirrored from the private monorepo.
