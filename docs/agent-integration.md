@@ -56,14 +56,15 @@ first try.
 
 | Agent      | Skill location                     | Status |
 | ---------- | ---------------------------------- | ------ |
-| Cursor     | [`.cursor/skills/use-smarterweather-api/SKILL.md`](https://github.com/smarterweather/developer/blob/main/.cursor/skills/use-smarterweather-api/SKILL.md) | Available |
-| Claude Code| [`.claude/CLAUDE.md`](https://github.com/smarterweather/developer/blob/main/.claude/CLAUDE.md) | Available |
+| Any Agent Plugins client | [`plugins/smarterweather/`](https://github.com/smarterweather/developer/tree/main/plugins/smarterweather) (`smarterweather-api` + `smarterweather-mcp`) | Available |
+| Cursor     | Same plugin; Marketplace source is `.cursor-plugin/marketplace.json` | Available |
+| Claude Code| [`.claude/CLAUDE.md`](https://github.com/smarterweather/developer/blob/main/.claude/CLAUDE.md) | Available (refresh pending) |
 | Codex CLI  | [`AGENTS.md`](https://github.com/smarterweather/developer/blob/main/AGENTS.md) at repo root | Available |
 
-To install a skill in your own project, copy the corresponding file (or
-the whole `.cursor/skills/use-smarterweather-api/` directory for Cursor)
-into your repo at the same path. Most agents auto-discover skills the
-next time they index the project; some require a restart.
+To install the playbooks in your own project, install the
+`plugins/smarterweather` Agent Plugin (or copy the skill directories
+under `plugins/smarterweather/skills/`). Most agents auto-discover
+skills the next time they index the project; some require a restart.
 
 Hosted equivalents, for agents that fetch rather than clone, are published
 under <https://developers.smarterweather.com/.well-known/skills/> and indexed

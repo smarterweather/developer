@@ -13,7 +13,8 @@ holds are:
 - The `@smarterweather/mcp-weather` and `@smarterweather/mcp-onboarding` package sources
 - Client SDKs (TypeScript, Python, Go)
 - Examples, cookbooks, and integration recipes
-- Agent skills (`.cursor/skills/`, `.claude/`)
+- Agent skills (canonical copies under `plugins/smarterweather/skills/`;
+  `.cursor/skills/` is a pointer, `.claude/` is still a follow-up)
 - Developer-facing documentation and tutorials
 
 ## What this repository is not
@@ -55,6 +56,9 @@ logical change per PR.
 - New SDK features (new methods, new helper utilities, ergonomic improvements)
 - New examples or cookbook recipes
 - New agent skills or substantial revisions to existing ones
+  (canonical skill prose lives under `plugins/smarterweather/skills/`
+  and is synced from the private well-known copies; do not edit only
+  the `.cursor/skills/` stub)
 - Refactors that touch SDK public surface area
 - Adding support for a new SDK language we don't ship today
 
