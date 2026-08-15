@@ -3682,7 +3682,7 @@
     {
       "name": "search_locations",
       "title": "Search locations",
-      "description": "Resolve a place query to candidate locations with coordinates. Accepts city names (\"Denver\"), city+state (\"Portland, OR\" via query), ZIP codes (\"50219\"), or partial input with fuzzy=true for autosuggest-style matching (\"bost\" -> Boston). Returns ranked candidates with lat/lon. Most weather tools accept a `location` string directly and geocode internally -- use this tool only to disambiguate (\"which Springfield?\") or to present location choices to the user. Example: {\"query\": \"Springfield\"} returns all major Springfields ranked by population.",
+      "description": "Resolve a place query to candidate locations with coordinates. Accepts city names (\"Denver\"), city+state (\"Portland, OR\" via query), ZIP codes (\"50219\"), or partial input with fuzzy=true for autosuggest-style matching (\"bost\" -> Boston). Returns ranked candidates with lat/lon. Most weather tools accept a `location` string directly and geocode internally -- use this tool only to disambiguate (\"which Springfield?\") or to present location choices to the user. Example: {\"query\": \"Springfield\"} returns all major Springfields ranked by place importance.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3747,6 +3747,9 @@
                   "type": "string"
                 },
                 "type": {
+                  "type": "string"
+                },
+                "place_id": {
                   "type": "string"
                 }
               },

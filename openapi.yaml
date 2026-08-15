@@ -4297,6 +4297,12 @@ components:
             include `city`, `zip`. Treat as opaque -- new types may
             appear without a sw-api release.
           example: "city"
+        place_id:
+          type: [string, "null"]
+          description: |
+            Census place GEOID. Same key as the v2 basemap tile `id`.
+            Present on place results; omitted for ZIP results.
+          example: "1714000"
       additionalProperties: true
 
     StormTrackFeature:
