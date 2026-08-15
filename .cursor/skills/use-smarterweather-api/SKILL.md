@@ -10,8 +10,8 @@ description: >-
 This path is a stub. The canonical playbooks live in the `smarterweather`
 Agent Plugin:
 
-- REST API: [`plugins/smarterweather/skills/smarterweather-api/SKILL.md`](../../plugins/smarterweather/skills/smarterweather-api/SKILL.md)
-- Hosted MCP: [`plugins/smarterweather/skills/smarterweather-mcp/SKILL.md`](../../plugins/smarterweather/skills/smarterweather-mcp/SKILL.md)
+- REST API: [`plugins/smarterweather/skills/smarterweather-api/SKILL.md`](../../../plugins/smarterweather/skills/smarterweather-api/SKILL.md)
+- Hosted MCP: [`plugins/smarterweather/skills/smarterweather-mcp/SKILL.md`](../../../plugins/smarterweather/skills/smarterweather-mcp/SKILL.md)
 
 Hosted copies (same prose, authored in the private monorepo and published
 on the developer portal):

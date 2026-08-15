@@ -3,7 +3,8 @@ name: smarterweather-api
 description: >-
   Build integrations against the Smarter Weather developer platform — the
   REST API at api.smarterweather.com. Covers authentication via API key,
-  calling /v1/weather, /v1/alerts, /v1/geocoding, and /v1/storm-tracks,
+  calling /v1/weather, /v1/alerts/{id}, /v1/geocode/{search,autosuggest,reverse},
+  and /v1/storm-tracks,
   handling the RFC 7807 error envelope, respecting RateLimit-* headers,
   and choosing between REST and MCP for the integration. Use when the
   user wants to fetch weather data from Smarter Weather, integrate the
