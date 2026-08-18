@@ -1463,7 +1463,7 @@
     {
       "name": "get_forecast_skill",
       "title": "Get forecast skill",
-      "description": "How accurate our forecasts have actually been near a location, measured against observed analysis truth. Returns bias (positive = the model runs high), mean absolute error, RMSE, and a skill score against local climatology, per model, weather variable, and forecast lead time; continuous and vector entries also carry persistenceSkillScore, skill against the analysis at forecast issue time (null means not enough persist pairs, not zero skill -- do not compare it to skillScore as if they shared a denominator); for probability forecasts, the Brier score and a reliability breakdown. Use this to qualify a forecast rather than assert it -- \"NBM has been running 1.8F warm at 3-day leads near you, so treat that 72 as around 70\" -- and to answer \"how much should I trust this forecast\", \"is the model biased here\", or \"how accurate were you last month\". Evidence is reported at three scopes side by side: the exact point (strongest, slowest to accumulate), the ~50km neighborhood, and the ~300km region. Prefer the most specific scope that has samples. Metrics below minimumSamples observations are withheld and listed under insufficientHistory with their count -- say that history is still accumulating rather than treating thin numbers as evidence. Coverage is a rolling recent window over verified US variables, not all of history. Entries are per model and their samples are not matched, so never conclude that one model beats another by comparing their numbers here. Each entry states the truth field it was measured against -- one designated analysis per variable -- so never compare numbers carrying different truth values either. Each entry also states the regime it was measured under: ALL for every observation regardless of weather, or a conditioned tier such as SEA:DJF (winter), SCN1:WINDY / SCN1:WET / SCN1:QUIET (what the forecast was showing), or JC1:NW (a circulation pattern). Pass the regime parameter to ask for a conditioned track record. It falls back, so asking for SCN1:WINDY and getting back regime ALL is a successful answer, not a missing one -- always read the regime field and qualify the claim with it, because \"NBM runs warm here when it shows windy\" and \"NBM runs warm here\" are different statements. Regimes overlap by construction across families, so entries under different regimes are alternative answers to one question and must never be compared or added; within SCN1: the labels are mutually exclusive. Entries with a categorical block answer a yes/no question instead of an error magnitude -- did it rain, at the thresholdMm stated on the entry -- with pod (of the times it happened, how often we called it), far (of the times we called it, how often it did not happen), and frequencyBias (above 1 = we call it too often). Use these for \"will it actually rain\" questions, where a small average error means nothing if the rain lands in the wrong hour. A null rate means the sample cannot answer it -- the event has not happened, or been forecast, enough times to divide by -- and must be reported as unknown, never as zero. The counts beside it are still evidence, and for a rare event they are often the whole answer: \"it has only rained twice here in the record\" is a useful thing to say.",
+      "description": "How accurate our forecasts have actually been near a location, measured against observed analysis truth. Returns bias (positive = the model runs high), mean absolute error, RMSE, and a skill score against local climatology, per model, weather variable, and forecast lead time; continuous and vector entries also carry persistenceSkillScore, skill against the analysis at forecast issue time (null means not enough persist pairs, not zero skill -- do not compare it to skillScore as if they shared a denominator), and analysisDisagreementMae, the analyses' own disagreement at that lead -- a floor on how good the forecast can look, not a skill score and not an excuse (null means the sibling row is missing or below minimumSamples); for probability forecasts, the Brier score and a reliability breakdown. Use this to qualify a forecast rather than assert it -- \"NBM has been running 1.8F warm at 3-day leads near you, so treat that 72 as around 70\" -- and to answer \"how much should I trust this forecast\", \"is the model biased here\", or \"how accurate were you last month\". Evidence is reported at three scopes side by side: the exact point (strongest, slowest to accumulate), the ~50km neighborhood, and the ~300km region. Prefer the most specific scope that has samples. Metrics below minimumSamples observations are withheld and listed under insufficientHistory with their count -- say that history is still accumulating rather than treating thin numbers as evidence. Coverage is a rolling recent window over verified US variables, not all of history. Entries are per model and their samples are not matched, so never conclude that one model beats another by comparing their numbers here. Each entry states the truth field it was measured against -- one designated analysis per variable -- so never compare numbers carrying different truth values either. Each entry also states the regime it was measured under: ALL for every observation regardless of weather, or a conditioned tier such as SEA:DJF (winter), SCN1:WINDY / SCN1:WET / SCN1:QUIET (what the forecast was showing), or JC1:NW (a circulation pattern). Pass the regime parameter to ask for a conditioned track record. It falls back, so asking for SCN1:WINDY and getting back regime ALL is a successful answer, not a missing one -- always read the regime field and qualify the claim with it, because \"NBM runs warm here when it shows windy\" and \"NBM runs warm here\" are different statements. Regimes overlap by construction across families, so entries under different regimes are alternative answers to one question and must never be compared or added; within SCN1: the labels are mutually exclusive. Entries with a categorical block answer a yes/no question instead of an error magnitude -- did it rain, at the thresholdMm stated on the entry -- with pod (of the times it happened, how often we called it), far (of the times we called it, how often it did not happen), and frequencyBias (above 1 = we call it too often). Use these for \"will it actually rain\" questions, where a small average error means nothing if the rain lands in the wrong hour. A null rate means the sample cannot answer it -- the event has not happened, or been forecast, enough times to divide by -- and must be reported as unknown, never as zero. The counts beside it are still evidence, and for a rare event they are often the whole answer: \"it has only rained twice here in the record\" is a useful thing to say.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1623,6 +1623,18 @@
                         "number",
                         "null"
                       ]
+                    },
+                    "analysisDisagreementMae": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "analysisDisagreementSamples": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
                     }
                   },
                   "required": [
@@ -1774,6 +1786,18 @@
                       ]
                     },
                     "persistenceSkillScore": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "analysisDisagreementMae": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "analysisDisagreementSamples": {
                       "type": [
                         "number",
                         "null"
