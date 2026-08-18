@@ -1479,7 +1479,7 @@
           },
           "variable": {
             "type": "string",
-            "description": "Narrow to one variable, e.g. temperature_2m, dew_point_2m, wind_speed_10m, wind_gusts_10m, cloud_cover, precipitation, precipitation_probability, or a thresholded rain event such as precipitation_gt_0p254mm (any measurable rain) or precipitation_gt_2p54mm. Omit for everything measured at the location."
+            "description": "Narrow to one variable, e.g. temperature_2m, dew_point_2m, wind_speed_10m, wind_gusts_10m, wind_vector_10m, cloud_cover, precipitation, precipitation_probability, or a thresholded rain event such as precipitation_gt_0p254mm (any measurable rain) or precipitation_gt_2p54mm. Omit for everything measured at the location."
           },
           "model": {
             "type": "string",
@@ -1747,6 +1747,28 @@
                     "falseAlarms",
                     "correctNegatives",
                     "baseRate"
+                  ],
+                  "additionalProperties": false
+                },
+                "vector": {
+                  "type": "object",
+                  "properties": {
+                    "samples": {
+                      "type": "number"
+                    },
+                    "vectorRmse": {
+                      "type": "number"
+                    },
+                    "skillScore": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "samples",
+                    "vectorRmse"
                   ],
                   "additionalProperties": false
                 }
