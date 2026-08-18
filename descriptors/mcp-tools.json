@@ -631,7 +631,7 @@
     {
       "name": "get_alerts",
       "title": "Get NWS alerts",
-      "description": "Active NWS watches, warnings, and advisories. Location mode returns all alerts in effect at a point (severity, urgency, certainty, timing, headline, description, instructions); an empty result means no active alerts -- not a failure. alert_id mode returns full detail (including geometry) for one alert previously returned by this tool. Examples: {\"location\": \"Miami\"} or {\"alert_id\": \"urn:oid:2.49.0.1.840...\"}.",
+      "description": "NWS watches, warnings, and advisories in effect at a point. Omit at for now; pass at (ISO-8601 UTC) for the in-effect snapshot at that instant. Empty means all-clear then, or history already purged (~24h after expiry) — not a multi-day archive. alert_id returns detail+geometry for one prior result and ignores at. Examples: {\"location\": \"Miami\"} or {\"location\": \"Miami\", \"at\": \"2026-08-17T21:00:00Z\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -656,6 +656,10 @@
           "alert_id": {
             "type": "string",
             "description": "Alert identifier for detail mode. When set, location is ignored."
+          },
+          "at": {
+            "type": "string",
+            "description": "ISO-8601 UTC past instant for the in-effect snapshot. Ignored with alert_id."
           }
         },
         "additionalProperties": false,
@@ -690,6 +694,10 @@
           "alert": {
             "type": "object",
             "additionalProperties": {}
+          },
+          "valid_time": {
+            "type": "string",
+            "description": "Echo of at when an as-of snapshot was requested."
           },
           "widget": {
             "type": "object",
@@ -1455,7 +1463,7 @@
     {
       "name": "get_forecast_skill",
       "title": "Get forecast skill",
-      "description": "How accurate our forecasts have actually been near a location, measured against observed analysis truth. Returns bias (positive = the model runs high), mean absolute error, RMSE, and a skill score against local climatology, per model, weather variable, and forecast lead time; for probability forecasts, the Brier score and a reliability breakdown. Use this to qualify a forecast rather than assert it -- \"NBM has been running 1.8F warm at 3-day leads near you, so treat that 72 as around 70\" -- and to answer \"how much should I trust this forecast\", \"is the model biased here\", or \"how accurate were you last month\". Evidence is reported at three scopes side by side: the exact point (strongest, slowest to accumulate), the ~50km neighborhood, and the ~300km region. Prefer the most specific scope that has samples. Metrics below minimumSamples observations are withheld and listed under insufficientHistory with their count -- say that history is still accumulating rather than treating thin numbers as evidence. Coverage is a rolling recent window over verified US variables, not all of history. Entries are per model and their samples are not matched, so never conclude that one model beats another by comparing their numbers here. Each entry states the truth field it was measured against -- one designated analysis per variable -- so never compare numbers carrying different truth values either. Each entry also states the regime it was measured under: ALL for every observation regardless of weather, or a conditioned tier such as SEA:DJF (winter), SCN1:WINDY / SCN1:WET / SCN1:QUIET (what the forecast was showing), or JC:CNW (a circulation pattern). Pass the regime parameter to ask for a conditioned track record. It falls back, so asking for SCN1:WINDY and getting back regime ALL is a successful answer, not a missing one -- always read the regime field and qualify the claim with it, because \"NBM runs warm here when it shows windy\" and \"NBM runs warm here\" are different statements. Regimes overlap by construction across families, so entries under different regimes are alternative answers to one question and must never be compared or added; within SCN1: the labels are mutually exclusive. Entries with a categorical block answer a yes/no question instead of an error magnitude -- did it rain, at the thresholdMm stated on the entry -- with pod (of the times it happened, how often we called it), far (of the times we called it, how often it did not happen), and frequencyBias (above 1 = we call it too often). Use these for \"will it actually rain\" questions, where a small average error means nothing if the rain lands in the wrong hour. A null rate means the sample cannot answer it -- the event has not happened, or been forecast, enough times to divide by -- and must be reported as unknown, never as zero. The counts beside it are still evidence, and for a rare event they are often the whole answer: \"it has only rained twice here in the record\" is a useful thing to say.",
+      "description": "How accurate our forecasts have actually been near a location, measured against observed analysis truth. Returns bias (positive = the model runs high), mean absolute error, RMSE, and a skill score against local climatology, per model, weather variable, and forecast lead time; continuous entries also carry persistenceSkillScore, skill against the analysis at forecast issue time (null means not enough persist pairs, not zero skill -- do not compare it to skillScore as if they shared a denominator); for probability forecasts, the Brier score and a reliability breakdown. Use this to qualify a forecast rather than assert it -- \"NBM has been running 1.8F warm at 3-day leads near you, so treat that 72 as around 70\" -- and to answer \"how much should I trust this forecast\", \"is the model biased here\", or \"how accurate were you last month\". Evidence is reported at three scopes side by side: the exact point (strongest, slowest to accumulate), the ~50km neighborhood, and the ~300km region. Prefer the most specific scope that has samples. Metrics below minimumSamples observations are withheld and listed under insufficientHistory with their count -- say that history is still accumulating rather than treating thin numbers as evidence. Coverage is a rolling recent window over verified US variables, not all of history. Entries are per model and their samples are not matched, so never conclude that one model beats another by comparing their numbers here. Each entry states the truth field it was measured against -- one designated analysis per variable -- so never compare numbers carrying different truth values either. Each entry also states the regime it was measured under: ALL for every observation regardless of weather, or a conditioned tier such as SEA:DJF (winter), SCN1:WINDY / SCN1:WET / SCN1:QUIET (what the forecast was showing), or JC1:NW (a circulation pattern). Pass the regime parameter to ask for a conditioned track record. It falls back, so asking for SCN1:WINDY and getting back regime ALL is a successful answer, not a missing one -- always read the regime field and qualify the claim with it, because \"NBM runs warm here when it shows windy\" and \"NBM runs warm here\" are different statements. Regimes overlap by construction across families, so entries under different regimes are alternative answers to one question and must never be compared or added; within SCN1: the labels are mutually exclusive. Entries with a categorical block answer a yes/no question instead of an error magnitude -- did it rain, at the thresholdMm stated on the entry -- with pod (of the times it happened, how often we called it), far (of the times we called it, how often it did not happen), and frequencyBias (above 1 = we call it too often). Use these for \"will it actually rain\" questions, where a small average error means nothing if the rain lands in the wrong hour. A null rate means the sample cannot answer it -- the event has not happened, or been forecast, enough times to divide by -- and must be reported as unknown, never as zero. The counts beside it are still evidence, and for a rare event they are often the whole answer: \"it has only rained twice here in the record\" is a useful thing to say.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1479,7 +1487,7 @@
           },
           "variable": {
             "type": "string",
-            "description": "Narrow to one variable, e.g. temperature_2m, dew_point_2m, wind_speed_10m, wind_gusts_10m, cloud_cover, precipitation, precipitation_probability, or a thresholded rain event such as precipitation_gt_0p254mm (any measurable rain) or precipitation_gt_2p54mm. Omit for everything measured at the location."
+            "description": "Narrow to one variable, e.g. temperature_2m, dew_point_2m, wind_speed_10m, wind_gusts_10m, wind_vector_10m, cloud_cover, precipitation, precipitation_probability, or a thresholded rain event such as precipitation_gt_0p254mm (any measurable rain) or precipitation_gt_2p54mm. Omit for everything measured at the location."
           },
           "model": {
             "type": "string",
@@ -1496,7 +1504,7 @@
           },
           "regime": {
             "type": "string",
-            "description": "Ask for a track record measured only under particular conditions, as a comma-separated preference chain, most specific first, e.g. \"SCN1:WINDY,SEA:JJA\". SEA: is the meteorological season (DJF, MAM, JJA, SON); SCN1: is a forecast-conditioned scenario (WINDY, WET, QUIET — mutually exclusive within the family); JC: is a circulation pattern. The most specific tier with enough observations answers and the unconditioned record is the last resort, so this never empties a result the way truth does -- it degrades. Read the regime field on each entry to see which tier actually answered. Pass this when the question is conditional (\"is it worse in winter\", \"how does it do when the model shows windy\"); omit it otherwise, since conditioned tiers are thinner and slower to earn numbers."
+            "description": "Ask for a track record measured only under particular conditions, as a comma-separated preference chain, most specific first, e.g. \"SCN1:WINDY,SEA:JJA\". SEA: is the meteorological season (DJF, MAM, JJA, SON); SCN1: is a forecast-conditioned scenario (WINDY, WET, QUIET — mutually exclusive within the family); JC1: is a circulation pattern. The most specific tier with enough observations answers and the unconditioned record is the last resort, so this never empties a result the way truth does -- it degrades. Read the regime field on each entry to see which tier actually answered. Pass this when the question is conditional (\"is it worse in winter\", \"how does it do when the model shows windy\"); omit it otherwise, since conditioned tiers are thinner and slower to earn numbers."
           },
           "unit": {
             "type": "string",
@@ -1605,6 +1613,12 @@
                       "type": "number"
                     },
                     "skillScore": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "persistenceSkillScore": {
                       "type": [
                         "number",
                         "null"
@@ -1741,6 +1755,28 @@
                     "falseAlarms",
                     "correctNegatives",
                     "baseRate"
+                  ],
+                  "additionalProperties": false
+                },
+                "vector": {
+                  "type": "object",
+                  "properties": {
+                    "samples": {
+                      "type": "number"
+                    },
+                    "vectorRmse": {
+                      "type": "number"
+                    },
+                    "skillScore": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "samples",
+                    "vectorRmse"
                   ],
                   "additionalProperties": false
                 }
