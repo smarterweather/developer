@@ -91,7 +91,7 @@ API key:
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"],
       "env": {
-        "SMARTERWEATHER_API_KEY": "sw_live_..."
+        "SMARTERWEATHER_API_KEY": "${SMARTERWEATHER_API_KEY}"
       }
     }
   }

@@ -41,14 +41,14 @@ When Claude Desktop starts the server, your default browser opens to a SmarterWe
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"],
       "env": {
-        "SMARTERWEATHER_API_KEY": "sw_live_…"
+        "SMARTERWEATHER_API_KEY": "${SMARTERWEATHER_API_KEY}"
       }
     }
   }
 }
 ```
 
-The bridge injects `Authorization: Bearer sw_live_…` on every proxied request. No browser pop-up.
+The bridge injects `Authorization: Bearer $SMARTERWEATHER_API_KEY` on every proxied request. No browser pop-up.
 
 ## Cursor
 

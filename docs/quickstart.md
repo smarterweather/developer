@@ -18,11 +18,8 @@ for the current numbers.
 
 ## 2. Make your first call
 
-Every request carries your key as an HTTP Bearer token in the
-`Authorization` header. The base URL is
-`https://api.smarterweather.com`. The `X-API-Key` header is **not**
-supported — requests that send it instead of `Authorization` are
-rejected with `401`.
+Every request carries `Authorization: Bearer $SMARTERWEATHER_API_KEY`.
+The base URL is `https://api.smarterweather.com`.
 
 ### curl
 
@@ -108,12 +105,14 @@ MCP-compatible client, you can skip curl entirely and use the
 published MCP server:
 
 ```bash
-npm i -g @smarterweather/mcp-weather
-SMARTERWEATHER_API_KEY=sw_live_... mcp-weather
+npx -y @smarterweather/mcp-weather
 ```
 
-See [`mcp-onboarding.md`](./mcp-onboarding.md) for client-specific
-configuration snippets.
+Set `SMARTERWEATHER_API_KEY` in the process environment (or your host
+secret store). REST calls still use
+`Authorization: Bearer $SMARTERWEATHER_API_KEY`. See
+[`mcp-weather.md`](./mcp-weather.md) for client-specific configuration
+snippets.
 
 ## Next steps
 
