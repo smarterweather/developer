@@ -13,6 +13,11 @@
       "name": "smarterweather",
       "source": "./plugins/smarterweather",
       "description": "Hosted weather MCP plus playbooks for forecasts, alerts, and REST vs MCP"
+    },
+    {
+      "name": "smarterweather-onboarding",
+      "source": "./plugins/smarterweather-onboarding",
+      "description": "One-shot onboarding MCP: sign up, mint a key, configure the weather client, then remove"
     }
   ]
 }

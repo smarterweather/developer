@@ -56,7 +56,7 @@ logical change per PR.
 - New SDK features (new methods, new helper utilities, ergonomic improvements)
 - New examples or cookbook recipes
 - New agent skills or substantial revisions to existing ones
-  (canonical skill prose lives under `plugins/smarterweather/skills/`
+  (canonical skill prose lives under `plugins/*/skills/`
   and is synced from the private well-known copies; do not edit only
   the `.cursor/skills/` stub)
 - Refactors that touch SDK public surface area

@@ -1,0 +1,12 @@
+{
+  "name": "smarterweather-onboarding",
+  "displayName": "Smarter Weather Onboarding",
+  "version": "1.0.0",
+  "description": "One-shot onboarding MCP: create a free account, mint an API key, configure the weather client, then remove this plugin.",
+  "author": {
+    "name": "Smarter Weather",
+    "email": "ops@smarterweather.com"
+  },
+  "license": "MIT",
+  "keywords": ["weather", "mcp", "onboarding", "signup"]
+}
