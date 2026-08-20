@@ -48,11 +48,14 @@ When Claude Desktop starts the server, your default browser opens to a SmarterWe
 }
 ```
 
-The bridge injects `Authorization: Bearer $SMARTERWEATHER_API_KEY` on every proxied request. No browser pop-up.
+The `${SMARTERWEATHER_API_KEY}` value is a slot — set that env var in
+the host (or paste the key locally; never commit it). The bridge
+injects `Authorization: Bearer $SMARTERWEATHER_API_KEY` on every
+proxied request. No browser pop-up.
 
 ## Cursor
 
-Add to `~/.cursor/mcp.json` (the JSON shape matches Claude Desktop's `mcpServers` block):
+Add to `~/.cursor/mcp.json`. OAuth:
 
 ```json
 {
@@ -60,6 +63,23 @@ Add to `~/.cursor/mcp.json` (the JSON shape matches Claude Desktop's `mcpServers
     "smarterweather": {
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"]
+    }
+  }
+}
+```
+
+API key — Cursor interpolates `${env:NAME}` from the process
+environment:
+
+```json
+{
+  "mcpServers": {
+    "smarterweather": {
+      "command": "npx",
+      "args": ["-y", "@smarterweather/mcp-weather"],
+      "env": {
+        "SMARTERWEATHER_API_KEY": "${env:SMARTERWEATHER_API_KEY}"
+      }
     }
   }
 }

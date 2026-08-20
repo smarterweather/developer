@@ -91,12 +91,16 @@ API key:
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"],
       "env": {
-        "SMARTERWEATHER_API_KEY": "${SMARTERWEATHER_API_KEY}"
+        "SMARTERWEATHER_API_KEY": "${env:SMARTERWEATHER_API_KEY}"
       }
     }
   }
 }
 ```
+
+Cursor interpolates `${env:NAME}` from the process environment. Do
+not paste `sw_live_` / `sw_test_` into the JSON. Other hosts (and
+`configure_mcp`) use the `${SMARTERWEATHER_API_KEY}` slot.
 
 > **Note (Cursor built-in OAuth):** Cursor's *built-in* MCP OAuth
 > client (`cursor://` redirect) is currently incompatible with
