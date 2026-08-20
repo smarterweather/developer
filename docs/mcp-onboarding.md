@@ -19,6 +19,15 @@ The server is co-hosted with the developer portal at
 `developers.smarterweather.com/mcp` rather than living on its own subdomain;
 path-based CloudFront routing isolates the MCP traffic from the portal HTML.
 
+## Agent Plugin
+
+[`plugins/smarterweather-onboarding/`](https://github.com/smarterweather/developer/tree/main/plugins/smarterweather-onboarding)
+is the Agent Plugins 1.0 install unit for this server (`mcp.json` →
+the URL below). It is temporary: after `configure_mcp`, remove it and
+install [`plugins/smarterweather/`](https://github.com/smarterweather/developer/tree/main/plugins/smarterweather)
+for the weather MCP. Cursor Marketplace discovery is the second entry
+in [`.cursor-plugin/marketplace.json`](https://github.com/smarterweather/developer/blob/main/.cursor-plugin/marketplace.json).
+
 ## Connect
 
 ### Hosted (Streamable HTTP)

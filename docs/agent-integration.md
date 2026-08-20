@@ -20,25 +20,21 @@ code that ships to production.
 
 ## Pattern 1: MCP-native agents
 
-Smarter Weather ships two MCP packages on npm:
+Smarter Weather ships two MCP packages on npm and two Agent Plugins:
 
-- [`@smarterweather/mcp-weather`](./mcp-weather.md) - bridges to the hosted
-  weather MCP server. Use this when you want your agent to call weather
-  tools directly during a session.
-- [`@smarterweather/mcp-onboarding`](./mcp-onboarding.md) - bridges to the
-  hosted onboarding MCP server. Use this once, the first time you set up
-  Smarter Weather - it walks the agent through account creation, key
-  minting, and writing the right config files.
+- [`@smarterweather/mcp-weather`](./mcp-weather.md) / [`plugins/smarterweather/`](https://github.com/smarterweather/developer/tree/main/plugins/smarterweather) — long-lived weather MCP. Use this when you want your agent to call weather tools during a session.
+- [`@smarterweather/mcp-onboarding`](./mcp-onboarding.md) / [`plugins/smarterweather-onboarding/`](https://github.com/smarterweather/developer/tree/main/plugins/smarterweather-onboarding) — one-shot signup path. Use this once to create an account, mint a key, and write weather-client config.
 
 The recommended onboarding flow is:
 
-1. Install `@smarterweather/mcp-onboarding` in your client. Restart the
-   client. Tell the agent "set up Smarter Weather for me." It will OAuth
-   you through the dashboard, mint a key, and write the
-   `@smarterweather/mcp-weather` config to disk on your behalf.
-2. Restart the client again. The weather MCP is now wired in.
-3. Optionally remove `@smarterweather/mcp-onboarding` - it has done its
-   job.
+1. Install the onboarding plugin or `@smarterweather/mcp-onboarding`.
+   Restart the client. Tell the agent "set up Smarter Weather for me."
+   It will open a Clerk signup URL, OAuth you, mint a key, and emit
+   weather-client config (`configure_mcp`).
+2. Restart the client with the weather plugin or
+   `@smarterweather/mcp-weather` wired in.
+3. Remove the onboarding plugin / `@smarterweather/mcp-onboarding` — it
+   has done its job. Never keep both servers in one long-lived config.
 
 Per-client config snippets live in
 [`docs/mcp-weather.md`](./mcp-weather.md) and
@@ -56,8 +52,8 @@ first try.
 
 | Agent      | Skill location                     | Status |
 | ---------- | ---------------------------------- | ------ |
-| Any Agent Plugins client | [`plugins/smarterweather/`](https://github.com/smarterweather/developer/tree/main/plugins/smarterweather) (`smarterweather-api` + `smarterweather-mcp`) | Available |
-| Cursor     | Same plugin; Marketplace source is `.cursor-plugin/marketplace.json` | Available |
+| Any Agent Plugins client | [`plugins/smarterweather/`](https://github.com/smarterweather/developer/tree/main/plugins/smarterweather) (weather) and [`plugins/smarterweather-onboarding/`](https://github.com/smarterweather/developer/tree/main/plugins/smarterweather-onboarding) (one-shot signup) | Available |
+| Cursor     | Same plugins; Marketplace source is `.cursor-plugin/marketplace.json` | Available |
 | Claude Code| [`.claude/CLAUDE.md`](https://github.com/smarterweather/developer/blob/main/.claude/CLAUDE.md) | Available (refresh pending) |
 | Codex CLI  | [`AGENTS.md`](https://github.com/smarterweather/developer/blob/main/AGENTS.md) at repo root | Available |
 
