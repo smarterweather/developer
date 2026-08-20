@@ -4,6 +4,7 @@ on:
     paths:
       - "plugins/**"
       - ".cursor-plugin/**"
+      - "scripts/validate-plugins.mjs"
       - ".github/workflows/plugin-ci.yml"
 jobs:
   validate:
