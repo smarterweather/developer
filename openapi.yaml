@@ -63,7 +63,7 @@ info:
     | `location`  | no      | stable    | Echo of the resolved location (lat/lon/name/tz).  |
     | `gis`       | no      | stable    | Geographic metadata (population, timezone, nearest radar site). |
     | `narrations`| no      | experimental | LLM-generated narrative text for current/short-term conditions. |
-    | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/NOW/HLS/MCD/MPD). Canonical for new clients. |
+    | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/NOW/HLS/MCD/MPD/PMD). Canonical for new clients. |
     | `discussions` | no    | experimental | Deprecated. Prefer `include=guidance` (`guidance.mcds` / `guidance.afd`). |
     | `uncertainty` | no    | experimental | NBM probabilistic sub-objects on hourly and daily forecasts (CONUS/Alaska/Hawaii only). |
     | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
@@ -4740,14 +4740,16 @@ components:
       type: object
       x-stability: experimental
       description: |
-        NWS forecaster text products (AFD, HWO, NOW, HLS, MCD, MPD) for the point:
+        NWS forecaster text products (AFD, HWO, NOW, HLS, MCD, MPD, PMD) for the point:
         structured fields plus raw bulletin `body` when available. Canonical
         weather surface for forecaster guidance; map polygons live on
         `GET /v1/guidance/mesoscale` and `GET /v1/guidance/precipitation`
         (bodies omitted there). `guidance.now` is the WFO short-term NOW
         product, not the radar `nowcast` block. `guidance.hls` is the WFO
         Hurricane Local Statement for the office covering the point; omitted
-        when none is live.
+        when none is live. `guidance.pmds` is the latest national Prognostic
+        Discussion per enabled desk (SPD/EPD/HMD/HI/CA); omitted when empty.
+        Distinct from `guidance.mpds` (WPC precipitation discussions).
 
         **Experimental.** Field shapes may change during Phase 2 closed
         beta without notice; the 90-day breaking-change commitment applies
@@ -4791,6 +4793,15 @@ components:
             Expired products are omitted. Cap 10 (newest first).
           items:
             $ref: '#/components/schemas/MPDGuidance'
+        pmds:
+          type: array
+          description: |
+            Latest national Prognostic Discussion per enabled desk
+            (`PMDSPD`, `PMDEPD`, `PMDHMD`, `PMDHI`, `PMDCA`). Omitted when
+            empty. Distinct from `mpds` (precipitation discussions).
+            Each desk is fetched by `awips_id` (limit 1).
+          items:
+            $ref: '#/components/schemas/PMDGuidance'
         swo_day1_risk:
           type: string
           description: SPC Day-1 convective outlook categorical risk label (when active).
@@ -4946,6 +4957,29 @@ components:
           type: string
         body:
           type: string
+
+    PMDGuidance:
+      type: object
+      x-stability: experimental
+      description: |
+        One enabled national Prognostic Discussion desk. Latest issuance
+        for that AWIPS id. Distinct from `MPDGuidance` (precipitation).
+      properties:
+        awips_id:
+          type: string
+          description: Full AWIPS identifier (e.g. PMDSPD).
+        pmd_desk:
+          type: string
+          description: Desk suffix after the PMD prefix (SPD, EPD, HMD, HI, CA).
+        issued_at:
+          type: [string, "null"]
+          format: date-time
+        summary:
+          type: string
+          description: Pipeline LLM summary when enrichment has run.
+        body:
+          type: string
+          description: Full PMD bulletin text from S3 when fetched.
 
     # -----------------------------------------------------------------------
     # POST /v1/weather/batch
