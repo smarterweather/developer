@@ -41,17 +41,17 @@ When Claude Desktop starts the server, your default browser opens to a SmarterWe
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"],
       "env": {
-        "SMARTERWEATHER_API_KEY": "${SMARTERWEATHER_API_KEY}"
+        "SMARTERWEATHER_API_KEY": "<from create_api_key>"
       }
     }
   }
 }
 ```
 
-The `${SMARTERWEATHER_API_KEY}` value is a slot — set that env var in
-the host (or paste the key locally; never commit it). The bridge
-injects `Authorization: Bearer $SMARTERWEATHER_API_KEY` on every
-proxied request. No browser pop-up.
+Claude Desktop does not interpolate env placeholders — replace
+`<from create_api_key>` with the key in this local file (do not
+commit it). The bridge injects `Authorization: Bearer <key>` on
+every proxied request. No browser pop-up.
 
 ## Cursor
 
