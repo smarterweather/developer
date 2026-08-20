@@ -41,18 +41,21 @@ When Claude Desktop starts the server, your default browser opens to a SmarterWe
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"],
       "env": {
-        "SMARTERWEATHER_API_KEY": "sw_live_…"
+        "SMARTERWEATHER_API_KEY": "<from create_api_key>"
       }
     }
   }
 }
 ```
 
-The bridge injects `Authorization: Bearer sw_live_…` on every proxied request. No browser pop-up.
+Claude Desktop does not interpolate env placeholders — replace
+`<from create_api_key>` with the key in this local file (do not
+commit it). The bridge injects `Authorization: Bearer <key>` on
+every proxied request. No browser pop-up.
 
 ## Cursor
 
-Add to `~/.cursor/mcp.json` (the JSON shape matches Claude Desktop's `mcpServers` block):
+Add to `~/.cursor/mcp.json`. OAuth:
 
 ```json
 {
@@ -60,6 +63,23 @@ Add to `~/.cursor/mcp.json` (the JSON shape matches Claude Desktop's `mcpServers
     "smarterweather": {
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"]
+    }
+  }
+}
+```
+
+API key — Cursor interpolates `${env:NAME}` from the process
+environment:
+
+```json
+{
+  "mcpServers": {
+    "smarterweather": {
+      "command": "npx",
+      "args": ["-y", "@smarterweather/mcp-weather"],
+      "env": {
+        "SMARTERWEATHER_API_KEY": "${env:SMARTERWEATHER_API_KEY}"
+      }
     }
   }
 }
