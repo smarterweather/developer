@@ -65,6 +65,17 @@ the browser flow entirely — useful for scripted or CI usage.
 Mint keys at <https://developers.smarterweather.com/dashboard/api-keys>.
 Keys need the `mcp` scope to authenticate against `sw-mcp`.
 
+### Keyless x402 (wallet agents)
+
+Agents with a wallet can call the hosted weather MCP with no
+account and no API key. An unpaid `tools/call` returns **in-band**
+x402 payment requirements as a tool result (never a raw HTTP 402
+on `POST /mcp` — that breaks MCP clients). Settle in USDC on Base
+and retry the same call with the payment proof. Discovery tools
+stay free. Keyed and keyless rails are mutually exclusive per
+request. Under the Stripe payee the quote floors at **$0.01** per
+call. See <https://developers.smarterweather.com/agents>.
+
 ## Client configuration
 
 ### Cursor (`~/.cursor/mcp.json`)
