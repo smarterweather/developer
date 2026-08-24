@@ -13,7 +13,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://mcp.smarterweather.com/mcp"
+      "url": "https://mcp.smarterweather.com"
     }
   ],
   "packages": [
@@ -34,11 +34,11 @@
         },
         {
           "name": "SMARTERWEATHER_MCP_URL",
-          "description": "Override the target MCP endpoint. Useful for development or staging against a non-production sw-mcp deployment. Precedence: positional argument > SMARTERWEATHER_MCP_URL > package default (https://mcp.smarterweather.com/mcp).",
+          "description": "Override the target MCP endpoint. Useful for development or staging against a non-production sw-mcp deployment. Precedence: positional argument > SMARTERWEATHER_MCP_URL > package default (https://mcp.smarterweather.com).",
           "isRequired": false,
           "isSecret": false,
           "format": "string",
-          "default": "https://mcp.smarterweather.com/mcp"
+          "default": "https://mcp.smarterweather.com"
         }
       ]
     }

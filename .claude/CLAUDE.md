@@ -24,7 +24,7 @@ Two surfaces, one platform:
 - **REST API** at `https://api.smarterweather.com/v1/*` — call from your
   service, your script, your build pipeline. Authenticated with an API key
   passed as an HTTP Bearer token (`Authorization: Bearer sw_live_*`).
-- **MCP server** at `https://mcp.smarterweather.com/mcp`, accessed via the
+- **MCP server** at `https://mcp.smarterweather.com`, accessed via the
   npm bridge package
   [`@smarterweather/mcp-weather`](https://www.npmjs.com/package/@smarterweather/mcp-weather).
   Wires weather tools directly into MCP-capable agents (Claude Code,

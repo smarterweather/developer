@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildArgs } from '../src/args.js';
 
-const DEFAULT_URL = 'https://mcp.smarterweather.com/mcp';
+const DEFAULT_URL = 'https://mcp.smarterweather.com';
 
 describe('buildArgs', () => {
   describe('URL resolution', () => {

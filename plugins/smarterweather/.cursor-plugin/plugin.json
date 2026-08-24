@@ -1,7 +1,7 @@
 {
   "name": "smarterweather",
   "displayName": "Smarter Weather",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hosted weather MCP plus playbooks for forecasts, alerts, and REST vs MCP.",
   "author": {
     "name": "Smarter Weather",

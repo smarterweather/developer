@@ -3,7 +3,7 @@
   "mcpServers": {
     "smarterweather": {
       "type": "streamable-http",
-      "url": "https://mcp.smarterweather.com/mcp"
+      "url": "https://mcp.smarterweather.com"
     }
   }
 }

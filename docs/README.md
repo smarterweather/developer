@@ -9,7 +9,7 @@ that material with content best read alongside the source repo.
 | Doc | Surface | Status |
 | --- | ------- | ------ |
 | [REST API guide](./rest-api.md) | `https://api.smarterweather.com/v1/*` | GA |
-| [MCP weather server guide](./mcp-weather.md) | `https://mcp.smarterweather.com/mcp` and `@smarterweather/mcp-weather` | GA |
+| [MCP weather server guide](./mcp-weather.md) | `https://mcp.smarterweather.com` and `@smarterweather/mcp-weather` | GA |
 | [MCP onboarding server guide](./mcp-onboarding.md) | `https://developers.smarterweather.com/mcp` and `@smarterweather/mcp-onboarding` | GA |
 | [Error model](./errors.md) | RFC 7807 problem details across all surfaces | GA |
 | [Quickstart](./quickstart.md) | First REST and MCP call | GA |

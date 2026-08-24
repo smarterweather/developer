@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "smarterweather",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Connect to Smarter Weather's hosted weather MCP and use the playbooks for live agent tools versus REST integrations.",
   "author": {
     "name": "Smarter Weather",

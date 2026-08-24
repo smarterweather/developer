@@ -119,5 +119,5 @@ widget alongside the model's text answer.
 ## Looking for weather data?
 
 That's [`@smarterweather/mcp-weather`](./mcp-weather.md), hosted at
-`mcp.smarterweather.com/mcp` — which this server's `configure_mcp` tool will
+`mcp.smarterweather.com` — which this server's `configure_mcp` tool will
 set up for you.

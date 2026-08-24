@@ -1,7 +1,7 @@
 # MCP weather server guide
 
 > The hosted weather MCP server at
-> `https://mcp.smarterweather.com/mcp` is **live in production**,
+> `https://mcp.smarterweather.com` is **live in production**,
 > serving the full 29-tool catalog with API-key and OAuth 2.1 auth.
 > Install the stdio bridge with `npx -y @smarterweather/mcp-weather`
 > (untagged — `latest` is the only tag). Clients that speak
@@ -12,7 +12,7 @@
 
 Two pieces ship together as the "weather MCP" surface:
 
-1. **Hosted MCP server** at `https://mcp.smarterweather.com/mcp` —
+1. **Hosted MCP server** at `https://mcp.smarterweather.com` —
    streamable-HTTP transport, served from the same backend that
    powers the REST API at `api.smarterweather.com`. Authenticates
    with either a Smarter Weather API key (`Authorization: Bearer
@@ -139,7 +139,7 @@ uses the identical `mcpServers` shape:
 ```
 
 The client connects to the local bridge over stdio; the bridge
-connects to `https://mcp.smarterweather.com/mcp` over streamable
+connects to `https://mcp.smarterweather.com` over streamable
 HTTP and either prompts you to sign in (OAuth) or attaches your
 API key.
 
