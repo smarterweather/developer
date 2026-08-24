@@ -1,5 +1,11 @@
 # @smarterweather/mcp-weather
 
+## 0.0.1
+
+### Patch Changes
+
+- [#65](https://github.com/smarterweather/developer/pull/65) [`293b795`](https://github.com/smarterweather/developer/commit/293b79594b0ea2e3511eeae2905b158391ce3a6b) Thanks [@afisch710](https://github.com/afisch710)! - Point the stdio bridge default and the official MCP Registry remote at `https://mcp.smarterweather.com` (hostname apex). The previous `/mcp` path remains a cutover alias on the server until it is removed; new installs should use the apex URL.
+
 ## 0.0.0
 
 ### Major Changes
