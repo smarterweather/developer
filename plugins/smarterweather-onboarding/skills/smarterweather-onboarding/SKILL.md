@@ -17,7 +17,7 @@ This install is **temporary**. It talks to the onboarding MCP at
 `https://developers.smarterweather.com/mcp`. After a key exists and the
 weather client is configured, **remove this server** from the client
 config. Never wire it into a long-lived config alongside the weather MCP
-(`https://mcp.smarterweather.com/mcp`).
+(`https://mcp.smarterweather.com`).
 
 ## Flow
 
@@ -43,7 +43,7 @@ tools appear after OAuth. That is by design.
 
 ## After onboarding
 
-- Weather MCP / Agent Plugin: `https://mcp.smarterweather.com/mcp`
+- Weather MCP / Agent Plugin: `https://mcp.smarterweather.com`
 - REST: `https://api.smarterweather.com`
 - Playbooks: `smarterweather-mcp` and `smarterweather-api` at
   <https://developers.smarterweather.com/.well-known/skills/>

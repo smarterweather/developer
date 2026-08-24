@@ -23,7 +23,7 @@ long-lived client config — they serve different phases:
 
 | Server | Endpoint | Auth | Purpose |
 | --- | --- | --- | --- |
-| Weather MCP | `https://mcp.smarterweather.com/mcp` | API key Bearer, OAuth 2.1 + PKCE, or keyless x402 | Hosted weather tools: forecasts, alerts, outlooks, raw dataset queries, rendered radar/satellite/sounding imagery |
+| Weather MCP | `https://mcp.smarterweather.com` | API key Bearer, OAuth 2.1 + PKCE, or keyless x402 | Hosted weather tools: forecasts, alerts, outlooks, raw dataset queries, rendered radar/satellite/sounding imagery |
 | Onboarding MCP | `https://developers.smarterweather.com/mcp` | Anonymous for discovery; OAuth for account tools | One-time onboarding: `get_plans`, `get_documentation`, `sign_up`, then `create_api_key`, `configure_mcp`, usage + billing |
 
 Tool descriptors for the weather MCP:
