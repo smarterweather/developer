@@ -49,7 +49,7 @@ const args = buildArgs(userArgs, {
   // The live prod hostname is the baked default. For dev/staging,
   // users override via SMARTERWEATHER_MCP_URL=http://<dev-alb>/mcp;
   // see README for the dev/staging snippet.
-  defaultUrl: 'https://mcp.smarterweather.com/mcp',
+  defaultUrl: 'https://mcp.smarterweather.com',
 });
 
 // mcp-remote ships its CLI entry point at dist/proxy.js. We resolve

@@ -14,7 +14,7 @@ specification for `api.smarterweather.com`.
 | Surface | Endpoint | Auth |
 | ------- | -------- | ---- |
 | REST API | `https://api.smarterweather.com` | `Authorization: Bearer sw_live_*` / `sw_test_*` |
-| Weather MCP | `https://mcp.smarterweather.com/mcp` | API key Bearer, OAuth 2.1 + PKCE, or keyless x402 |
+| Weather MCP | `https://mcp.smarterweather.com` | API key Bearer, OAuth 2.1 + PKCE, or keyless x402 |
 | Onboarding MCP | `https://developers.smarterweather.com/mcp` | Anonymous discovery tools; OAuth for account tools |
 
 ---
@@ -29,7 +29,7 @@ specification for `api.smarterweather.com`.
   catalog for the weather MCP server, synced on every server change.
 - **`@smarterweather/mcp-weather`** -- npm package source for the stdio
   bridge that connects MCP clients (Cursor, Claude Desktop, Claude Code, etc.)
-  to the hosted MCP endpoint at `https://mcp.smarterweather.com/mcp`. The
+  to the hosted MCP endpoint at `https://mcp.smarterweather.com`. The
   bridge attaches your API key from `SMARTERWEATHER_API_KEY` and proxies
   every JSON-RPC message; all weather logic runs server-side.
 - **`@smarterweather/mcp-onboarding`** -- npm package source for the stdio
@@ -76,7 +76,7 @@ curl -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
 ```
 
 ```bash
-# Weather MCP bridge (defaults to https://mcp.smarterweather.com/mcp;
+# Weather MCP bridge (defaults to https://mcp.smarterweather.com;
 # override via SMARTERWEATHER_MCP_URL).
 npx -y @smarterweather/mcp-weather --version
 ```
@@ -111,7 +111,7 @@ artifacts as each one ships.
 | 1b | This public repository (contracts, package sources, OpenAPI + descriptor sync) | shipped |
 | 2  | Public REST API (`sw-api`) at `api.smarterweather.com` with usage-based billing | shipped |
 | 2b | First-party migration of the Smarter Weather web and iOS apps onto the public API | shipped |
-| 3  | Public MCP server (`sw-mcp`) at `mcp.smarterweather.com/mcp` + `@smarterweather/mcp-weather` | shipped |
+| 3  | Public MCP server (`sw-mcp`) at `mcp.smarterweather.com` + `@smarterweather/mcp-weather` | shipped |
 | 4  | Onboarding MCP server (`sw-onboarding`) + `@smarterweather/mcp-onboarding` | shipped |
 | 5  | SDKs, expanded examples, registry distribution, community growth | in progress |
 

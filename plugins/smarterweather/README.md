@@ -7,7 +7,7 @@ plus MCP *connection config*. It is not a copy of the weather server.
 | Piece | Role |
 | ----- | ---- |
 | `plugin.json` | Plugin identity (Agent Plugins 1.0) |
-| `mcp.json` | Streamable HTTP → `https://mcp.smarterweather.com/mcp` |
+| `mcp.json` | Streamable HTTP → `https://mcp.smarterweather.com` |
 | `skills/smarterweather-mcp` | When and how to use the hosted weather MCP |
 | `skills/smarterweather-api` | When and how to call the REST API |
 

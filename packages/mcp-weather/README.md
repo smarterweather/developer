@@ -115,7 +115,7 @@ Or pass the URL as a positional arg (precedence: positional > env > default):
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `SMARTERWEATHER_MCP_URL` | Override the target MCP endpoint. Useful for dev / staging. | `https://mcp.smarterweather.com/mcp` |
+| `SMARTERWEATHER_MCP_URL` | Override the target MCP endpoint. Useful for dev / staging. | `https://mcp.smarterweather.com` |
 | `SMARTERWEATHER_API_KEY` | Inject `Authorization: Bearer <key>` on every proxied request. Bypasses the OAuth flow. | unset (use OAuth) |
 | `MCP_REMOTE_CONFIG_DIR` | OAuth token cache directory (passed through to `mcp-remote`). | `~/.mcp-auth/` |
 

@@ -1,7 +1,7 @@
 # Smarter Weather Developer Platform
 
 > Weather data for apps and AI agents: a REST API (api.smarterweather.com), a
-> hosted weather MCP server (mcp.smarterweather.com/mcp), and an agent-first
+> hosted weather MCP server (mcp.smarterweather.com), and an agent-first
 > onboarding MCP server (developers.smarterweather.com/mcp) that can sign you
 > up, mint API keys, and configure your client — all from inside an AI agent.
 

@@ -54,7 +54,7 @@ The bridge pins a loopback callback on port `3334`. Do **not** append
 
 ## What this plugin does not include
 
-- The weather MCP (`https://mcp.smarterweather.com/mcp`). Install
+- The weather MCP (`https://mcp.smarterweather.com`). Install
   [`plugins/smarterweather/`](../smarterweather/) after `configure_mcp`.
 - A local copy of onboarding or weather tools. All implementations run
   on the hosted servers.

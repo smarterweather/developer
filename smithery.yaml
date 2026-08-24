@@ -23,7 +23,7 @@ runtime: remote
 
 remote:
   transport: streamable-http
-  url: https://mcp.smarterweather.com/mcp
+  url: https://mcp.smarterweather.com
 
 auth:
   # OAuth 2.1 with PKCE + Dynamic Client Registration (Clerk).
