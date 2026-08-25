@@ -1846,7 +1846,7 @@
                 "scope",
                 "metric"
               ],
-              "additionalProperties": false
+              "additionalProperties": true
             }
           },
           "insufficientHistory": {
@@ -1888,7 +1888,7 @@
                 "scope",
                 "samples"
               ],
-              "additionalProperties": false
+              "additionalProperties": true
             }
           }
         },
@@ -2851,14 +2851,14 @@
                       "type": "string"
                     }
                   },
-                  "additionalProperties": false
+                  "additionalProperties": true
                 }
               },
               "required": [
                 "source_id",
                 "state"
               ],
-              "additionalProperties": false
+              "additionalProperties": true
             }
           },
           "advisories": {
@@ -2879,7 +2879,7 @@
                   "type": "string"
                 }
               },
-              "additionalProperties": false
+              "additionalProperties": true
             }
           },
           "note": {
@@ -3847,7 +3847,7 @@
                   "type": "string"
                 }
               },
-              "additionalProperties": false
+              "additionalProperties": true
             }
           }
         },
