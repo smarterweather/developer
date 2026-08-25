@@ -1,5 +1,11 @@
 # @smarterweather/mcp-onboarding
 
+## 0.0.3
+
+### Patch Changes
+
+- [#69](https://github.com/smarterweather/developer/pull/69) [`aaa61dc`](https://github.com/smarterweather/developer/commit/aaa61dc21e82c4238c7a296b7fb16b2a41dfd2eb) Thanks [@afisch710](https://github.com/afisch710)! - Point the default Streamable HTTP URL at `https://mcp.developers.smarterweather.com` after the portal `/mcp` cut.
+
 ## 0.0.2
 
 ### Patch Changes
