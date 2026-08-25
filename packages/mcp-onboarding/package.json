@@ -1,6 +1,6 @@
 {
   "name": "@smarterweather/mcp-onboarding",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "mcpName": "io.github.smarterweather/onboarding",
   "description": "stdio bridge to the Smarter Weather developer onboarding MCP server (sw-onboarding). Thin wrapper around mcp-remote with SmarterWeather URL defaults and an opt-in OAuth mode for account-scoped tools.",
   "license": "MIT",
