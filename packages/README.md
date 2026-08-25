@@ -7,7 +7,7 @@ This directory hosts the publishable npm packages in the Smarter Weather develop
 | Package | Purpose | Status |
 | ------- | ------- | ------ |
 | [`@smarterweather/mcp-weather`](./mcp-weather) | stdio bridge to the hosted weather MCP server at `mcp.smarterweather.com`. Speaks MCP OAuth 2.1 + PKCE by default; falls back to API-key auth via `SMARTERWEATHER_API_KEY`. | GA on `latest` |
-| [`@smarterweather/mcp-onboarding`](./mcp-onboarding) | stdio bridge to the hosted developer-onboarding MCP server at `developers.smarterweather.com/mcp`. Anonymous discovery by default; set `SMARTERWEATHER_ONBOARDING_AUTH=required` for OAuth. | GA on `latest` |
+| [`@smarterweather/mcp-onboarding`](./mcp-onboarding) | stdio bridge to the hosted developer-onboarding MCP server at `mcp.developers.smarterweather.com`. Anonymous discovery by default; set `SMARTERWEATHER_ONBOARDING_AUTH=required` for OAuth. | GA on `latest` |
 
 Both packages are thin wrappers around [`mcp-remote`](https://www.npmjs.com/package/mcp-remote). Install with `npx -y @smarterweather/mcp-weather` / `mcp-onboarding` — untagged; there is no `preview` tag to append.
 

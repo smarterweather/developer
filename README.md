@@ -15,7 +15,7 @@ specification for `api.smarterweather.com`.
 | ------- | -------- | ---- |
 | REST API | `https://api.smarterweather.com` | `Authorization: Bearer sw_live_*` / `sw_test_*` |
 | Weather MCP | `https://mcp.smarterweather.com` | API key Bearer, OAuth 2.1 + PKCE, or keyless x402 |
-| Onboarding MCP | `https://developers.smarterweather.com/mcp` | Anonymous discovery tools; OAuth for account tools |
+| Onboarding MCP | `https://mcp.developers.smarterweather.com` | Anonymous discovery tools; OAuth for account tools |
 
 ---
 
@@ -34,7 +34,7 @@ specification for `api.smarterweather.com`.
   every JSON-RPC message; all weather logic runs server-side.
 - **`@smarterweather/mcp-onboarding`** -- npm package source for the stdio
   bridge to the developer-onboarding MCP server at
-  `https://developers.smarterweather.com/mcp`. Provides agent-driven
+  `https://mcp.developers.smarterweather.com`. Provides agent-driven
   self-service account creation, API key provisioning, and SDK setup
   walkthroughs. Auth via OAuth (browser callback).
 - **Client SDKs** -- TypeScript and Python first; Go to follow. Not yet

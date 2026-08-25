@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // @smarterweather/mcp-onboarding -- stdio-to-HTTP bridge to the
 // SmarterWeather developer onboarding MCP server (sw-onboarding,
-// hosted at https://developers.smarterweather.com/mcp).
+// hosted at https://mcp.developers.smarterweather.com).
 //
 // Thin spawn() wrapper around `mcp-remote`
 // (https://www.npmjs.com/package/mcp-remote), same pattern as
@@ -50,7 +50,7 @@ const args = buildArgs(userArgs, {
   url: process.env.SMARTERWEATHER_ONBOARDING_MCP_URL,
   authMode: process.env.SMARTERWEATHER_ONBOARDING_AUTH,
   oauthClientId: process.env.SMARTERWEATHER_ONBOARDING_OAUTH_CLIENT_ID,
-  defaultUrl: 'https://developers.smarterweather.com/mcp',
+  defaultUrl: 'https://mcp.developers.smarterweather.com',
 });
 
 // mcp-remote ships its CLI entry point at dist/proxy.js; resolve the

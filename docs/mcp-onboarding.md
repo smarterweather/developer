@@ -1,7 +1,7 @@
 # MCP onboarding server guide
 
 The "meta MCP" — the agent-first way onto the Smarter Weather platform,
-**live at `https://developers.smarterweather.com/mcp`**. Its tools walk a
+**live at `https://mcp.developers.smarterweather.com`**. Its tools walk a
 developer (and their agent) end-to-end:
 
 1. **Discovery** — plans, pricing, and documentation, with zero credentials.
@@ -15,9 +15,8 @@ developer (and their agent) end-to-end:
    Code, Claude Desktop, Codex, etc.).
 5. **Billing** — usage, billing status, plan upgrades, and the billing portal.
 
-The server is co-hosted with the developer portal at
-`developers.smarterweather.com/mcp` rather than living on its own subdomain;
-path-based CloudFront routing isolates the MCP traffic from the portal HTML.
+The server lives on its own host,
+`mcp.developers.smarterweather.com` (origin `/`). Portal `/mcp` 404s.
 
 ## Agent Plugin
 
@@ -35,12 +34,12 @@ in [`.cursor-plugin/marketplace.json`](https://github.com/smarterweather/develop
 Clients with native remote-MCP support connect directly:
 
 ```
-https://developers.smarterweather.com/mcp
+https://mcp.developers.smarterweather.com
 ```
 
 Anonymous connections see the three open discovery tools. Signing in via the
 advertised OAuth 2.1 flow (RFC 9728 discovery is served at
-`/.well-known/oauth-protected-resource/mcp`) unlocks the account-scoped tools.
+`/.well-known/oauth-protected-resource`) unlocks the account-scoped tools.
 
 ### stdio bridge (npm)
 

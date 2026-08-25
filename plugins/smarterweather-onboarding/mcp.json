@@ -3,7 +3,7 @@
   "mcpServers": {
     "smarterweather-onboarding": {
       "type": "streamable-http",
-      "url": "https://developers.smarterweather.com/mcp"
+      "url": "https://mcp.developers.smarterweather.com"
     }
   }
 }

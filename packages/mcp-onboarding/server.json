@@ -13,7 +13,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://developers.smarterweather.com/mcp"
+      "url": "https://mcp.developers.smarterweather.com"
     }
   ],
   "packages": [
@@ -38,7 +38,7 @@
           "isRequired": false,
           "isSecret": false,
           "format": "string",
-          "default": "https://developers.smarterweather.com/mcp"
+          "default": "https://mcp.developers.smarterweather.com"
         }
       ]
     }

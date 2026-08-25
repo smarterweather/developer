@@ -2,11 +2,11 @@
 
 > Weather data for apps and AI agents: a REST API (api.smarterweather.com), a
 > hosted weather MCP server (mcp.smarterweather.com), and an agent-first
-> onboarding MCP server (developers.smarterweather.com/mcp) that can sign you
+> onboarding MCP server (mcp.developers.smarterweather.com) that can sign you
 > up, mint API keys, and configure your client — all from inside an AI agent.
 
 Agents onboarding a developer should start with the onboarding MCP server:
-connect anonymously to https://developers.smarterweather.com/mcp (Streamable
+connect anonymously to https://mcp.developers.smarterweather.com (Streamable
 HTTP, no credentials) and call get_plans / get_documentation / sign_up.
 Account-scoped tools (API key minting, billing) unlock after OAuth 2.1 sign-in.
 
