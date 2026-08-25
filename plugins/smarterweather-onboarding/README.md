@@ -7,7 +7,7 @@ configure the weather client. Then **remove it**.
 | Piece | Role |
 | ----- | ---- |
 | `plugin.json` | Plugin identity (Agent Plugins 1.0) |
-| `mcp.json` | Streamable HTTP → `https://developers.smarterweather.com/mcp` |
+| `mcp.json` | Streamable HTTP → `https://mcp.developers.smarterweather.com` |
 | `skills/smarterweather-onboarding` | Create account → mint key → configure weather → remove |
 
 This is not the weather plugin. The long-lived install unit is

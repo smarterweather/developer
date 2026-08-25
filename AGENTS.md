@@ -8,7 +8,7 @@ Guidance for AI agents integrating with Smarter Weather.
 | ------- | -------- | ---- |
 | REST API | `https://api.smarterweather.com` | `Authorization: Bearer sw_live_*` / `sw_test_*` |
 | Weather MCP | `https://mcp.smarterweather.com` | OAuth 2.1 + PKCE, or API key Bearer |
-| Onboarding MCP | `https://developers.smarterweather.com/mcp` | Anonymous discovery tools; OAuth for account tools |
+| Onboarding MCP | `https://mcp.developers.smarterweather.com` | Anonymous discovery tools; OAuth for account tools |
 
 Canonical machine-readable contracts:
 

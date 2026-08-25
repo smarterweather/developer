@@ -1,6 +1,6 @@
 # @smarterweather/mcp-onboarding
 
-stdio bridge to the [Smarter Weather developer onboarding MCP server](https://developers.smarterweather.com/mcp) — the agent-first way onto the Smarter Weather platform. Your AI coding agent can explore plans and docs, sign you up, mint API keys, configure your MCP client, and manage billing, all from inside your editor.
+stdio bridge to the [Smarter Weather developer onboarding MCP server](https://mcp.developers.smarterweather.com) — the agent-first way onto the Smarter Weather platform. Your AI coding agent can explore plans and docs, sign you up, mint API keys, configure your MCP client, and manage billing, all from inside your editor.
 
 A thin wrapper around [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) with Smarter Weather defaults. All onboarding logic runs server-side.
 
@@ -45,7 +45,7 @@ Ensure port `3334` is free when authenticating; if mcp-remote falls back to a ra
 
 | Env var | Default | Purpose |
 | --- | --- | --- |
-| `SMARTERWEATHER_ONBOARDING_MCP_URL` | `https://developers.smarterweather.com/mcp` | Target endpoint override (dev/staging). A positional URL argument takes precedence over both. |
+| `SMARTERWEATHER_ONBOARDING_MCP_URL` | `https://mcp.developers.smarterweather.com` | Target endpoint override (dev/staging). A positional URL argument takes precedence over both. |
 | `SMARTERWEATHER_ONBOARDING_AUTH` | *(unset)* | `required` → opt into the OAuth challenge and account-scoped tools. |
 | `SMARTERWEATHER_ONBOARDING_OAUTH_CLIENT_ID` | `PQcxOLVZg5kxzhoC` | Override the pre-registered Clerk OAuth client_id (staging / alternate apps). |
 

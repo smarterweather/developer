@@ -2,7 +2,7 @@
 # Publish separately from the weather listing (root smithery.yaml):
 #
 #   npx -y @smithery/cli mcp publish \
-#     "https://developers.smarterweather.com/mcp" \
+#     "https://mcp.developers.smarterweather.com" \
 #     -n smarterweather/onboarding
 #
 # Do not replace or merge into smithery.yaml — Soft GA keeps weather and
@@ -23,12 +23,12 @@ runtime: remote
 
 remote:
   transport: streamable-http
-  url: https://developers.smarterweather.com/mcp
+  url: https://mcp.developers.smarterweather.com
 
 auth:
   type: oauth2
   authorizationServer: https://clerk.smarterweather.com
-  protectedResourceMetadata: https://developers.smarterweather.com/.well-known/oauth-protected-resource
+  protectedResourceMetadata: https://mcp.developers.smarterweather.com/.well-known/oauth-protected-resource
   pkce: true
   dynamicClientRegistration: true
 

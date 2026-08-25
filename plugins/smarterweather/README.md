@@ -61,7 +61,7 @@ Set `SMARTERWEATHER_API_KEY` in the process environment. Do **not** append
 
 ## What this plugin does not include
 
-- The onboarding MCP (`https://developers.smarterweather.com/mcp`). That
+- The onboarding MCP (`https://mcp.developers.smarterweather.com`). That
   server is a one-shot signup path — use
   [`plugins/smarterweather-onboarding/`](../smarterweather-onboarding/).
   Never wire it into a long-lived client config alongside the weather

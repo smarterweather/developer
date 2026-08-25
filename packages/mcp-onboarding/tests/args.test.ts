@@ -5,7 +5,7 @@ import {
   buildArgs,
 } from '../src/args.js';
 
-const DEFAULT_URL = 'https://developers.smarterweather.com/mcp';
+const DEFAULT_URL = 'https://mcp.developers.smarterweather.com';
 const AUTH_URL = `${DEFAULT_URL}?auth=required`;
 const STATIC_INFO = JSON.stringify({ client_id: DEFAULT_OAUTH_CLIENT_ID });
 
