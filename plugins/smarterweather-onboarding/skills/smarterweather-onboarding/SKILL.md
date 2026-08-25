@@ -14,7 +14,7 @@ metadata:
 # Onboard to Smarter Weather (one-shot)
 
 This install is **temporary**. It talks to the onboarding MCP at
-`https://developers.smarterweather.com/mcp`. After a key exists and the
+`https://mcp.developers.smarterweather.com`. After a key exists and the
 weather client is configured, **remove this server** from the client
 config. Never wire it into a long-lived config alongside the weather MCP
 (`https://mcp.smarterweather.com`).
