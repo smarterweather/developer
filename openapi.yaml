@@ -68,6 +68,7 @@ info:
     | `uncertainty` | no    | experimental | NBM probabilistic sub-objects on hourly and daily forecasts (CONUS/Alaska/Hawaii only). |
     | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
     | `climate`     | no    | experimental | NCEI day-of-year normals for the location, plus per-day departure from normal on `daily[]`. |
+    | `metar`       | no    | experimental | Nearest METAR sky layers and present weather for the photoreal canvas. |
 
     `radar` and `products` (wx visual-products manifest) are **not** in the
     v1 token set. They will land in Phase 5 alongside a separate
@@ -2827,8 +2828,65 @@ components:
             Omitted when no station with normals is near the point; that case
             reports `coverage_limited` in `meta.warnings[]` rather than
             failing the request.
+        metar:
+          $ref: '#/components/schemas/Metar'
         meta:
           $ref: '#/components/schemas/Meta'
+
+    Metar:
+      type: object
+      description: |
+        Compact nearest METAR observation for the queried point. Populated
+        when `include=metar` is requested. Sky layers and present-weather
+        tokens are parsed from `raw_metar` (stop at RMK); the raw string
+        itself is not forwarded.
+
+        Omitted when no recent station is near the point or the fetch
+        fails; those cases report `coverage_limited` or a fetch warning
+        in `meta.warnings[]` rather than failing the request.
+      required: [station_id, distance_km, observed_at, age_min]
+      properties:
+        station_id:
+          type: string
+          example: KORD
+        distance_km:
+          type: number
+          description: Great-circle distance from the requested point to the station.
+        observed_at:
+          type: string
+          format: date-time
+        age_min:
+          type: number
+          description: Minutes between `observed_at` and response `meta.generated_at`.
+        ceiling_ft:
+          type: integer
+          description: Lowest BKN/OVC/VV base, feet AGL.
+        layers:
+          type: array
+          description: |
+            Parsed sky groups. Empty when the station reports CLR/SKC/NSC.
+            Omitted when sky condition is unknown.
+          items:
+            $ref: '#/components/schemas/MetarSkyLayer'
+        weather:
+          type: array
+          description: Raw present-weather tokens (`-RA`, `VCTS`, `TSRA`).
+          items:
+            type: string
+
+    MetarSkyLayer:
+      type: object
+      required: [cover]
+      properties:
+        cover:
+          type: string
+          enum: [FEW, SCT, BKN, OVC, VV]
+        base_ft:
+          type: integer
+          description: Layer base in feet AGL. Omitted when the group has no height (`VV///`).
+        convective:
+          type: string
+          enum: [CB, TCU]
 
     Nowcast:
       type: object
