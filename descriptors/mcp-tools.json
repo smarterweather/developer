@@ -423,6 +423,15 @@
             },
             "daylight_only": true
           }
+        ],
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
         ]
       }
     },
@@ -625,7 +634,16 @@
         "ui": {
           "resourceUri": "ui://weather-widget/v1/index.html"
         },
-        "ui/resourceUri": "ui://weather-widget/v1/index.html"
+        "ui/resourceUri": "ui://weather-widget/v1/index.html",
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -780,7 +798,22 @@
         "ui": {
           "resourceUri": "ui://weather-widget/v1/index.html"
         },
-        "ui/resourceUri": "ui://weather-widget/v1/index.html"
+        "ui/resourceUri": "ui://weather-widget/v1/index.html",
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ],
+          [
+            "bbox"
+          ],
+          [
+            "alert_id"
+          ]
+        ]
       }
     },
     {
@@ -1047,6 +1080,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -1201,7 +1245,16 @@
         "ui": {
           "resourceUri": "ui://weather-widget/v1/index.html"
         },
-        "ui/resourceUri": "ui://weather-widget/v1/index.html"
+        "ui/resourceUri": "ui://weather-widget/v1/index.html",
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -1486,6 +1539,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -1939,6 +2003,15 @@
             "variable": "precipitation_gt_0p254mm",
             "lead_hours": 24
           }
+        ],
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
         ]
       }
     },
@@ -2392,7 +2465,16 @@
         "ui": {
           "resourceUri": "ui://weather-widget/v1/index.html"
         },
-        "ui/resourceUri": "ui://weather-widget/v1/index.html"
+        "ui/resourceUri": "ui://weather-widget/v1/index.html",
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -2472,6 +2554,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -2666,6 +2759,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -2792,6 +2896,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -2970,6 +3085,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -3264,6 +3390,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -3320,6 +3457,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -3422,6 +3570,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -3511,6 +3670,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -3603,6 +3773,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -3738,6 +3919,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -3895,6 +4087,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
