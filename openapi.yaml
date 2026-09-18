@@ -3771,7 +3771,8 @@ components:
         Full alert representation returned by `GET /v1/alerts/{id}`.
         Supersets `Alert` with full description, instruction, geometry,
         spatial metadata (centroid, recommended zoom, affected
-        population), and the upstream NWS VTEC identifier.
+        population), the upstream NWS VTEC identifier, and path-impact
+        (`pois`, `buildings`) when the reader computed it.
 
         Field shape mirrors `wx-api`'s `GET /v1/alerts/{id}` so iOS,
         legacy CRA, and OG-service consumers swap base URLs without
@@ -3892,6 +3893,47 @@ components:
             Optional ending-time hint surfaced by the OG-share image
             renderer. Currently always omitted by the pipeline; clients
             should fall back to `expires`. Reserved for forward-compat.
+        pois:
+          type: object
+          description: |
+            Civic POIs inside the alert polygon (`wx.estimate_polygon_pois`).
+            `features` are capped at 50. Omitted when unavailable
+            (null geometry, timeout, or function error). Empty
+            `counts`/`features` means computed zero, not unknown.
+          properties:
+            counts:
+              type: object
+              additionalProperties:
+                type: integer
+            features:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  class:
+                    type: string
+        buildings:
+          type: object
+          description: |
+            ACS housing units inside the alert polygon
+            (`wx.estimate_polygon_buildings`). `features` is always
+            empty this slice. Omitted when unavailable (empty table,
+            timeout, or function error). `counts.housing_unit: 0` is
+            computed zero, not unknown.
+          properties:
+            counts:
+              type: object
+              properties:
+                housing_unit:
+                  type: integer
+            features:
+              type: array
+              items:
+                type: object
 
     Outlook:
       type: object
