@@ -571,6 +571,99 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/pois/exposure:
+    post:
+      operationId: postPoisExposure
+      summary: Civic POIs inside a bounded polygon.
+      description: |
+        Returns civic POI counts and a 50-row feature sample for a caller-supplied
+        GeoJSON Polygon or MultiPolygon via `wx.estimate_polygon_pois`.
+
+        Rejects national-scale dissolves (area over 250,000 km²), invalid
+        geometry, unknown classes, bodies over 1 MiB, and queries that exceed
+        a 2s reader budget. Clip HeatRisk / outlook polygons first — do not
+        pass a CONUS product dissolve.
+
+        Optional `classes` filters to the civic allowlist (school, hospital,
+        airport, …). Omit it for every civic class.
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [geometry]
+              properties:
+                geometry:
+                  type: object
+                  description: GeoJSON Polygon or MultiPolygon.
+                  required: [type, coordinates]
+                  properties:
+                    type:
+                      type: string
+                      enum: [Polygon, MultiPolygon]
+                    coordinates:
+                      type: array
+                      items: {}
+                classes:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional civic class filter.
+      responses:
+        '200':
+          description: Civic POI counts and up to 50 features.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [counts, features]
+                properties:
+                  counts:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                  features:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, class]
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        class:
+                          type: string
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '413':
+          $ref: '#/components/responses/Problem413'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/storm-tracks:
     get:
       operationId: getStormTracks
@@ -3047,6 +3140,32 @@ components:
             Analysis cloud-base height above ground (RTMA/URMA), in the
             `units.altitude` unit. Null when no ceiling is reported (clear or
             high thin cloud) or outside analysis coverage.
+        cloud_cover_low:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR low-cloud-layer cover, percent (CONUS). Present only with
+            `cloud_cover_mid` and `cloud_cover_high` (all three numbers or
+            all three null). Null outside HRRR coverage or before the first
+            post-deploy cycle.
+        cloud_cover_mid:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR mid-cloud-layer cover, percent (CONUS). Same
+            all-three-or-null contract as `cloud_cover_low`.
+        cloud_cover_high:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR high-cloud-layer cover, percent (CONUS). Same
+            all-three-or-null contract as `cloud_cover_low`.
         uv_index:
           type: [number, "null"]
           format: double
@@ -3223,6 +3342,31 @@ components:
             NBM forecast cloud-base height above ground, in the
             `units.altitude` unit. Null when no ceiling is reported (clear or
             high thin cloud).
+        cloud_cover_low:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR low-cloud-layer cover, percent (CONUS). Present only with
+            `cloud_cover_mid` and `cloud_cover_high` for hours inside the
+            HRRR horizon (18 h, or 48 h on 00/06/12/18Z cycles).
+        cloud_cover_mid:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR mid-cloud-layer cover, percent (CONUS). Same
+            all-three-or-null contract as `cloud_cover_low`.
+        cloud_cover_high:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR high-cloud-layer cover, percent (CONUS). Same
+            all-three-or-null contract as `cloud_cover_low`.
         snow_level:
           type: [number, "null"]
           format: double
@@ -3771,7 +3915,8 @@ components:
         Full alert representation returned by `GET /v1/alerts/{id}`.
         Supersets `Alert` with full description, instruction, geometry,
         spatial metadata (centroid, recommended zoom, affected
-        population), and the upstream NWS VTEC identifier.
+        population), the upstream NWS VTEC identifier, and path-impact
+        (`pois`, `buildings`) when the reader computed it.
 
         Field shape mirrors `wx-api`'s `GET /v1/alerts/{id}` so iOS,
         legacy CRA, and OG-service consumers swap base URLs without
@@ -3892,6 +4037,61 @@ components:
             Optional ending-time hint surfaced by the OG-share image
             renderer. Currently always omitted by the pipeline; clients
             should fall back to `expires`. Reserved for forward-compat.
+        pois:
+          type: object
+          description: |
+            Civic POIs inside the alert polygon (`wx.estimate_polygon_pois`).
+            `features` are capped at 50. Omitted when unavailable
+            (null geometry, timeout, or function error). Empty
+            `counts`/`features` means computed zero, not unknown.
+          properties:
+            counts:
+              type: object
+              additionalProperties:
+                type: integer
+            features:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  class:
+                    type: string
+        buildings:
+          type: object
+          description: |
+            ACS housing units and Overture building-class counts inside
+            the alert polygon (`wx.estimate_polygon_buildings`).
+            `housing_unit` is ACS B25001, not residences. Class keys
+            (`residential`, `commercial`, `industrial`, `civic`,
+            `other`) appear only when `gis.building_class` is loaded.
+            `features` is always empty this slice. Omitted when
+            unavailable (empty housing table, timeout, or function
+            error). `counts.housing_unit: 0` is computed zero, not
+            unknown.
+          properties:
+            counts:
+              type: object
+              properties:
+                housing_unit:
+                  type: integer
+                residential:
+                  type: integer
+                commercial:
+                  type: integer
+                industrial:
+                  type: integer
+                civic:
+                  type: integer
+                other:
+                  type: integer
+            features:
+              type: array
+              items:
+                type: object
 
     Outlook:
       type: object
@@ -5747,6 +5947,14 @@ components:
         Resource not found. For `/v1/weather`, returned when the requested
         location cannot be resolved (unknown ZIP, unrecognised free-text
         location) or when no upstream data covers the location.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem413:
+      description: |
+        Payload too large. The request body exceeded the 1 MiB cap on
+        `POST /v1/pois/exposure`.
       content:
         application/problem+json:
           schema:
