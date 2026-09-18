@@ -3047,6 +3047,32 @@ components:
             Analysis cloud-base height above ground (RTMA/URMA), in the
             `units.altitude` unit. Null when no ceiling is reported (clear or
             high thin cloud) or outside analysis coverage.
+        cloud_cover_low:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR low-cloud-layer cover, percent (CONUS). Present only with
+            `cloud_cover_mid` and `cloud_cover_high` (all three numbers or
+            all three null). Null outside HRRR coverage or before the first
+            post-deploy cycle.
+        cloud_cover_mid:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR mid-cloud-layer cover, percent (CONUS). Same
+            all-three-or-null contract as `cloud_cover_low`.
+        cloud_cover_high:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR high-cloud-layer cover, percent (CONUS). Same
+            all-three-or-null contract as `cloud_cover_low`.
         uv_index:
           type: [number, "null"]
           format: double
@@ -3223,6 +3249,31 @@ components:
             NBM forecast cloud-base height above ground, in the
             `units.altitude` unit. Null when no ceiling is reported (clear or
             high thin cloud).
+        cloud_cover_low:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR low-cloud-layer cover, percent (CONUS). Present only with
+            `cloud_cover_mid` and `cloud_cover_high` for hours inside the
+            HRRR horizon (18 h, or 48 h on 00/06/12/18Z cycles).
+        cloud_cover_mid:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR mid-cloud-layer cover, percent (CONUS). Same
+            all-three-or-null contract as `cloud_cover_low`.
+        cloud_cover_high:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR high-cloud-layer cover, percent (CONUS). Same
+            all-three-or-null contract as `cloud_cover_low`.
         snow_level:
           type: [number, "null"]
           format: double
