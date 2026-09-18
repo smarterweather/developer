@@ -3919,16 +3919,30 @@ components:
         buildings:
           type: object
           description: |
-            ACS housing units inside the alert polygon
-            (`wx.estimate_polygon_buildings`). `features` is always
-            empty this slice. Omitted when unavailable (empty table,
-            timeout, or function error). `counts.housing_unit: 0` is
-            computed zero, not unknown.
+            ACS housing units and Overture building-class counts inside
+            the alert polygon (`wx.estimate_polygon_buildings`).
+            `housing_unit` is ACS B25001, not residences. Class keys
+            (`residential`, `commercial`, `industrial`, `civic`,
+            `other`) appear only when `gis.building_class` is loaded.
+            `features` is always empty this slice. Omitted when
+            unavailable (empty housing table, timeout, or function
+            error). `counts.housing_unit: 0` is computed zero, not
+            unknown.
           properties:
             counts:
               type: object
               properties:
                 housing_unit:
+                  type: integer
+                residential:
+                  type: integer
+                commercial:
+                  type: integer
+                industrial:
+                  type: integer
+                civic:
+                  type: integer
+                other:
                   type: integer
             features:
               type: array
