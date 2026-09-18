@@ -571,6 +571,99 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/pois/exposure:
+    post:
+      operationId: postPoisExposure
+      summary: Civic POIs inside a bounded polygon.
+      description: |
+        Returns civic POI counts and a 50-row feature sample for a caller-supplied
+        GeoJSON Polygon or MultiPolygon via `wx.estimate_polygon_pois`.
+
+        Rejects national-scale dissolves (area over 250,000 km²), invalid
+        geometry, unknown classes, bodies over 1 MiB, and queries that exceed
+        a 2s reader budget. Clip HeatRisk / outlook polygons first — do not
+        pass a CONUS product dissolve.
+
+        Optional `classes` filters to the civic allowlist (school, hospital,
+        airport, …). Omit it for every civic class.
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [geometry]
+              properties:
+                geometry:
+                  type: object
+                  description: GeoJSON Polygon or MultiPolygon.
+                  required: [type, coordinates]
+                  properties:
+                    type:
+                      type: string
+                      enum: [Polygon, MultiPolygon]
+                    coordinates:
+                      type: array
+                      items: {}
+                classes:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional civic class filter.
+      responses:
+        '200':
+          description: Civic POI counts and up to 50 features.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [counts, features]
+                properties:
+                  counts:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                  features:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, class]
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        class:
+                          type: string
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '413':
+          $ref: '#/components/responses/Problem413'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/storm-tracks:
     get:
       operationId: getStormTracks
@@ -5854,6 +5947,14 @@ components:
         Resource not found. For `/v1/weather`, returned when the requested
         location cannot be resolved (unknown ZIP, unrecognised free-text
         location) or when no upstream data covers the location.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem413:
+      description: |
+        Payload too large. The request body exceeded the 1 MiB cap on
+        `POST /v1/pois/exposure`.
       content:
         application/problem+json:
           schema:
