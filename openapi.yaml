@@ -1642,12 +1642,12 @@ paths:
           required: true
           description: |
             Partial place-name to expand. 2-128 characters, restricted
-            to alphanumerics + spaces + `,`, `.`, `-`, and `'`.
+            to alphanumerics + spaces + `,`, `.`, `-`, `'`, `#`, and `/`.
           schema:
             type: string
             minLength: 2
             maxLength: 128
-            pattern: "^[A-Za-z0-9 ,.\\-']+$"
+            pattern: "^[A-Za-z0-9 ,.\\-'#/]+$"
           example: "Chic"
         - name: count
           in: query
@@ -1660,6 +1660,42 @@ paths:
             maximum: 100
             default: 10
           example: 10
+        - name: include
+          in: query
+          required: false
+          description: |
+            Comma-separated extra result classes to mix into the
+            typeahead. Allowlisted tokens: `address`, `poi`. Omitted
+            or empty keeps the legacy place+ZIP-only response.
+          schema:
+            type: string
+          example: "address,poi"
+        - name: bias_lat
+          in: query
+          required: false
+          description: |
+            Soft rank bias latitude. Must be paired with `bias_lon`.
+            Range [-90, 90]. Forwarded as parsed; wxreader formats
+            one-decimal precision on the reader wire.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 41.8
+        - name: bias_lon
+          in: query
+          required: false
+          description: |
+            Soft rank bias longitude. Must be paired with `bias_lat`.
+            Range [-180, 180]. Forwarded as parsed; wxreader formats
+            one-decimal precision on the reader wire.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -88.2
       responses:
         '200':
           description: |
@@ -4518,7 +4554,7 @@ components:
         Single forward-geocode candidate. Field shape mirrors the
         reader's `AutosuggestResult` (most fields are nullable JSON
         nulls when the underlying row lacks the column). `type` is
-        the reader's discriminator (`city`, `zip`, etc.).
+        the reader's discriminator (`place`, `zip`, `address`, `poi`).
 
         Forward-compat: additional fields may appear without a
         sw-api release.
@@ -4564,16 +4600,33 @@ components:
         type:
           type: string
           description: |
-            Reader-side discriminator. Currently emitted values
-            include `city`, `zip`. Treat as opaque -- new types may
-            appear without a sw-api release.
-          example: "city"
+            Reader-side discriminator. Emitted values are
+            `place`, `zip`, `address`, `poi`. Treat as opaque --
+            new types may appear without a sw-api release.
+          example: "place"
         place_id:
           type: [string, "null"]
           description: |
             Census place GEOID. Same key as the v2 basemap tile `id`.
             Present on place results; omitted for ZIP results.
           example: "1714000"
+        id:
+          type: string
+          description: |
+            Stable row id for address and POI hits (and some place
+            rows). Omitted when the reader has no id.
+          example: "addr:123-main-st-naperville-il"
+        title:
+          type: string
+          description: |
+            Primary two-line copy (street or POI name). Prefer over
+            `name` for `address` and `poi` rows.
+          example: "123 Main St"
+        subtitle:
+          type: string
+          description: |
+            Secondary two-line copy (city, state, ZIP).
+          example: "Naperville, IL 60540"
       additionalProperties: true
 
     StormTrackFeature:
