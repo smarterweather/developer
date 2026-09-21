@@ -4087,7 +4087,8 @@ components:
         pois:
           type: object
           description: |
-            Civic POIs inside the alert polygon (`wx.estimate_polygon_pois`).
+            Civic POIs inside the alert polygon (`wx.estimate_polygon_pois`),
+            computed once when the alert is written and stored on the alert.
             Present only when the request includes `include=impact`.
             `features` are capped at 50. Omitted when unavailable
             (null geometry, timeout, or function error) or when impact
@@ -4113,7 +4114,8 @@ components:
           type: object
           description: |
             ACS housing units and Overture building-class counts inside
-            the alert polygon (`wx.estimate_polygon_buildings`).
+            the alert polygon (`wx.estimate_polygon_buildings`), computed once
+            when the alert is written and stored on the alert.
             Present only when the request includes `include=impact`.
             `housing_unit` is ACS B25001, not residences. Class keys
             (`residential`, `commercial`, `industrial`, `civic`,
