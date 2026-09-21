@@ -422,6 +422,17 @@ paths:
             minLength: 1
             maxLength: 256
           example: "1.2.3-NWS-WW.SAMPLE.CASE"
+        - name: include
+          in: query
+          required: false
+          description: |
+            Comma-separated tokens. `impact` opts in to civic POI and
+            building-count estimates (`pois`, `buildings`). Unknown
+            tokens are ignored. Omitted on the default response so the
+            lookup stays a primary-key read.
+          schema:
+            type: string
+          example: impact
       responses:
         '200':
           description: Alert detail for the requested id.
@@ -4077,9 +4088,11 @@ components:
           type: object
           description: |
             Civic POIs inside the alert polygon (`wx.estimate_polygon_pois`).
+            Present only when the request includes `include=impact`.
             `features` are capped at 50. Omitted when unavailable
-            (null geometry, timeout, or function error). Empty
-            `counts`/`features` means computed zero, not unknown.
+            (null geometry, timeout, or function error) or when impact
+            was not requested. Empty `counts`/`features` means computed
+            zero, not unknown.
           properties:
             counts:
               type: object
@@ -4101,13 +4114,14 @@ components:
           description: |
             ACS housing units and Overture building-class counts inside
             the alert polygon (`wx.estimate_polygon_buildings`).
+            Present only when the request includes `include=impact`.
             `housing_unit` is ACS B25001, not residences. Class keys
             (`residential`, `commercial`, `industrial`, `civic`,
             `other`) appear only when `gis.building_class` is loaded.
             `features` is always empty this slice. Omitted when
             unavailable (empty housing table, timeout, or function
-            error). `counts.housing_unit: 0` is computed zero, not
-            unknown.
+            error) or when impact was not requested.
+            `counts.housing_unit: 0` is computed zero, not unknown.
           properties:
             counts:
               type: object
