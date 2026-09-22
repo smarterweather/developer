@@ -21,8 +21,18 @@ info:
     ## Errors
 
     Error responses (`4xx`, `5xx`) are served with content type
-    `application/problem+json` per [RFC 7807](https://datatracker.ietf.org/doc/html/rfc7807).
+    `application/problem+json` per [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
+    (which obsoletes RFC 7807 with the same wire format).
     Successful responses use `application/json`.
+
+    `401`, `403`, and `429` responses additionally carry a `next_steps`
+    extension member: a machine-readable map of where to go next
+    (`recommended` names the link to take first), so a client -- or a
+    coding agent acting for one -- can recover from "no key", "wrong
+    scope", or "over quota" without leaving the response. `401` and
+    `403` also carry an RFC 6750 `WWW-Authenticate: Bearer` challenge.
+    Every `type` URI dereferences to a human-readable explanation at
+    [developers.smarterweather.com/errors](https://developers.smarterweather.com/errors).
 
     ## Authentication
 
@@ -35,8 +45,9 @@ info:
 
     Test-mode keys (`sw_test_*`) return live data but are excluded from
     billing meter events. Get a key from the developer dashboard at
-    [https://smarterweather.com/developers/dashboard](https://smarterweather.com/developers/dashboard)
-    once general availability ships.
+    [developers.smarterweather.com/dashboard/api-keys](https://developers.smarterweather.com/dashboard/api-keys)
+    (free, no card). Agents: start at
+    [developers.smarterweather.com/llms.txt](https://developers.smarterweather.com/llms.txt).
 
     ## Rate limits
 
@@ -2458,8 +2469,7 @@ components:
           development.
 
         Get a key from the developer dashboard at
-        [smarterweather.com/developers/dashboard](https://smarterweather.com/developers/dashboard)
-        once general availability ships.
+        [developers.smarterweather.com/dashboard/api-keys](https://developers.smarterweather.com/dashboard/api-keys).
 
   parameters:
     LatQuery:
@@ -2557,6 +2567,18 @@ components:
         default: 48
 
   headers:
+    WWWAuthenticate:
+      description: |
+        RFC 6750 Bearer challenge. `realm` is always
+        `api.smarterweather.com`. A request with no credentials gets the
+        bare challenge (RFC 6750 §3.1); otherwise `error` is one of
+        `invalid_request` (malformed header), `invalid_token` (unknown,
+        revoked, or expired key), or `insufficient_scope` (with `scope`
+        naming the scope the route needs). `error_uri` points at the
+        error reference.
+      schema:
+        type: string
+        example: Bearer realm="api.smarterweather.com", error="invalid_token", error_description="API key is not recognised.", error_uri="https://developers.smarterweather.com/errors"
     RateLimitLimit:
       description: The request-rate limit for this API key in the current window.
       schema:
@@ -2738,15 +2760,27 @@ components:
     Problem:
       type: object
       description: |
-        RFC 7807 problem-details object served as `application/problem+json`
-        on every `4xx` and `5xx` response.
+        RFC 9457 problem-details object served as `application/problem+json`
+        on every `4xx` and `5xx` response. RFC 9457 obsoletes RFC 7807 with
+        an identical wire format; parsers written for either work.
+
+        Beyond the five standard members the object may carry extension
+        members (RFC 9457 §3.2). Today `401`, `403`, and `429` carry
+        `next_steps`. Clients MUST ignore extension members they do not
+        understand.
       required: [type, title, status]
+      additionalProperties: true
       properties:
         type:
           type: string
           format: uri
-          description: A URI reference identifying the problem type.
-          example: https://smarterweather.com/errors/invalid-key
+          description: |
+            A URI reference identifying the problem type. Stable; switch on
+            it as an opaque string. Every value under
+            `https://smarterweather.com/errors/` redirects to the matching
+            section of
+            [developers.smarterweather.com/errors](https://developers.smarterweather.com/errors).
+          example: https://smarterweather.com/errors/unauthorized
         title:
           type: string
           description: Short, human-readable summary of the problem type.
@@ -2760,6 +2794,61 @@ components:
           type: string
           format: uri
           description: A URI reference identifying the specific occurrence.
+        next_steps:
+          $ref: '#/components/schemas/ProblemNextSteps'
+
+    ProblemNextSteps:
+      type: object
+      description: |
+        Extension member on `401`, `403`, and `429` problems: where to go
+        next, as a map of link relations. `recommended` names the relation
+        a client should take first; when present, `if_no_human_present`
+        names the relation an autonomous agent should take when nobody can
+        act on the recommended one right now. Every other key is a link
+        relation (`get_key`, `quickstart`, `agents`, `onboarding_mcp`,
+        `keyless_x402`, `key_handling`, `errors`, `upgrade`, `pricing`,
+        `usage`) whose value is a `ProblemNextStepLink`. New relations may
+        be added over time; unknown relations MUST be ignored.
+      required: [recommended]
+      properties:
+        recommended:
+          type: string
+          description: The link relation to take first.
+          example: get_key
+        if_no_human_present:
+          type: string
+          description: |
+            The link relation for an autonomous agent when no human can act
+            on `recommended` right now. Absent when there is no such
+            alternative.
+      additionalProperties:
+        $ref: '#/components/schemas/ProblemNextStepLink'
+      example:
+        recommended: get_key
+        get_key:
+          href: https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api
+          description: "Sign in (free, no card) and mint an API key. Pass it as 'Authorization: Bearer sw_live_*'."
+        quickstart:
+          href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api
+          description: Three requests from zero to a live forecast call; the no-install path for agents and humans.
+        agents:
+          href: https://developers.smarterweather.com/llms.txt?utm_campaign=401&utm_medium=problem-json&utm_source=api
+          description: "Agents: start here. The full agent path, key handling, and the machine-readable contracts."
+
+    ProblemNextStepLink:
+      type: object
+      description: One destination in `next_steps`.
+      required: [href, description]
+      properties:
+        href:
+          type: string
+          format: uri
+          description: |
+            Absolute URL. Carries `utm_source=api&utm_medium=problem-json&utm_campaign=<status>`
+            so the portal can attribute visits that started from an API error.
+        description:
+          type: string
+          description: One sentence a human or agent can act on.
 
     PlatformStatus:
       type: object
@@ -6000,13 +6089,52 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     Problem401:
-      description: Missing or invalid API key.
+      description: |
+        Missing or invalid API key. Carries a `WWW-Authenticate` challenge
+        and a `next_steps` extension telling the caller how to get a key.
+      headers:
+        WWW-Authenticate:
+          $ref: '#/components/headers/WWWAuthenticate'
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+          example:
+            type: https://smarterweather.com/errors/unauthorized
+            title: Unauthorized
+            status: 401
+            detail: "Missing Authorization header. Pass your API key as 'Authorization: Bearer sw_live_*'."
+            next_steps:
+              recommended: get_key
+              get_key:
+                href: https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api
+                description: "Sign in (free, no card) and mint an API key. Pass it as 'Authorization: Bearer sw_live_*'."
+              quickstart:
+                href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api
+                description: Three requests from zero to a live forecast call; the no-install path for agents and humans.
+              agents:
+                href: https://developers.smarterweather.com/llms.txt?utm_campaign=401&utm_medium=problem-json&utm_source=api
+                description: "Agents: start here. The full agent path, key handling, and the machine-readable contracts."
+              onboarding_mcp:
+                href: https://mcp.developers.smarterweather.com?utm_campaign=401&utm_medium=problem-json&utm_source=api
+                description: Anonymous Streamable HTTP MCP that can sign you up, mint a key, and configure the weather MCP in your client.
+              keyless_x402:
+                href: https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#x402
+                description: Agents with a wallet can pay per call (USDC on Base via x402) on the weather MCP with no account.
+              key_handling:
+                href: https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#key-handling
+                description: Write the key to .env, add .env to .gitignore, read SMARTERWEATHER_API_KEY in code, never echo the key in chat or commit it.
+              errors:
+                href: https://developers.smarterweather.com/errors?utm_campaign=401&utm_medium=problem-json&utm_source=api
+                description: What every problem type means and what to do next.
     Problem403:
-      description: API key lacks required scope.
+      description: |
+        API key lacks the required scope. Carries a `WWW-Authenticate`
+        challenge with `error="insufficient_scope"` and a `next_steps`
+        extension.
+      headers:
+        WWW-Authenticate:
+          $ref: '#/components/headers/WWWAuthenticate'
       content:
         application/problem+json:
           schema:
@@ -6029,7 +6157,10 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     Problem429:
-      description: Rate limit exceeded.
+      description: |
+        Rate limit exceeded. Carries a `next_steps` extension
+        (`recommended: upgrade`, plus `pricing` and `usage`) telling the
+        caller how to lift the limit.
       headers:
         Retry-After:
           $ref: '#/components/headers/RetryAfter'
