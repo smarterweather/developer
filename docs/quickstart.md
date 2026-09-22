@@ -26,7 +26,15 @@ WWW-Authenticate: Bearer realm="api.smarterweather.com"
   "detail": "Missing Authorization header. Pass your API key as 'Authorization: Bearer sw_live_*'.",
   "instance": "/v1/weather",
   "next_steps": {
-    "recommended": "get_key",
+    "recommended": "device_flow",
+    "device_flow": {
+      "href": "https://developers.smarterweather.com/quickstart?utm_…#device-flow",
+      "description": "No install, no loopback port: POST device_authorization_endpoint, show the human the code, poll, then GET /developer/keys.",
+      "client_id": "k2h05BUoTP393zcD",
+      "device_authorization_endpoint": "https://clerk.smarterweather.com/oauth/device_authorization",
+      "token_endpoint": "https://clerk.smarterweather.com/oauth/token",
+      "api_keys_endpoint": "https://api.smarterweather.com/developer/keys"
+    },
     "get_key": { "href": "https://developers.smarterweather.com/dashboard/api-keys?utm_…", "description": "Sign in (free, no card) and mint an API key. …" },
     "quickstart": { "href": "…", "description": "…" },
     "agents": { "href": "…", "description": "…" },
@@ -46,7 +54,15 @@ an agent never has to guess where to go.
 
 Pick one:
 
-- **Dashboard (recommended when a human is present).** Sign in at
+- **Device flow (401 `recommended` for agents).** Follow
+  `next_steps.device_flow`: POST `device_authorization_endpoint` with
+  the advertised `client_id` and `scope=openid email`, show the human
+  `verification_uri` + `user_code`, poll `token_endpoint`, then GET
+  `https://api.smarterweather.com/developer/keys`. POST a key only if
+  that list is empty, with an agent-generated `Idempotency-Key` UUID
+  (never `first-key`). Discard the access token afterwards. Recipe:
+  <https://developers.smarterweather.com/quickstart#device-flow>.
+- **Dashboard (when a human is present).** Sign in at
   <https://developers.smarterweather.com/dashboard/api-keys> (free, no
   card) and click **New key**. The key is shown exactly once
   (`sw_live_...` or `sw_test_...`).

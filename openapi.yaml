@@ -2805,16 +2805,17 @@ components:
         a client should take first; when present, `if_no_human_present`
         names the relation an autonomous agent should take when nobody can
         act on the recommended one right now. Every other key is a link
-        relation (`get_key`, `quickstart`, `agents`, `onboarding_mcp`,
-        `keyless_x402`, `key_handling`, `errors`, `upgrade`, `pricing`,
-        `usage`) whose value is a `ProblemNextStepLink`. New relations may
-        be added over time; unknown relations MUST be ignored.
+        relation (`device_flow`, `get_key`, `quickstart`, `agents`,
+        `onboarding_mcp`, `keyless_x402`, `key_handling`, `errors`,
+        `upgrade`, `pricing`, `usage`) whose value is a
+        `ProblemNextStepLink`. New relations may be added over time;
+        unknown relations MUST be ignored.
       required: [recommended]
       properties:
         recommended:
           type: string
           description: The link relation to take first.
-          example: get_key
+          example: device_flow
         if_no_human_present:
           type: string
           description: |
@@ -2824,7 +2825,14 @@ components:
       additionalProperties:
         $ref: '#/components/schemas/ProblemNextStepLink'
       example:
-        recommended: get_key
+        recommended: device_flow
+        device_flow:
+          href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api#device-flow
+          description: "No install, no loopback port: POST device_authorization_endpoint, show the human the code, poll, then GET /developer/keys."
+          client_id: k2h05BUoTP393zcD
+          device_authorization_endpoint: https://clerk.smarterweather.com/oauth/device_authorization
+          token_endpoint: https://clerk.smarterweather.com/oauth/token
+          api_keys_endpoint: https://api.smarterweather.com/developer/keys
         get_key:
           href: https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api
           description: "Sign in (free, no card) and mint an API key. Pass it as 'Authorization: Bearer sw_live_*'."
@@ -2837,7 +2845,11 @@ components:
 
     ProblemNextStepLink:
       type: object
-      description: One destination in `next_steps`.
+      description: |
+        One destination in `next_steps`. `href` and `description` are
+        always present. The `device_flow` relation also carries the
+        public Clerk device-grant recipe fields so a 401 body is
+        complete without a second fetch.
       required: [href, description]
       properties:
         href:
@@ -2849,6 +2861,23 @@ components:
         description:
           type: string
           description: One sentence a human or agent can act on.
+        client_id:
+          type: string
+          description: Public OAuth client id (device_flow only).
+        device_authorization_endpoint:
+          type: string
+          format: uri
+          description: Clerk device-authorization URL (device_flow only). No UTM.
+        token_endpoint:
+          type: string
+          format: uri
+          description: Clerk token URL (device_flow only). No UTM.
+        api_keys_endpoint:
+          type: string
+          format: uri
+          description: |
+            Key CRUD URL to call with the device-grant access token
+            (device_flow only). No UTM.
 
     PlatformStatus:
       type: object
@@ -6091,7 +6120,8 @@ components:
     Problem401:
       description: |
         Missing or invalid API key. Carries a `WWW-Authenticate` challenge
-        and a `next_steps` extension telling the caller how to get a key.
+        and a `next_steps` extension. `recommended` is `device_flow`: the
+        object is a complete no-install mint recipe.
       headers:
         WWW-Authenticate:
           $ref: '#/components/headers/WWWAuthenticate'
@@ -6105,7 +6135,14 @@ components:
             status: 401
             detail: "Missing Authorization header. Pass your API key as 'Authorization: Bearer sw_live_*'."
             next_steps:
-              recommended: get_key
+              recommended: device_flow
+              device_flow:
+                href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api#device-flow
+                description: "No install, no loopback port: POST device_authorization_endpoint, show the human the code, poll, then GET /developer/keys."
+                client_id: k2h05BUoTP393zcD
+                device_authorization_endpoint: https://clerk.smarterweather.com/oauth/device_authorization
+                token_endpoint: https://clerk.smarterweather.com/oauth/token
+                api_keys_endpoint: https://api.smarterweather.com/developer/keys
               get_key:
                 href: https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api
                 description: "Sign in (free, no card) and mint an API key. Pass it as 'Authorization: Bearer sw_live_*'."

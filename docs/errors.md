@@ -48,15 +48,19 @@ Retry-After: 12
 
 <a id="next-steps"></a>A `401`, `403`, or `429` is where a first
 integration most often stalls, so those three carry a `next_steps`
-extension member: a map of link relations, each `{ href, description }`,
-plus `recommended` naming the one to take first. When present,
-`if_no_human_present` names the relation an autonomous agent should
-take if nobody can act on `recommended` right now. Relations today:
-`get_key`, `quickstart`, `agents`, `onboarding_mcp`, `keyless_x402`,
-`key_handling`, `errors` (on `401`/`403`) and `upgrade`, `pricing`,
-`usage`, `errors` (on `429`). New relations may be added; ignore
-unknown ones. Every `href` carries
-`utm_source=api&utm_medium=problem-json&utm_campaign=<status>`.
+extension member: a map of link relations, each `{ href, description }`
+plus optional grant fields, plus `recommended` naming the one to take
+first. When present, `if_no_human_present` names the relation an
+autonomous agent should take if nobody can act on `recommended` right
+now. Relations today: `device_flow` (401 recommended; also carries
+`client_id`, `device_authorization_endpoint`, `token_endpoint`,
+`api_keys_endpoint`), `get_key`, `quickstart`, `agents`,
+`onboarding_mcp`, `keyless_x402`, `key_handling`, `errors` (on `401`;
+`403` recommends `get_key`) and `upgrade`, `pricing`, `usage`, `errors`
+(on `429`). New relations may be added; ignore unknown ones. Every
+`href` carries
+`utm_source=api&utm_medium=problem-json&utm_campaign=<status>`. Grant
+endpoints on `device_flow` do not get UTM.
 
 ```http
 HTTP/1.1 401 Unauthorized
@@ -70,7 +74,15 @@ WWW-Authenticate: Bearer realm="api.smarterweather.com"
   "detail": "Missing Authorization header. Pass your API key as 'Authorization: Bearer sw_live_*'.",
   "instance": "/v1/weather",
   "next_steps": {
-    "recommended": "get_key",
+    "recommended": "device_flow",
+    "device_flow": {
+      "href": "https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api#device-flow",
+      "description": "No install, no loopback port: POST device_authorization_endpoint, show the human the code, poll, then GET /developer/keys.",
+      "client_id": "k2h05BUoTP393zcD",
+      "device_authorization_endpoint": "https://clerk.smarterweather.com/oauth/device_authorization",
+      "token_endpoint": "https://clerk.smarterweather.com/oauth/token",
+      "api_keys_endpoint": "https://api.smarterweather.com/developer/keys"
+    },
     "get_key": {
       "href": "https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api",
       "description": "Sign in (free, no card) and mint an API key. Pass it as 'Authorization: Bearer sw_live_*'."
