@@ -18,8 +18,11 @@ metadata:
 
 # Use the Smarter Weather MCP servers
 
-Smarter Weather ships two hosted MCP servers. Never wire both into a
-long-lived client config — they serve different phases:
+Smarter Weather ships two hosted MCP servers on different hosts; they
+do not conflict, but they serve different phases. The onboarding MCP
+is one-shot: keep it in the client config only until `configure_mcp`
+has written the weather MCP entry, then remove it so its account tools
+are not left in a long-lived session.
 
 | Server | Endpoint | Auth | Purpose |
 | --- | --- | --- | --- |

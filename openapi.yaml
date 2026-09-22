@@ -21,8 +21,18 @@ info:
     ## Errors
 
     Error responses (`4xx`, `5xx`) are served with content type
-    `application/problem+json` per [RFC 7807](https://datatracker.ietf.org/doc/html/rfc7807).
+    `application/problem+json` per [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
+    (which obsoletes RFC 7807 with the same wire format).
     Successful responses use `application/json`.
+
+    `401`, `403`, and `429` responses additionally carry a `next_steps`
+    extension member: a machine-readable map of where to go next
+    (`recommended` names the link to take first), so a client -- or a
+    coding agent acting for one -- can recover from "no key", "wrong
+    scope", or "over quota" without leaving the response. `401` and
+    `403` also carry an RFC 6750 `WWW-Authenticate: Bearer` challenge.
+    Every `type` URI dereferences to a human-readable explanation at
+    [developers.smarterweather.com/errors](https://developers.smarterweather.com/errors).
 
     ## Authentication
 
@@ -35,8 +45,9 @@ info:
 
     Test-mode keys (`sw_test_*`) return live data but are excluded from
     billing meter events. Get a key from the developer dashboard at
-    [https://smarterweather.com/developers/dashboard](https://smarterweather.com/developers/dashboard)
-    once general availability ships.
+    [developers.smarterweather.com/dashboard/api-keys](https://developers.smarterweather.com/dashboard/api-keys)
+    (free, no card). Agents: start at
+    [developers.smarterweather.com/llms.txt](https://developers.smarterweather.com/llms.txt).
 
     ## Rate limits
 
@@ -422,6 +433,17 @@ paths:
             minLength: 1
             maxLength: 256
           example: "1.2.3-NWS-WW.SAMPLE.CASE"
+        - name: include
+          in: query
+          required: false
+          description: |
+            Comma-separated tokens. `impact` opts in to civic POI and
+            building-count estimates (`pois`, `buildings`). Unknown
+            tokens are ignored. Omitted on the default response so the
+            lookup stays a primary-key read.
+          schema:
+            type: string
+          example: impact
       responses:
         '200':
           description: Alert detail for the requested id.
@@ -560,6 +582,99 @@ paths:
           $ref: '#/components/responses/Problem401'
         '403':
           $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/pois/exposure:
+    post:
+      operationId: postPoisExposure
+      summary: Civic POIs inside a bounded polygon.
+      description: |
+        Returns civic POI counts and a 50-row feature sample for a caller-supplied
+        GeoJSON Polygon or MultiPolygon via `wx.estimate_polygon_pois`.
+
+        Rejects national-scale dissolves (area over 250,000 km²), invalid
+        geometry, unknown classes, bodies over 1 MiB, and queries that exceed
+        a 2s reader budget. Clip HeatRisk / outlook polygons first — do not
+        pass a CONUS product dissolve.
+
+        Optional `classes` filters to the civic allowlist (school, hospital,
+        airport, …). Omit it for every civic class.
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [geometry]
+              properties:
+                geometry:
+                  type: object
+                  description: GeoJSON Polygon or MultiPolygon.
+                  required: [type, coordinates]
+                  properties:
+                    type:
+                      type: string
+                      enum: [Polygon, MultiPolygon]
+                    coordinates:
+                      type: array
+                      items: {}
+                classes:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional civic class filter.
+      responses:
+        '200':
+          description: Civic POI counts and up to 50 features.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [counts, features]
+                properties:
+                  counts:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                  features:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, class]
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        class:
+                          type: string
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '413':
+          $ref: '#/components/responses/Problem413'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -1549,12 +1664,12 @@ paths:
           required: true
           description: |
             Partial place-name to expand. 2-128 characters, restricted
-            to alphanumerics + spaces + `,`, `.`, `-`, and `'`.
+            to alphanumerics + spaces + `,`, `.`, `-`, `'`, `#`, and `/`.
           schema:
             type: string
             minLength: 2
             maxLength: 128
-            pattern: "^[A-Za-z0-9 ,.\\-']+$"
+            pattern: "^[A-Za-z0-9 ,.\\-'#/]+$"
           example: "Chic"
         - name: count
           in: query
@@ -1567,6 +1682,42 @@ paths:
             maximum: 100
             default: 10
           example: 10
+        - name: include
+          in: query
+          required: false
+          description: |
+            Comma-separated extra result classes to mix into the
+            typeahead. Allowlisted tokens: `address`, `poi`. Omitted
+            or empty keeps the legacy place+ZIP-only response.
+          schema:
+            type: string
+          example: "address,poi"
+        - name: bias_lat
+          in: query
+          required: false
+          description: |
+            Soft rank bias latitude. Must be paired with `bias_lon`.
+            Range [-90, 90]. Forwarded as parsed; wxreader formats
+            one-decimal precision on the reader wire.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 41.8
+        - name: bias_lon
+          in: query
+          required: false
+          description: |
+            Soft rank bias longitude. Must be paired with `bias_lat`.
+            Range [-180, 180]. Forwarded as parsed; wxreader formats
+            one-decimal precision on the reader wire.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -88.2
       responses:
         '200':
           description: |
@@ -2318,8 +2469,7 @@ components:
           development.
 
         Get a key from the developer dashboard at
-        [smarterweather.com/developers/dashboard](https://smarterweather.com/developers/dashboard)
-        once general availability ships.
+        [developers.smarterweather.com/dashboard/api-keys](https://developers.smarterweather.com/dashboard/api-keys).
 
   parameters:
     LatQuery:
@@ -2417,6 +2567,18 @@ components:
         default: 48
 
   headers:
+    WWWAuthenticate:
+      description: |
+        RFC 6750 Bearer challenge. `realm` is always
+        `api.smarterweather.com`. A request with no credentials gets the
+        bare challenge (RFC 6750 §3.1); otherwise `error` is one of
+        `invalid_request` (malformed header), `invalid_token` (unknown,
+        revoked, or expired key), or `insufficient_scope` (with `scope`
+        naming the scope the route needs). `error_uri` points at the
+        error reference.
+      schema:
+        type: string
+        example: Bearer realm="api.smarterweather.com", error="invalid_token", error_description="API key is not recognised.", error_uri="https://developers.smarterweather.com/errors"
     RateLimitLimit:
       description: The request-rate limit for this API key in the current window.
       schema:
@@ -2598,15 +2760,27 @@ components:
     Problem:
       type: object
       description: |
-        RFC 7807 problem-details object served as `application/problem+json`
-        on every `4xx` and `5xx` response.
+        RFC 9457 problem-details object served as `application/problem+json`
+        on every `4xx` and `5xx` response. RFC 9457 obsoletes RFC 7807 with
+        an identical wire format; parsers written for either work.
+
+        Beyond the five standard members the object may carry extension
+        members (RFC 9457 §3.2). Today `401`, `403`, and `429` carry
+        `next_steps`. Clients MUST ignore extension members they do not
+        understand.
       required: [type, title, status]
+      additionalProperties: true
       properties:
         type:
           type: string
           format: uri
-          description: A URI reference identifying the problem type.
-          example: https://smarterweather.com/errors/invalid-key
+          description: |
+            A URI reference identifying the problem type. Stable; switch on
+            it as an opaque string. Every value under
+            `https://smarterweather.com/errors/` redirects to the matching
+            section of
+            [developers.smarterweather.com/errors](https://developers.smarterweather.com/errors).
+          example: https://smarterweather.com/errors/unauthorized
         title:
           type: string
           description: Short, human-readable summary of the problem type.
@@ -2620,6 +2794,61 @@ components:
           type: string
           format: uri
           description: A URI reference identifying the specific occurrence.
+        next_steps:
+          $ref: '#/components/schemas/ProblemNextSteps'
+
+    ProblemNextSteps:
+      type: object
+      description: |
+        Extension member on `401`, `403`, and `429` problems: where to go
+        next, as a map of link relations. `recommended` names the relation
+        a client should take first; when present, `if_no_human_present`
+        names the relation an autonomous agent should take when nobody can
+        act on the recommended one right now. Every other key is a link
+        relation (`get_key`, `quickstart`, `agents`, `onboarding_mcp`,
+        `keyless_x402`, `key_handling`, `errors`, `upgrade`, `pricing`,
+        `usage`) whose value is a `ProblemNextStepLink`. New relations may
+        be added over time; unknown relations MUST be ignored.
+      required: [recommended]
+      properties:
+        recommended:
+          type: string
+          description: The link relation to take first.
+          example: get_key
+        if_no_human_present:
+          type: string
+          description: |
+            The link relation for an autonomous agent when no human can act
+            on `recommended` right now. Absent when there is no such
+            alternative.
+      additionalProperties:
+        $ref: '#/components/schemas/ProblemNextStepLink'
+      example:
+        recommended: get_key
+        get_key:
+          href: https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api
+          description: "Sign in (free, no card) and mint an API key. Pass it as 'Authorization: Bearer sw_live_*'."
+        quickstart:
+          href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api
+          description: Three requests from zero to a live forecast call; the no-install path for agents and humans.
+        agents:
+          href: https://developers.smarterweather.com/llms.txt?utm_campaign=401&utm_medium=problem-json&utm_source=api
+          description: "Agents: start here. The full agent path, key handling, and the machine-readable contracts."
+
+    ProblemNextStepLink:
+      type: object
+      description: One destination in `next_steps`.
+      required: [href, description]
+      properties:
+        href:
+          type: string
+          format: uri
+          description: |
+            Absolute URL. Carries `utm_source=api&utm_medium=problem-json&utm_campaign=<status>`
+            so the portal can attribute visits that started from an API error.
+        description:
+          type: string
+          description: One sentence a human or agent can act on.
 
     PlatformStatus:
       type: object
@@ -3047,6 +3276,32 @@ components:
             Analysis cloud-base height above ground (RTMA/URMA), in the
             `units.altitude` unit. Null when no ceiling is reported (clear or
             high thin cloud) or outside analysis coverage.
+        cloud_cover_low:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR low-cloud-layer cover, percent (CONUS). Present only with
+            `cloud_cover_mid` and `cloud_cover_high` (all three numbers or
+            all three null). Null outside HRRR coverage or before the first
+            post-deploy cycle.
+        cloud_cover_mid:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR mid-cloud-layer cover, percent (CONUS). Same
+            all-three-or-null contract as `cloud_cover_low`.
+        cloud_cover_high:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR high-cloud-layer cover, percent (CONUS). Same
+            all-three-or-null contract as `cloud_cover_low`.
         uv_index:
           type: [number, "null"]
           format: double
@@ -3223,6 +3478,31 @@ components:
             NBM forecast cloud-base height above ground, in the
             `units.altitude` unit. Null when no ceiling is reported (clear or
             high thin cloud).
+        cloud_cover_low:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR low-cloud-layer cover, percent (CONUS). Present only with
+            `cloud_cover_mid` and `cloud_cover_high` for hours inside the
+            HRRR horizon (18 h, or 48 h on 00/06/12/18Z cycles).
+        cloud_cover_mid:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR mid-cloud-layer cover, percent (CONUS). Same
+            all-three-or-null contract as `cloud_cover_low`.
+        cloud_cover_high:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 100
+          description: >-
+            HRRR high-cloud-layer cover, percent (CONUS). Same
+            all-three-or-null contract as `cloud_cover_low`.
         snow_level:
           type: [number, "null"]
           format: double
@@ -3771,7 +4051,8 @@ components:
         Full alert representation returned by `GET /v1/alerts/{id}`.
         Supersets `Alert` with full description, instruction, geometry,
         spatial metadata (centroid, recommended zoom, affected
-        population), and the upstream NWS VTEC identifier.
+        population), the upstream NWS VTEC identifier, and path-impact
+        (`pois`, `buildings`) when the reader computed it.
 
         Field shape mirrors `wx-api`'s `GET /v1/alerts/{id}` so iOS,
         legacy CRA, and OG-service consumers swap base URLs without
@@ -3892,6 +4173,66 @@ components:
             Optional ending-time hint surfaced by the OG-share image
             renderer. Currently always omitted by the pipeline; clients
             should fall back to `expires`. Reserved for forward-compat.
+        pois:
+          type: object
+          description: |
+            Civic POIs inside the alert polygon (`wx.estimate_polygon_pois`),
+            computed once when the alert is written and stored on the alert.
+            Present only when the request includes `include=impact`.
+            `features` are capped at 50. Omitted when unavailable
+            (null geometry, timeout, or function error) or when impact
+            was not requested. Empty `counts`/`features` means computed
+            zero, not unknown.
+          properties:
+            counts:
+              type: object
+              additionalProperties:
+                type: integer
+            features:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  class:
+                    type: string
+        buildings:
+          type: object
+          description: |
+            ACS housing units and Overture building-class counts inside
+            the alert polygon (`wx.estimate_polygon_buildings`), computed once
+            when the alert is written and stored on the alert.
+            Present only when the request includes `include=impact`.
+            `housing_unit` is ACS B25001, not residences. Class keys
+            (`residential`, `commercial`, `industrial`, `civic`,
+            `other`) appear only when `gis.building_class` is loaded.
+            `features` is always empty this slice. Omitted when
+            unavailable (empty housing table, timeout, or function
+            error) or when impact was not requested.
+            `counts.housing_unit: 0` is computed zero, not unknown.
+          properties:
+            counts:
+              type: object
+              properties:
+                housing_unit:
+                  type: integer
+                residential:
+                  type: integer
+                commercial:
+                  type: integer
+                industrial:
+                  type: integer
+                civic:
+                  type: integer
+                other:
+                  type: integer
+            features:
+              type: array
+              items:
+                type: object
 
     Outlook:
       type: object
@@ -4318,7 +4659,7 @@ components:
         Single forward-geocode candidate. Field shape mirrors the
         reader's `AutosuggestResult` (most fields are nullable JSON
         nulls when the underlying row lacks the column). `type` is
-        the reader's discriminator (`city`, `zip`, etc.).
+        the reader's discriminator (`place`, `zip`, `address`, `poi`).
 
         Forward-compat: additional fields may appear without a
         sw-api release.
@@ -4364,16 +4705,33 @@ components:
         type:
           type: string
           description: |
-            Reader-side discriminator. Currently emitted values
-            include `city`, `zip`. Treat as opaque -- new types may
-            appear without a sw-api release.
-          example: "city"
+            Reader-side discriminator. Emitted values are
+            `place`, `zip`, `address`, `poi`. Treat as opaque --
+            new types may appear without a sw-api release.
+          example: "place"
         place_id:
           type: [string, "null"]
           description: |
             Census place GEOID. Same key as the v2 basemap tile `id`.
             Present on place results; omitted for ZIP results.
           example: "1714000"
+        id:
+          type: string
+          description: |
+            Stable row id for address and POI hits (and some place
+            rows). Omitted when the reader has no id.
+          example: "addr:123-main-st-naperville-il"
+        title:
+          type: string
+          description: |
+            Primary two-line copy (street or POI name). Prefer over
+            `name` for `address` and `poi` rows.
+          example: "123 Main St"
+        subtitle:
+          type: string
+          description: |
+            Secondary two-line copy (city, state, ZIP).
+          example: "Naperville, IL 60540"
       additionalProperties: true
 
     StormTrackFeature:
@@ -5731,13 +6089,52 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     Problem401:
-      description: Missing or invalid API key.
+      description: |
+        Missing or invalid API key. Carries a `WWW-Authenticate` challenge
+        and a `next_steps` extension telling the caller how to get a key.
+      headers:
+        WWW-Authenticate:
+          $ref: '#/components/headers/WWWAuthenticate'
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+          example:
+            type: https://smarterweather.com/errors/unauthorized
+            title: Unauthorized
+            status: 401
+            detail: "Missing Authorization header. Pass your API key as 'Authorization: Bearer sw_live_*'."
+            next_steps:
+              recommended: get_key
+              get_key:
+                href: https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api
+                description: "Sign in (free, no card) and mint an API key. Pass it as 'Authorization: Bearer sw_live_*'."
+              quickstart:
+                href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api
+                description: Three requests from zero to a live forecast call; the no-install path for agents and humans.
+              agents:
+                href: https://developers.smarterweather.com/llms.txt?utm_campaign=401&utm_medium=problem-json&utm_source=api
+                description: "Agents: start here. The full agent path, key handling, and the machine-readable contracts."
+              onboarding_mcp:
+                href: https://mcp.developers.smarterweather.com?utm_campaign=401&utm_medium=problem-json&utm_source=api
+                description: Anonymous Streamable HTTP MCP that can sign you up, mint a key, and configure the weather MCP in your client.
+              keyless_x402:
+                href: https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#x402
+                description: Agents with a wallet can pay per call (USDC on Base via x402) on the weather MCP with no account.
+              key_handling:
+                href: https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#key-handling
+                description: Write the key to .env, add .env to .gitignore, read SMARTERWEATHER_API_KEY in code, never echo the key in chat or commit it.
+              errors:
+                href: https://developers.smarterweather.com/errors?utm_campaign=401&utm_medium=problem-json&utm_source=api
+                description: What every problem type means and what to do next.
     Problem403:
-      description: API key lacks required scope.
+      description: |
+        API key lacks the required scope. Carries a `WWW-Authenticate`
+        challenge with `error="insufficient_scope"` and a `next_steps`
+        extension.
+      headers:
+        WWW-Authenticate:
+          $ref: '#/components/headers/WWWAuthenticate'
       content:
         application/problem+json:
           schema:
@@ -5751,8 +6148,19 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+    Problem413:
+      description: |
+        Payload too large. The request body exceeded the 1 MiB cap on
+        `POST /v1/pois/exposure`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
     Problem429:
-      description: Rate limit exceeded.
+      description: |
+        Rate limit exceeded. Carries a `next_steps` extension
+        (`recommended: upgrade`, plus `pricing` and `usage`) telling the
+        caller how to lift the limit.
       headers:
         Retry-After:
           $ref: '#/components/headers/RetryAfter'
