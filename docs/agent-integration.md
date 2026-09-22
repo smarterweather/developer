@@ -18,6 +18,14 @@ Most developers use both: MCP for runtime tool calls during agent
 sessions, plus a skill so the agent knows the right shape when generating
 code that ships to production.
 
+## Pattern 0: no install at all
+
+A coding agent that only needs to write code against the REST API does
+not need either MCP server. Call the API with no key; the `401` body's
+`next_steps` member says where to get one and how to store it
+(`.env` as `SMARTERWEATHER_API_KEY`, never in chat or a commit). See the
+[quickstart](./quickstart.md).
+
 ## Pattern 1: MCP-native agents
 
 Smarter Weather ships two MCP packages on npm and two Agent Plugins:
@@ -34,7 +42,9 @@ The recommended onboarding flow is:
 2. Restart the client with the weather plugin or
    `@smarterweather/mcp-weather` wired in.
 3. Remove the onboarding plugin / `@smarterweather/mcp-onboarding` — it
-   has done its job. Never keep both servers in one long-lived config.
+   has done its job and its account tools should not sit in a long-lived
+   config. (The two servers live on different hosts and do not conflict;
+   the removal is hygiene, not a compatibility rule.)
 
 Per-client config snippets live in
 [`docs/mcp-weather.md`](./mcp-weather.md) and

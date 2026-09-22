@@ -1,5 +1,11 @@
 # Smarter Weather Developer Platform
 
+> **Agents: start here.** Nothing to install. Call
+> `https://api.smarterweather.com/v1/weather?lat=41.66&lon=-91.53` with no
+> key; the `401` body's `next_steps` member tells you where to get one and
+> what to do with it. Full agent path: [`llms.txt`](./llms.txt) /
+> [`AGENTS.md`](./AGENTS.md).
+
 The public home for the Smarter Weather developer platform: SDKs,
 documentation, example apps, the `@smarterweather/mcp-weather` and
 `@smarterweather/mcp-onboarding` packages, agent skills, and the OpenAPI
@@ -46,7 +52,8 @@ specification for `api.smarterweather.com`.
   (weather MCP + playbooks).
   [`plugins/smarterweather-onboarding/`](./plugins/smarterweather-onboarding/)
   is the one-shot signup / key-mint install; remove it after
-  `configure_mcp`. Never put both servers in one `mcp.json`. Cursor
+  `configure_mcp` so its account tools are not left in a long-lived
+  config (the two servers live on different hosts and do not conflict). Cursor
   Marketplace discovery uses
   [`.cursor-plugin/marketplace.json`](./.cursor-plugin/marketplace.json).
   [`.cursor/skills/use-smarterweather-api/`](./.cursor/skills/use-smarterweather-api/SKILL.md)
@@ -62,10 +69,26 @@ repository.
 
 ## Quickstart
 
+Three requests, no install:
+
+```bash
+# 1. Call with no key: the 401 carries `next_steps` (and WWW-Authenticate).
+curl -sS -D - 'https://api.smarterweather.com/v1/weather?lat=41.66&lon=-91.53'
+
+# 2. Get a key (free, no card, shown once) at
+#    https://developers.smarterweather.com/dashboard/api-keys
+#    and put it in .env as SMARTERWEATHER_API_KEY (add .env to .gitignore).
+
+# 3. Call again with the key.
+curl -sS 'https://api.smarterweather.com/v1/weather?lat=41.66&lon=-91.53' \
+  -H "Authorization: Bearer $SMARTERWEATHER_API_KEY"
+```
+
 The hosted developer portal at https://developers.smarterweather.com is
 the source of truth for account creation, API key minting, plan management,
-and usage. Agents can do all of it without the dashboard by connecting to the
-onboarding MCP server — see [docs/mcp-onboarding.md](./docs/mcp-onboarding.md).
+and usage. Agents whose client speaks MCP can do the same without the
+dashboard through the onboarding MCP server — see
+[docs/mcp-onboarding.md](./docs/mcp-onboarding.md).
 
 Once you have a key:
 
