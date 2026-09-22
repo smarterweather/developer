@@ -2176,6 +2176,162 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/windows:
+    get:
+      operationId: getWindows
+      summary: Consecutive hours that meet activity criteria.
+      description: |
+        Returns runs of forecast hours that satisfy the caller's
+        criteria, the REST twin of MCP `find_best_window`. The scan is
+        deterministic. An optional `activity` string may attach a
+        favorability `rating` and `limiting_factor` to one window when
+        activity rating is enabled for the service. When rating is off,
+        or the scorer does not return a usable verdict, `rating` and
+        `limiting_factor` are omitted and the windows stay in
+        chronological order.
+
+        When a rating lands, the rated window is first and the remaining
+        windows follow by duration (longer first).
+
+        Location selectors match `GET /v1/weather`: exactly one of
+        `lat`+`lon`, `zip`, or `location`.
+
+        Outside CONUS, Alaska, and Hawaii the response is `200` with
+        `windows: []` and `message` explaining that window search uses
+        NBM. An empty scan inside coverage may also return `windows: []`
+        with `message` when no forecast series is available.
+
+        `activity` does not change the metered weight of the call.
+      tags: [Weather]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - $ref: '#/components/parameters/ZipQuery'
+        - $ref: '#/components/parameters/LocationQuery'
+        - $ref: '#/components/parameters/UnitsQuery'
+        - name: hours
+          in: query
+          required: false
+          description: How far ahead to search, in hours.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 168
+            default: 72
+        - name: activity_duration_hours
+          in: query
+          required: false
+          description: Minimum consecutive hours that must meet the criteria.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+            default: 2
+        - name: daylight_only
+          in: query
+          required: false
+          description: |
+            When true (the default), hours outside sunrise–sunset are
+            excluded when sun times are available. If sun times cannot
+            be loaded, the daylight filter is skipped.
+          schema:
+            type: boolean
+            default: true
+        - name: max_precipitation_probability
+          in: query
+          required: false
+          description: Drop hours whose precipitation probability exceeds this percent.
+          schema:
+            type: number
+            format: double
+            minimum: 0
+            maximum: 100
+        - name: min_temperature
+          in: query
+          required: false
+          description: Drop hours colder than this, in the selected units.
+          schema:
+            type: number
+            format: double
+        - name: max_temperature
+          in: query
+          required: false
+          description: Drop hours warmer than this, in the selected units.
+          schema:
+            type: number
+            format: double
+        - name: max_wind_speed
+          in: query
+          required: false
+          description: Drop hours with sustained wind above this, in the selected units.
+          schema:
+            type: number
+            format: double
+        - name: max_wind_gust
+          in: query
+          required: false
+          description: Drop hours with a gust above this, in the selected units.
+          schema:
+            type: number
+            format: double
+        - name: min_visibility
+          in: query
+          required: false
+          description: Drop hours with visibility below this, in the selected units.
+          schema:
+            type: number
+            format: double
+        - name: min_ceiling
+          in: query
+          required: false
+          description: Drop hours with a cloud ceiling below this, in the selected units.
+          schema:
+            type: number
+            format: double
+        - name: activity
+          in: query
+          required: false
+          description: |
+            Free-text activity used only when activity rating is enabled.
+            At most 200 characters. Accepted and ignored when rating is off.
+          schema:
+            type: string
+            maxLength: 200
+      responses:
+        '200':
+          description: Windows that meet the criteria, possibly empty.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WindowsResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/point:
     get:
       operationId: getPointValue
@@ -3289,6 +3445,101 @@ components:
         intensity:
           type: string
           enum: [none, light, moderate, heavy]
+
+    WindowsResponse:
+      type: object
+      required:
+        - location
+        - units
+        - windows
+        - criteria_applied
+        - daylight_only
+        - activity_duration_hours
+      properties:
+        location:
+          $ref: '#/components/schemas/Location'
+        units:
+          type: string
+          enum: [imperial, metric]
+        windows:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeatherWindow'
+        criteria_applied:
+          $ref: '#/components/schemas/WindowCriteria'
+        daylight_only:
+          type: boolean
+        activity_duration_hours:
+          type: integer
+          minimum: 1
+          maximum: 24
+        sun_times:
+          type: array
+          description: Present when daylight filtering used sunrise and sunset.
+          items:
+            type: object
+            required: [sunrise, sunset]
+            properties:
+              sunrise:
+                type: string
+                format: date-time
+              sunset:
+                type: string
+                format: date-time
+        message:
+          type: string
+          description: |
+            Set when `windows` is empty because the point is outside NBM
+            coverage or no forecast series was available.
+
+    WeatherWindow:
+      type: object
+      required: [start, end, hours]
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+          description: Timestamp of the last hour in the run.
+        hours:
+          type: integer
+          minimum: 1
+          description: Count of passing hours in the run.
+        rating:
+          type: string
+          enum: [unworkable, poor, workable, good, ideal]
+          description: Present only on the window a favorability score landed on.
+        limiting_factor:
+          type: string
+          enum: [wind, precip, temperature, visibility, storms, none]
+
+    WindowCriteria:
+      type: object
+      description: Criteria echoed back in the requested units. Omitted fields were not set.
+      properties:
+        max_precipitation_probability:
+          type: number
+          format: double
+        min_temperature:
+          type: number
+          format: double
+        max_temperature:
+          type: number
+          format: double
+        max_wind_speed:
+          type: number
+          format: double
+        max_wind_gust:
+          type: number
+          format: double
+        min_visibility:
+          type: number
+          format: double
+        min_ceiling:
+          type: number
+          format: double
 
     # -----------------------------------------------------------------------
     # Location / current / hourly / daily
