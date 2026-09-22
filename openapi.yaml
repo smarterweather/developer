@@ -29,9 +29,11 @@ info:
     extension member: a machine-readable map of where to go next
     (`recommended` names the link to take first), so a client -- or a
     coding agent acting for one -- can recover from "no key", "wrong
-    scope", or "over quota" without leaving the response. `401` and
-    `403` also carry an RFC 6750 `WWW-Authenticate: Bearer` challenge.
-    Every `type` URI dereferences to a human-readable explanation at
+    scope", or "over quota" without leaving the response. Trial keys
+    whose free value has ended receive `402` with
+    `next_steps.recommended = claim`. `401` and `403` also carry an
+    RFC 6750 `WWW-Authenticate: Bearer` challenge. Every `type` URI
+    dereferences to a human-readable explanation at
     [developers.smarterweather.com/errors](https://developers.smarterweather.com/errors).
 
     ## Authentication
@@ -283,6 +285,12 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
           content:
             application/json:
               schema:
@@ -300,6 +308,8 @@ paths:
           $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '500':
           $ref: '#/components/responses/Problem500'
         '502':
@@ -363,6 +373,12 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
           content:
             application/json:
               schema:
@@ -375,6 +391,8 @@ paths:
           $ref: '#/components/responses/Problem403'
         '429':
           $ref: '#/components/responses/Problem429'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '500':
           $ref: '#/components/responses/Problem500'
         '502':
@@ -454,6 +472,12 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
           content:
             application/json:
               schema:
@@ -468,6 +492,8 @@ paths:
           $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '500':
           $ref: '#/components/responses/Problem500'
         '502':
@@ -1613,6 +1639,12 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
           content:
             application/json:
               schema:
@@ -1627,6 +1659,8 @@ paths:
           $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '500':
           $ref: '#/components/responses/Problem500'
         '502':
@@ -1730,6 +1764,12 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
           content:
             application/json:
               schema:
@@ -1742,6 +1782,8 @@ paths:
           $ref: '#/components/responses/Problem403'
         '429':
           $ref: '#/components/responses/Problem429'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '500':
           $ref: '#/components/responses/Problem500'
         '502':
@@ -1822,6 +1864,12 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
           content:
             application/json:
               schema:
@@ -1836,6 +1884,8 @@ paths:
           $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '500':
           $ref: '#/components/responses/Problem500'
         '502':
@@ -2599,6 +2649,24 @@ components:
       schema:
         type: integer
         minimum: 0
+    XTrialClaimUrl:
+      description: |
+        Portal claim URL for this trial key
+        (`https://developers.smarterweather.com/claim#key=<raw bearer>`).
+        Present on every served trial response while the claim window is open.
+      schema:
+        type: string
+        format: uri
+    XTrialExpiresAt:
+      description: RFC 3339 instant when this trial key stops serving (key clock).
+      schema:
+        type: string
+        format: date-time
+    XTrialCallsRemaining:
+      description: Remaining lifetime calls on this trial key after this request.
+      schema:
+        type: integer
+        minimum: 0
 
   examples:
     WeatherBoston:
@@ -2765,9 +2833,9 @@ components:
         an identical wire format; parsers written for either work.
 
         Beyond the five standard members the object may carry extension
-        members (RFC 9457 §3.2). Today `401`, `403`, and `429` carry
-        `next_steps`. Clients MUST ignore extension members they do not
-        understand.
+        members (RFC 9457 §3.2). Today `401`, `402`, `403`, and `429`
+        carry `next_steps`. Clients MUST ignore extension members they
+        do not understand.
       required: [type, title, status]
       additionalProperties: true
       properties:
@@ -2797,19 +2865,40 @@ components:
         next_steps:
           $ref: '#/components/schemas/ProblemNextSteps'
 
+    ProblemTrialEnded:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [reason]
+          properties:
+            reason:
+              type: string
+              enum: [exhausted, expired]
+              description: |
+                Why free value ended. `exhausted` = lifetime call cap
+                spent; `expired` = key clock ended while the claim
+                window is still open.
+            claim_expires_at:
+              type: string
+              format: date-time
+              description: |
+                RFC 3339 instant when the claim window closes (row TTL).
+                After this, the key is unknown and returns a standard 401.
+
     ProblemNextSteps:
       type: object
       description: |
-        Extension member on `401`, `403`, and `429` problems: where to go
-        next, as a map of link relations. `recommended` names the relation
-        a client should take first; when present, `if_no_human_present`
-        names the relation an autonomous agent should take when nobody can
-        act on the recommended one right now. Every other key is a link
-        relation (`device_flow`, `get_key`, `quickstart`, `agents`,
-        `onboarding_mcp`, `keyless_x402`, `key_handling`, `errors`,
-        `upgrade`, `pricing`, `usage`) whose value is a
-        `ProblemNextStepLink`. New relations may be added over time;
-        unknown relations MUST be ignored.
+        Extension member on `401`, `402`, `403`, and `429` problems: where
+        to go next, as a map of link relations. `recommended` names the
+        relation a client should take first; when present,
+        `if_no_human_present` names the relation an autonomous agent
+        should take when nobody can act on the recommended one right
+        now. Every other key is a link relation (`device_flow`,
+        `get_key`, `quickstart`, `agents`, `onboarding_mcp`,
+        `keyless_x402`, `key_handling`, `errors`, `upgrade`, `pricing`,
+        `usage`, `claim`) whose value is a `ProblemNextStepLink`. New
+        relations may be added over time; unknown relations MUST be
+        ignored.
       required: [recommended]
       properties:
         recommended:
@@ -6207,6 +6296,30 @@ components:
           $ref: '#/components/headers/RateLimitRemaining'
         RateLimit-Reset:
           $ref: '#/components/headers/RateLimitReset'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    TrialEnded:
+      description: |
+        Trial key free value ended (lifetime cap spent or key clock
+        expired) while the claim window is still open. Carries
+        `next_steps.recommended = claim` and the per-key claim href.
+      headers:
+        X-Trial-Claim-Url:
+          $ref: '#/components/headers/XTrialClaimUrl'
+        X-Trial-Expires-At:
+          $ref: '#/components/headers/XTrialExpiresAt'
+        X-Trial-Calls-Remaining:
+          $ref: '#/components/headers/XTrialCallsRemaining'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemTrialEnded'
+    TrialRouteNotAllowed:
+      description: |
+        Trial key authenticated but is not allowed to call this route.
+        Carries `next_steps.recommended = claim`.
       content:
         application/problem+json:
           schema:
