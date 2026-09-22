@@ -294,6 +294,11 @@
             "type": "boolean",
             "default": true,
             "description": "Only consider daylight hours (sunrise to sunset). Default true."
+          },
+          "activity": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Free-form activity to rate the windows for (e.g. \"afternoon golf\"). Accepted even when rating is off so clients can send it."
           }
         },
         "required": [
@@ -340,6 +345,27 @@
                 },
                 "hours": {
                   "type": "number"
+                },
+                "rating": {
+                  "type": "string",
+                  "enum": [
+                    "unworkable",
+                    "poor",
+                    "workable",
+                    "good",
+                    "ideal"
+                  ]
+                },
+                "limiting_factor": {
+                  "type": "string",
+                  "enum": [
+                    "wind",
+                    "precip",
+                    "temperature",
+                    "visibility",
+                    "storms",
+                    "none"
+                  ]
                 }
               },
               "required": [
