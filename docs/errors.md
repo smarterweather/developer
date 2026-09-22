@@ -60,7 +60,10 @@ now. Relations today: `device_flow` (401 recommended; also carries
 (on `429`). New relations may be added; ignore unknown ones. Every
 `href` carries
 `utm_source=api&utm_medium=problem-json&utm_campaign=<status>`. Grant
-endpoints on `device_flow` do not get UTM.
+endpoints on `device_flow` do not get UTM. When trial keys ship, a trial
+key whose free value has ended receives `402` with
+`next_steps.recommended = claim` (see
+[ADR 071](../developer/adr/071-agent-first-developer-onboarding.md)).
 
 ```http
 HTTP/1.1 401 Unauthorized
