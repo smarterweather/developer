@@ -62,8 +62,11 @@ incumbent APIs.
 
 ## Errors
 
-Errors return [RFC 7807 `application/problem+json`](https://datatracker.ietf.org/doc/html/rfc7807)
-documents with a stable shape:
+Errors return [RFC 9457 `application/problem+json`](https://www.rfc-editor.org/rfc/rfc9457)
+documents (same wire format as RFC 7807) with a stable shape. `401`, `403`,
+and `429` additionally carry a `next_steps` extension member naming where to
+go next, and `401` / `403` carry an RFC 6750 `WWW-Authenticate: Bearer`
+challenge; see [`errors.md`](./errors.md).
 
 ```json
 {

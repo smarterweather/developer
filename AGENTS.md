@@ -2,6 +2,19 @@
 
 Guidance for AI agents integrating with Smarter Weather.
 
+**Agents: start here.** There is nothing to install. Call the REST API with
+no key and read the response: every `401`, `403`, and `429` is an RFC 9457
+problem whose `next_steps` member names where to go (`recommended` first)
+and carries an RFC 6750 `WWW-Authenticate: Bearer` challenge.
+
+```bash
+curl -sS -D - 'https://api.smarterweather.com/v1/weather?lat=41.66&lon=-91.53'
+```
+
+Then get a key (see below), write it to `.env` as
+`SMARTERWEATHER_API_KEY`, add `.env` to `.gitignore`, and call again with
+`Authorization: Bearer sw_live_*`.
+
 ## Surfaces
 
 | Surface | Endpoint | Auth |
@@ -17,7 +30,16 @@ Canonical machine-readable contracts:
 - Agent Plugin (skills + MCP config): [`plugins/smarterweather/`](./plugins/smarterweather/)
 - Agent doc index: [`llms.txt`](./llms.txt)
 
-## Preferred onboarding path
+## Getting a key
+
+- **Human present (recommended):** send them to
+  <https://developers.smarterweather.com/dashboard/api-keys> (free, no
+  card; the key is shown once) and have them put it in `.env`, not chat.
+- **Client speaks MCP:** use the onboarding MCP path below.
+- **Agent holds a wallet:** pay per call on the weather MCP via x402
+  (USDC on Base); no account needed.
+
+## Onboarding MCP path
 
 1. Connect to the **onboarding MCP** with no credentials.
 2. Call `get_plans` / `get_documentation` / `sign_up`. `sign_up` returns
@@ -25,7 +47,8 @@ Canonical machine-readable contracts:
    (no credit card for the free tier).
 3. Complete Clerk OAuth when the host prompts.
 4. Call `create_api_key` (idempotent) and `configure_mcp`.
-5. Use the returned key against the weather MCP or REST API.
+5. Use the returned key against the weather MCP or REST API, then remove
+   the onboarding server from the client config (it is one-shot).
 
 stdio bridges (local clients that cannot speak Streamable HTTP):
 
@@ -46,7 +69,9 @@ native `url` OAuth for gated tools (Clerk + `cursor://` is broken).
 
 - Prefer `Authorization: Bearer <key>` (not `X-API-Key`).
 - Rate-limit headers follow the `RateLimit-*` family (see docs).
-- Errors use RFC 7807 problem details.
+- Errors use RFC 9457 problem details (same wire format as RFC 7807);
+  `401` / `403` / `429` carry a `next_steps` extension. See
+  [docs/errors.md](./docs/errors.md).
 
 ## Docs
 
@@ -60,7 +85,8 @@ native `url` OAuth for gated tools (Clerk + `cursor://` is broken).
 ## Do not
 
 - Invent endpoints or tools not listed in OpenAPI / `tools/list`.
-- Paste live API keys into committed config files.
+- Paste live API keys into committed config files, chat output, or logs;
+  read `SMARTERWEATHER_API_KEY` from the environment.
 - Edit `openapi.yaml`, `descriptors/mcp-tools.json`, or
   `plugins/smarterweather/skills/` as the source of truth — they are
   mirrored from the private monorepo.

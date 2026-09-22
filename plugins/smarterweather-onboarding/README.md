@@ -11,8 +11,9 @@ configure the weather client. Then **remove it**.
 | `skills/smarterweather-onboarding` | Create account → mint key → configure weather → remove |
 
 This is not the weather plugin. The long-lived install unit is
-[`plugins/smarterweather/`](../smarterweather/). Never put both servers
-in one `mcp.json`.
+[`plugins/smarterweather/`](../smarterweather/). Remove this one after
+`configure_mcp` so its account tools are not left in a long-lived config;
+the two servers live on different hosts and do not conflict.
 
 Cursor Marketplace discovery uses the repo-root
 [`.cursor-plugin/marketplace.json`](../../.cursor-plugin/marketplace.json)

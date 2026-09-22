@@ -64,7 +64,7 @@ weather = sw.weather.get(latitude=41.88, longitude=-87.63)
 ```
 
 Both SDKs ship typed responses, structured error classes that mirror the
-[RFC 7807 error model](./errors.md), and built-in handling of the
+[RFC 9457 error model](./errors.md), and built-in handling of the
 `RateLimit-*` headers.
 
 ## Until SDKs ship

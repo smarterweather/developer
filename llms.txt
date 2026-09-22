@@ -5,20 +5,28 @@
 > onboarding MCP server (mcp.developers.smarterweather.com) that can sign you
 > up, mint API keys, and configure your client — all from inside an AI agent.
 
-Agents onboarding a developer should start with the onboarding MCP server:
-connect anonymously to https://mcp.developers.smarterweather.com (Streamable
-HTTP, no credentials) and call get_plans / get_documentation / sign_up.
-Account-scoped tools (API key minting, billing) unlock after OAuth 2.1 sign-in.
+Agents: start here. There is nothing to install. Call
+https://api.smarterweather.com/v1/weather?lat=41.66&lon=-91.53 with no key;
+the 401 is an RFC 9457 problem whose `next_steps` member names where to get a
+key (`recommended` first). Send the human to
+https://developers.smarterweather.com/dashboard/api-keys (free, no card, shown
+once), write the key to `.env` as SMARTERWEATHER_API_KEY, add `.env` to
+`.gitignore`, never echo it into chat or a commit, and call again with
+`Authorization: Bearer sw_live_*`. If the client speaks MCP, connect
+anonymously to https://mcp.developers.smarterweather.com (Streamable HTTP) and
+call get_plans / sign_up; account-scoped tools (create_api_key, configure_mcp)
+unlock after OAuth 2.1 sign-in; remove that server afterwards. Agents with a
+wallet can pay per call on the weather MCP via x402 instead.
 
 ## Docs
 
-- [Quickstart](https://github.com/smarterweather/developer/blob/main/docs/quickstart.md): mint a key and make your first REST and MCP calls
+- [Quickstart](https://github.com/smarterweather/developer/blob/main/docs/quickstart.md): three requests from zero to a live forecast call, then the MCP path
 - [REST API guide](https://github.com/smarterweather/developer/blob/main/docs/rest-api.md): auth, endpoints, rate-limit headers, pagination
 - [OpenAPI specification](https://github.com/smarterweather/developer/blob/main/openapi.yaml): full machine-readable contract for api.smarterweather.com
 - [Weather MCP server guide](https://github.com/smarterweather/developer/blob/main/docs/mcp-weather.md): hosted endpoint, the 29-tool catalog (forecasts, alerts, outlooks, raw dataset queries, rendered radar/satellite map + sounding imagery), stdio bridge (@smarterweather/mcp-weather)
 - [Onboarding MCP server guide](https://github.com/smarterweather/developer/blob/main/docs/mcp-onboarding.md): agent-first signup, key provisioning, client config (@smarterweather/mcp-onboarding)
 - [Agent integration guide](https://github.com/smarterweather/developer/blob/main/docs/agent-integration.md): patterns for wiring Smarter Weather into AI agents
-- [Error model](https://github.com/smarterweather/developer/blob/main/docs/errors.md): RFC 7807 problem details and retry semantics
+- [Error model](https://github.com/smarterweather/developer/blob/main/docs/errors.md): RFC 9457 problem details, the `next_steps` extension, and retry semantics
 - [SDKs](https://github.com/smarterweather/developer/blob/main/docs/sdks.md): official client libraries
 
 ## Optional
