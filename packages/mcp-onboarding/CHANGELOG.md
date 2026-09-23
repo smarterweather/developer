@@ -1,5 +1,11 @@
 # @smarterweather/mcp-onboarding
 
+## 0.1.0
+
+### Minor Changes
+
+- [#80](https://github.com/smarterweather/developer/pull/80) [`4d46d5a`](https://github.com/smarterweather/developer/commit/4d46d5a52ba69988b43a509848f3e764f73d4ce2) Thanks [@afisch710](https://github.com/afisch710)! - Local `start_trial` writes `SMARTERWEATHER_API_KEY` to `.env` (mode 0600) and returns only a key prefix — the stdio bridge never prints the trial bearer.
+
 ## 0.0.3
 
 ### Patch Changes
