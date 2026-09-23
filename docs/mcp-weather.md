@@ -101,13 +101,15 @@ OAuth:
 }
 ```
 
-API key — prefer `envFile` so the bridge reads `./.env` written by
-`login` / `trial` / `start_trial`:
+API key — in the project `.cursor/mcp.json`, use `envFile` so the
+bridge reads the `.env` written by `login` / `trial` / `start_trial`
+(Cursor requires `"type": "stdio"` for `envFile`):
 
 ```jsonc
 {
   "mcpServers": {
     "smarterweather": {
+      "type": "stdio",
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"],
       "envFile": "${workspaceFolder}/.env"
@@ -140,6 +142,24 @@ uses the identical `mcpServers` shape:
     "smarterweather": {
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"]
+    }
+  }
+}
+```
+
+API key — Claude Desktop does not interpolate `${…}`, so point the
+bridge at the project `.env` by absolute path instead of pasting the
+key:
+
+```jsonc
+{
+  "mcpServers": {
+    "smarterweather": {
+      "command": "npx",
+      "args": ["-y", "@smarterweather/mcp-weather"],
+      "env": {
+        "SMARTERWEATHER_ENV_FILE": "/absolute/path/to/your/project/.env"
+      }
     }
   }
 }

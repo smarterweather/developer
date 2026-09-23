@@ -45,17 +45,18 @@ When Claude Desktop starts the server, your default browser opens to a SmarterWe
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"],
       "env": {
-        "SMARTERWEATHER_API_KEY": "<from create_api_key>"
+        "SMARTERWEATHER_ENV_FILE": "/absolute/path/to/your/project/.env"
       }
     }
   }
 }
 ```
 
-Claude Desktop does not interpolate env placeholders — replace
-`<from create_api_key>` with the key in this local file (do not
-commit it). The bridge injects `Authorization: Bearer <key>` on
-every proxied request. No browser pop-up.
+Claude Desktop does not interpolate env placeholders, so point the
+bridge at the `.env` that `login` / `trial` wrote, by absolute path —
+never paste the key into this file. The bridge injects
+`Authorization: Bearer <key>` on every proxied request. No browser
+pop-up.
 
 ## Cursor
 
@@ -72,12 +73,14 @@ Add to `~/.cursor/mcp.json`. OAuth:
 }
 ```
 
-API key — Cursor `envFile` (preferred after `login` / `trial`):
+API key — Cursor `envFile` in the project `.cursor/mcp.json`
+(preferred after `login` / `trial`; `envFile` requires `"type": "stdio"`):
 
 ```json
 {
   "mcpServers": {
     "smarterweather": {
+      "type": "stdio",
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"],
       "envFile": "${workspaceFolder}/.env"
@@ -92,6 +95,7 @@ Or `${env:NAME}` from the process environment:
 {
   "mcpServers": {
     "smarterweather": {
+      "type": "stdio",
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"],
       "env": {

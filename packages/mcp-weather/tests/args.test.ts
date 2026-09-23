@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildArgs } from '../src/args.js';
-import { KEY_VAR, resolveApiKey } from '../src/env.js';
+import { describeMissingKey, KEY_VAR, resolveApiKey } from '../src/env.js';
 
 const DEFAULT_URL = 'https://mcp.smarterweather.com';
 const FAKE = `sw_live_${'op'.repeat(20)}`;
@@ -186,6 +186,25 @@ describe('resolveApiKey', () => {
       homedir: '/Users/nobody',
       warn: () => undefined,
     });
-    expect(hit).toEqual({ ok: false, reason: 'guarded_cwd' });
+    expect(hit).toEqual({ ok: false, reason: 'guarded_cwd', searched: [`$${KEY_VAR}`] });
+  });
+
+  it('skips an unreadable env file with a warning and says where it looked', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-weather-env-'));
+    const warnings: string[] = [];
+    const hit = resolveApiKey({
+      envFile: dir,
+      cwd: dir,
+      homedir: '/Users/nobody',
+      warn: (m) => warnings.push(m),
+    });
+    expect(hit.ok).toBe(false);
+    expect(warnings.join('\n')).toMatch(/cannot read/);
+    if (!hit.ok) {
+      const line = describeMissingKey(hit);
+      expect(line).toContain(dir);
+      expect(line).toContain(join(dir, '.env'));
+      expect(line).toMatch(/OAuth/);
+    }
   });
 });

@@ -44,20 +44,24 @@ config — not in this portable `mcp.json` (the spec has no fallback, and
 `npx` as `command` is a worse path for ChatGPT / Claude).
 
 ```jsonc
-// ~/.cursor/mcp.json (or the client's equivalent)
+// project .cursor/mcp.json
 {
   "mcpServers": {
     "smarterweather": {
+      "type": "stdio",
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"],
-      "env": { "SMARTERWEATHER_API_KEY": "<from shell, not pasted here>" }
+      "envFile": "${workspaceFolder}/.env"
     }
   }
 }
 ```
 
-Set `SMARTERWEATHER_API_KEY` in the process environment. Do **not** append
-`@preview` — `latest` is the GA bridge.
+`npx -y @smarterweather/mcp-onboarding@latest login` (or `trial`) writes
+`SMARTERWEATHER_API_KEY` to that `.env`. Clients without `envFile` set
+`SMARTERWEATHER_ENV_FILE` to the `.env`'s absolute path; never paste the
+key into a config. Do **not** append `@preview` — `latest` is the GA
+bridge.
 
 ## What this plugin does not include
 

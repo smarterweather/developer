@@ -23,6 +23,7 @@ import { createRequire } from 'node:module';
 import { buildArgs } from './args.js';
 import {
   AUTH_HEADER_VAR,
+  describeMissingKey,
   ENV_FILE_VAR,
   KEY_VAR,
   resolveApiKey,
@@ -53,6 +54,7 @@ const resolved = resolveApiKey({
   cwd: process.cwd(),
   homedir: homedir(),
 });
+if (!resolved.ok) process.stderr.write(`${describeMissingKey(resolved)}\n`);
 
 const args = buildArgs(userArgs, {
   url: process.env.SMARTERWEATHER_MCP_URL,

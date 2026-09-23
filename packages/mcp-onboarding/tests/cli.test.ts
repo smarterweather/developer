@@ -1,8 +1,15 @@
-import { mkdtempSync, readFileSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseCliArgs, runLoginCli, runTrialCli } from '../src/cli.js';
+import {
+  KEY_NAME_MAX,
+  keyNameForEnvPath,
+  parseCliArgs,
+  runLoginCli,
+  runTrialCli,
+} from '../src/cli.js';
 import { resetStartTrialLock } from '../src/trial.js';
 
 const FAKE = `sw_live_${'ij'.repeat(20)}`;
@@ -23,7 +30,35 @@ describe('parseCliArgs', () => {
     expect(parseCliArgs(['login', '--json'])).toEqual({ command: 'login', json: true });
     expect(parseCliArgs(['--debug'])).toBeNull();
   });
+
+  it('routes help and unknown words instead of starting the proxy', () => {
+    expect(parseCliArgs(['help'])).toEqual({ command: 'help' });
+    expect(parseCliArgs(['--help'])).toEqual({ command: 'help' });
+    expect(parseCliArgs(['-h'])).toEqual({ command: 'help' });
+    expect(parseCliArgs(['signup'])).toEqual({ command: 'unknown', arg: 'signup' });
+    expect(parseCliArgs([])).toBeNull();
+    expect(parseCliArgs(['https://mcp.example.com', '--header', 'X:1'])).toBeNull();
+  });
 });
+
+describe('keyNameForEnvPath', () => {
+  it('labels by the directory holding the .env and caps length', () => {
+    expect(keyNameForEnvPath('/work/acme-app/.env')).toBe('cli acme-app');
+    expect(keyNameForEnvPath(`/work/${'x'.repeat(100)}/.env`)).toHaveLength(KEY_NAME_MAX);
+  });
+});
+
+function device(): Response {
+  return jsonResponse(200, {
+    device_code: 'x',
+    user_code: 'Y',
+    verification_uri: 'https://example.com',
+    expires_in: 100,
+    interval: 1,
+  });
+}
+
+const frozenNow = () => 1_000_000;
 
 describe('runTrialCli', () => {
   it('mints, writes .env 0600, and never prints the key', async () => {
@@ -255,5 +290,110 @@ describe('runLoginCli', () => {
     expect(code).toBe(1);
     expect(lines.join('\n')).toMatch(/key_cap|25\/owner|dashboard\/api-keys/);
     expect(TOKEN_LEAK_RE.test(lines.join('\n'))).toBe(false);
+  });
+
+  it('keeps polling through a transient network error', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-cli-login-'));
+    const errs: string[] = [];
+    let polls = 0;
+    const code = await runLoginCli(
+      {
+        cwd: dir,
+        homedir: '/Users/nobody',
+        stdout: () => undefined,
+        stderr: (l) => errs.push(l),
+        sleep: async () => undefined,
+        now: frozenNow,
+        fetchImpl: async (input) => {
+          const url = String(input);
+          if (url.includes('/device_authorization')) return device();
+          if (url.includes('/oauth/token')) {
+            polls += 1;
+            if (polls <= 2) throw new Error('ECONNRESET');
+            return jsonResponse(200, { access_token: FAKE_TOKEN });
+          }
+          return jsonResponse(200, { key: FAKE, keyId: 'key_1' });
+        },
+      },
+      {},
+    );
+    expect(code).toBe(0);
+    expect(polls).toBe(3);
+    expect(errs.filter((l) => l.includes('ECONNRESET'))).toHaveLength(1);
+  });
+
+  it('with --json, reports failures as one JSON object on stdout', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-cli-login-'));
+    const stdout: string[] = [];
+    const code = await runLoginCli(
+      {
+        cwd: dir,
+        homedir: '/Users/nobody',
+        stdout: (l) => stdout.push(l),
+        stderr: () => undefined,
+        fetchImpl: async () => {
+          throw new Error('getaddrinfo ENOTFOUND');
+        },
+      },
+      { json: true },
+    );
+    expect(code).toBe(1);
+    expect(JSON.parse(stdout[0])).toMatchObject({ status: 'error', error: 'network' });
+  });
+
+  it('names the keyId to revoke when the minted key cannot be written', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-cli-login-'));
+    const blocker = join(dir, 'not-a-dir');
+    writeFileSync(blocker, '');
+    const stdout: string[] = [];
+    const code = await runLoginCli(
+      {
+        envFile: join(blocker, '.env'),
+        cwd: dir,
+        homedir: '/Users/nobody',
+        stdout: (l) => stdout.push(l),
+        stderr: () => undefined,
+        sleep: async () => undefined,
+        now: frozenNow,
+        fetchImpl: async (input) => {
+          const url = String(input);
+          if (url.includes('/device_authorization')) return device();
+          if (url.includes('/oauth/token')) return jsonResponse(200, { access_token: FAKE_TOKEN });
+          return jsonResponse(200, { key: FAKE, keyId: 'key_orphan' });
+        },
+      },
+      { json: true },
+    );
+    expect(code).toBe(1);
+    const last = JSON.parse(stdout[stdout.length - 1]);
+    expect(last).toMatchObject({ status: 'error', error: 'env_write' });
+    expect(last.detail).toContain('key_orphan');
+    expect(last.detail).toContain(FAKE.slice(0, 12));
+    expect(KEY_LEAK_RE.test(stdout.join('\n'))).toBe(false);
+  });
+});
+
+describe('git-tracked .env', () => {
+  it('refuses trial and login before any network call', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-cli-git-'));
+    writeFileSync(join(dir, '.env'), 'OTHER=1\n');
+    execFileSync('git', ['init', '-q'], { cwd: dir });
+    execFileSync('git', ['add', '.env'], { cwd: dir });
+    let fetched = 0;
+    const deps = {
+      cwd: dir,
+      homedir: '/Users/nobody',
+      stdout: () => undefined,
+      stderr: () => undefined,
+      fetchImpl: async () => {
+        fetched += 1;
+        return jsonResponse(500, {});
+      },
+    };
+    resetStartTrialLock();
+    expect(await runTrialCli(deps, {})).toBe(2);
+    expect(await runLoginCli(deps, {})).toBe(2);
+    expect(fetched).toBe(0);
+    expect(readFileSync(join(dir, '.env'), 'utf8')).toBe('OTHER=1\n');
   });
 });

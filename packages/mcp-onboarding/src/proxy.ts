@@ -4,6 +4,7 @@ import { displayPrefix, isUsableKey, readExistingKey } from './env.js';
 import {
   alreadyConfiguredHandling,
   checkAlreadyConfigured,
+  trackedEnvError,
   writeNewKey,
   writeReplacedKey,
 } from './sink.js';
@@ -27,7 +28,6 @@ export type ProxySinkContext = {
 };
 
 const ROOTS_ID_PREFIX = 'sw-onboarding-roots-';
-const SINK_TOOLS = new Set(['create_api_key', 'rotate_api_key']);
 
 function parseLine(line: string): JsonRpc | JsonRpc[] | undefined {
   try {
@@ -170,6 +170,28 @@ function stripKeyFields(
   return r;
 }
 
+const KEY_SHAPED_RE = /sw_(?:live|test)_[A-Za-z0-9_-]{20,}/g;
+
+/** Last line of defense: no key-shaped string reaches the host, whatever shape the server used. */
+function redactKeys(result: unknown): unknown {
+  const dumped = JSON.stringify(result);
+  if (dumped === undefined || !KEY_SHAPED_RE.test(dumped)) return result;
+  KEY_SHAPED_RE.lastIndex = 0;
+  return JSON.parse(
+    dumped.replace(KEY_SHAPED_RE, (k) => `${displayPrefix(k)}…[redacted; not written to .env]`),
+  ) as unknown;
+}
+
+function mintedKeyId(
+  tool: 'create_api_key' | 'rotate_api_key',
+  structured: Record<string, unknown> | undefined,
+): unknown {
+  if (!structured) return undefined;
+  return tool === 'create_api_key'
+    ? structured.keyId
+    : (structured.newKey as { keyId?: string } | undefined)?.keyId;
+}
+
 export type JsonRpcProxy = {
   requestHostRoots: () => Promise<string[]>;
 };
@@ -224,48 +246,35 @@ export function attachJsonRpcProxy(opts: {
       return;
     }
 
+    const callName = toolsCallName(parsed);
     if (
       opts.sink &&
-      isToolsCall(parsed, 'create_api_key') &&
+      (callName === 'create_api_key' || callName === 'rotate_api_key') &&
       parsed.id !== undefined &&
       parsed.id !== null
     ) {
       const id = parsed.id;
+      const reply = (result: unknown) => writeLine(opts.hostOut, { jsonrpc: '2.0', id, result });
       void (async () => {
-        const target = await opts.sink!.resolveEnvPath();
-        if (!target.ok) {
-          writeLine(opts.hostOut, {
-            jsonrpc: '2.0',
-            id,
-            result: toolError(target.error),
-          });
-          return;
+        // Nothing is minted until the call is forwarded, so refuse here rather than after.
+        try {
+          const target = await opts.sink!.resolveEnvPath();
+          if (!target.ok) return reply(toolError(target.error));
+          const tracked = trackedEnvError(target.path);
+          if (tracked) return reply(toolError(tracked));
+          if (callName === 'create_api_key') {
+            const already = checkAlreadyConfigured(opts.sink!.processEnvKey, target.path);
+            if (already) {
+              return reply(toolResult({ ...already, handling: alreadyConfiguredHandling(already) }));
+            }
+          }
+        } catch (e) {
+          return reply(toolError(`cannot use the .env target: ${(e as Error).message}`));
         }
-        const already = checkAlreadyConfigured(opts.sink!.processEnvKey, target.path);
-        if (already) {
-          writeLine(opts.hostOut, {
-            jsonrpc: '2.0',
-            id,
-            result: toolResult({ ...already, handling: alreadyConfiguredHandling(already) }),
-          });
-          return;
-        }
-        pendingSinkIds.set(id, 'create_api_key');
+        pendingSinkIds.set(id, callName);
         opts.childIn.write(`${line}\n`);
       })();
       return;
-    }
-
-    const callName = toolsCallName(parsed);
-    if (
-      opts.sink &&
-      callName &&
-      SINK_TOOLS.has(callName) &&
-      callName === 'rotate_api_key' &&
-      parsed.id !== undefined &&
-      parsed.id !== null
-    ) {
-      pendingSinkIds.set(parsed.id, 'rotate_api_key');
     }
 
     if (parsed.method === 'tools/list' && parsed.id !== undefined && parsed.id !== null) {
@@ -293,20 +302,25 @@ export function attachJsonRpcProxy(opts: {
       return;
     }
 
-    if (
-      opts.sink &&
-      parsed.id !== undefined &&
-      parsed.id !== null &&
-      pendingSinkIds.has(parsed.id) &&
-      parsed.result !== undefined
-    ) {
+    if (opts.sink && parsed.id !== undefined && parsed.id !== null && pendingSinkIds.has(parsed.id)) {
       const tool = pendingSinkIds.get(parsed.id)!;
       pendingSinkIds.delete(parsed.id);
-      void (async () => {
-        const sunk = await sinkChildResult(opts.sink!, tool, parsed.result);
-        writeLine(opts.hostOut, { ...parsed, result: sunk });
-      })();
-      return;
+      if (parsed.result !== undefined) {
+        void (async () => {
+          let sunk: unknown;
+          try {
+            sunk = await sinkChildResult(opts.sink!, tool, parsed.result);
+          } catch (e) {
+            const keyId = mintedKeyId(tool, parseStructured(parsed.result));
+            sunk = toolError(
+              `key was minted but written nowhere (${(e as Error).message}). Revoke keyId ${String(keyId ?? 'unknown')}.`,
+              { keyId },
+            );
+          }
+          writeLine(opts.hostOut, { ...parsed, result: redactKeys(sunk) });
+        })();
+        return;
+      }
     }
 
     opts.hostOut.write(`${line}\n`);
@@ -336,16 +350,13 @@ async function sinkChildResult(
 ): Promise<unknown> {
   const structured = parseStructured(result);
   if (!structured) {
-    // Unparseable — pass through unchanged (never drop a key the server minted).
+    // Unrecognized shape: nothing to sink; redactKeys still masks any key in it.
     return result;
   }
 
   const target = await sink.resolveEnvPath();
   if (!target.ok) {
-    const keyId =
-      tool === 'create_api_key'
-        ? structured.keyId
-        : (structured.newKey as { keyId?: string } | undefined)?.keyId;
+    const keyId = mintedKeyId(tool, structured);
     return toolError(
       `key was minted but could not be written to .env (${target.error}). Revoke keyId ${String(keyId ?? 'unknown')} and retry after setting SMARTERWEATHER_ENV_FILE.`,
       { keyId },

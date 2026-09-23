@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import {
   checkAlreadyConfigured,
   resolveSinkTarget,
+  trackedEnvError,
   writeNewKey,
   type AlreadyConfigured,
 } from './sink.js';
@@ -94,6 +95,8 @@ async function runStartTrial(deps: StartTrialDeps): Promise<StartTrialResult> {
   if (!target.ok) {
     return { status: 'error', error: 'env_path', detail: target.error };
   }
+  const tracked = trackedEnvError(target.path);
+  if (tracked) return { status: 'error', error: 'env_path', detail: tracked };
 
   const already = checkAlreadyConfigured(deps.processEnvKey, target.path);
   if (already) return already;
@@ -192,6 +195,10 @@ async function runStartTrial(deps: StartTrialDeps): Promise<StartTrialResult> {
         env_path: target.path,
       };
     }
-    return { status: 'error', error: 'env_path', detail: (err as Error).message };
+    return {
+      status: 'error',
+      error: 'env_path',
+      detail: `trial key ${displayPrefix(minted.api_key)} was minted but could not be written (${(err as Error).message}); it expires unclaimed. Fix the path and retry.`,
+    };
   }
 }

@@ -55,7 +55,22 @@ export function isUsableKey(value: string | undefined): value is string {
 
 export type ResolveKeyResult =
   | { ok: true; key: string; source: 'env' | 'env_file' | 'cwd' }
-  | { ok: false; reason: 'unset' | 'unexpanded' | 'guarded_cwd' };
+  | { ok: false; reason: 'unset' | 'unexpanded' | 'guarded_cwd'; searched: string[] };
+
+/** An unreadable .env (directory, permissions) is skipped with a warning, not a crash. */
+function readKeyOrWarn(filePath: string, warn: (msg: string) => void): string | undefined {
+  try {
+    return readExistingKey(filePath);
+  } catch (err) {
+    warn(`@smarterweather/mcp-weather: cannot read ${filePath} (${(err as Error).message}); skipping`);
+    return undefined;
+  }
+}
+
+/** One stderr line for the no-key case, naming every place that was checked. */
+export function describeMissingKey(result: Extract<ResolveKeyResult, { ok: false }>): string {
+  return `@smarterweather/mcp-weather: no ${KEY_VAR} found (checked ${result.searched.join(', ')}); connecting without a key, so the server will ask for OAuth sign-in.`;
+}
 
 export function resolveApiKey(opts: {
   processEnvKey?: string;
@@ -65,6 +80,7 @@ export function resolveApiKey(opts: {
   warn?: (msg: string) => void;
 }): ResolveKeyResult {
   const warn = opts.warn ?? ((msg: string) => process.stderr.write(`${msg}\n`));
+  const searched = [`$${KEY_VAR}`];
 
   if (opts.processEnvKey !== undefined && opts.processEnvKey.trim() !== '') {
     if (UNEXPANDED_RE.test(opts.processEnvKey.trim())) {
@@ -77,20 +93,24 @@ export function resolveApiKey(opts: {
   }
 
   if (opts.envFile && opts.envFile.trim()) {
-    const fromFile = readExistingKey(resolve(opts.envFile.trim()));
+    const envFilePath = resolve(opts.envFile.trim());
+    searched.push(envFilePath);
+    const fromFile = readKeyOrWarn(envFilePath, warn);
     if (isUsableKey(fromFile)) {
       return { ok: true, key: fromFile, source: 'env_file' };
     }
   }
 
   if (isGuardedCwd(opts.cwd, opts.homedir)) {
-    return { ok: false, reason: 'guarded_cwd' };
+    return { ok: false, reason: 'guarded_cwd', searched };
   }
 
-  const fromCwd = readExistingKey(resolve(opts.cwd, '.env'));
+  const cwdPath = resolve(opts.cwd, '.env');
+  searched.push(cwdPath);
+  const fromCwd = readKeyOrWarn(cwdPath, warn);
   if (isUsableKey(fromCwd)) {
     return { ok: true, key: fromCwd, source: 'cwd' };
   }
 
-  return { ok: false, reason: 'unset' };
+  return { ok: false, reason: 'unset', searched };
 }

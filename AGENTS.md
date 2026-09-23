@@ -45,8 +45,10 @@ Canonical machine-readable contracts:
 - **Agent holds a wallet:** pay per call on the weather MCP via x402
   (USDC on Base); no account needed.
 - **Raw HTTP (curl / conformance only):** `POST /developer/keys` and
-  `POST /developer/keys/trial` return the bearer in the body — write it
-  straight to a file; never print it.
+  `POST /developer/keys/trial` return the bearer in the body — write only
+  the `key` / `api_key` field to `.env` as `SMARTERWEATHER_API_KEY=`
+  (e.g. `jq -er '"SMARTERWEATHER_API_KEY=" + .key' >> .env`); never print
+  it.
 
 ## Onboarding MCP path
 

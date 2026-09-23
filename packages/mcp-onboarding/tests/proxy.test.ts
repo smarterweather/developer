@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -367,4 +368,103 @@ describe('json-rpc proxy', () => {
     const msg = JSON.parse(await outP);
     expect(msg.result.content[0].text).toBe('not-json');
   });
+
+  it('redacts a key the server put in a non-JSON text block', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-proxy-'));
+    const envPath = join(dir, '.env');
+    const { hostIn, hostOut, childOut } = wire(envPath);
+
+    hostIn.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 14, method: 'tools/call', params: { name: 'create_api_key', arguments: {} } })}\n`,
+    );
+    await new Promise((r) => setTimeout(r, 10));
+
+    const outP = nextLine(hostOut);
+    childOut.write(
+      `${JSON.stringify({
+        jsonrpc: '2.0',
+        id: 14,
+        result: {
+          structuredContent: { key: FAKE, keyId: 'key_1' },
+          content: [
+            { type: 'text', text: JSON.stringify({ key: FAKE, keyId: 'key_1' }) },
+            { type: 'text', text: `Your key: ${FAKE}` },
+          ],
+        },
+      })}\n`,
+    );
+    const msg = JSON.parse(await outP);
+    expect(KEY_LEAK_RE.test(JSON.stringify(msg))).toBe(false);
+    expect(msg.result.content[1].text).toContain('[redacted');
+    expect(readFileSync(envPath, 'utf8')).toContain(FAKE);
+  });
+
+  it('refuses create_api_key and rotate_api_key before forwarding when .env is git-tracked', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-proxy-git-'));
+    const envPath = join(dir, '.env');
+    writeFileSync(envPath, 'OTHER=1\n');
+    execFileSync('git', ['init', '-q'], { cwd: dir });
+    execFileSync('git', ['add', '.env'], { cwd: dir });
+    const { hostIn, hostOut, childSaw } = wire(envPath);
+
+    for (const [id, name] of [
+      [15, 'create_api_key'],
+      [16, 'rotate_api_key'],
+    ] as const) {
+      const outP = nextLine(hostOut);
+      hostIn.write(
+        `${JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: {} } })}\n`,
+      );
+      const msg = JSON.parse(await outP);
+      expect(msg.id).toBe(id);
+      expect(msg.result.isError).toBe(true);
+      expect(msg.result.structuredContent.error).toMatch(/tracked by git/);
+    }
+    expect(childSaw.join('')).toBe('');
+  });
+
+  it('passes a JSON-RPC error for a sink call through and forgets the id', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-proxy-'));
+    const { hostIn, hostOut, childOut } = wire(join(dir, '.env'));
+
+    hostIn.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 17, method: 'tools/call', params: { name: 'create_api_key', arguments: {} } })}\n`,
+    );
+    await new Promise((r) => setTimeout(r, 10));
+
+    const errLine = JSON.stringify({ jsonrpc: '2.0', id: 17, error: { code: -32001, message: 'unauthorized' } });
+    let outP = nextLine(hostOut);
+    childOut.write(`${errLine}\n`);
+    expect((await outP).trim()).toBe(errLine);
+
+    // A later result reusing the id is not treated as a mint to sink.
+    const reuse = JSON.stringify({ jsonrpc: '2.0', id: 17, result: { structuredContent: { ok: true } } });
+    outP = nextLine(hostOut);
+    childOut.write(`${reuse}\n`);
+    expect((await outP).trim()).toBe(reuse);
+  });
 });
+
+function wire(envPath: string) {
+  const hostIn = new PassThrough();
+  const hostOut = new PassThrough();
+  const childIn = new PassThrough();
+  const childOut = new PassThrough();
+  const childSaw: string[] = [];
+  childIn.on('data', (c: Buffer) => childSaw.push(c.toString('utf8')));
+  attachJsonRpcProxy({
+    hostIn,
+    hostOut,
+    childIn,
+    childOut,
+    startTrial: async () => ({}),
+    sink: { resolveEnvPath: async () => ({ ok: true, path: envPath }) },
+  });
+  return { hostIn, hostOut, childOut, childSaw };
+}
+
+function nextLine(stream: PassThrough): Promise<string> {
+  return new Promise((resolve) => {
+    stream.once('data', (c: Buffer) => resolve(c.toString('utf8')));
+  });
+}

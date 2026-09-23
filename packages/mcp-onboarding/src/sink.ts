@@ -2,10 +2,11 @@
 // Every recommended mint path writes SMARTERWEATHER_API_KEY (0600, gitignored)
 // and returns only a 12-char prefix — never the bearer.
 
-import { dirname } from 'node:path';
+import { basename, dirname } from 'node:path';
 import {
   displayPrefix,
   ensureGitignore,
+  isGitTracked,
   isUsableKey,
   readExistingKey,
   replaceEnvKey,
@@ -46,6 +47,12 @@ export function resolveSinkTarget(deps: SinkResolveDeps): EnvTarget {
     cwd: deps.cwd,
     homedir: deps.homedir,
   });
+}
+
+/** Refusal copy when the target .env is committed to git; checked before any mint. */
+export function trackedEnvError(targetPath: string): string | undefined {
+  if (!isGitTracked(targetPath)) return undefined;
+  return `${targetPath} is tracked by git, so a key written there would be committed. Run \`git rm --cached ${basename(targetPath)}\` (and rotate any key already committed), or set SMARTERWEATHER_ENV_FILE to an untracked path, then retry.`;
 }
 
 /** If process env or the target .env already has a usable key, return already_configured. */

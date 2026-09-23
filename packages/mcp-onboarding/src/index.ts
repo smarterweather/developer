@@ -16,7 +16,7 @@ import { spawn } from 'node:child_process';
 import { homedir } from 'node:os';
 import { createRequire } from 'node:module';
 import { buildArgs } from './args.js';
-import { parseCliArgs, runLoginCli, runTrialCli } from './cli.js';
+import { parseCliArgs, runLoginCli, runTrialCli, USAGE } from './cli.js';
 import { ENV_FILE_VAR, KEY_VAR } from './env.js';
 import { attachJsonRpcProxy } from './proxy.js';
 import { resolveEnvPath } from './sink.js';
@@ -42,6 +42,16 @@ if (userArgs.includes('--version') || userArgs.includes('-v')) {
 }
 
 const cli = parseCliArgs(userArgs);
+if (cli?.command === 'help') {
+  // eslint-disable-next-line no-console
+  console.log(USAGE);
+  process.exit(0);
+}
+if (cli?.command === 'unknown') {
+  // eslint-disable-next-line no-console
+  console.error(`@smarterweather/mcp-onboarding: unknown command "${cli.arg}"\n\n${USAGE}`);
+  process.exit(2);
+}
 if (cli) {
   const deps = {
     envFile: process.env[ENV_FILE_VAR],

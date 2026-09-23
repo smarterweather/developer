@@ -1,5 +1,6 @@
-import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, dirname, resolve } from 'node:path';
 
 export const KEY_VAR = 'SMARTERWEATHER_API_KEY';
 export const ENV_FILE_VAR = 'SMARTERWEATHER_ENV_FILE';
@@ -93,16 +94,32 @@ export function readExistingKey(filePath: string): string | undefined {
   try {
     return parseEnvKey(readFileSync(filePath, 'utf8'));
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT' || code === 'ENOTDIR') return undefined;
     throw err;
   }
+}
+
+/** True when git tracks `filePath`. No git, not a repo, or untracked → false. */
+export function isGitTracked(filePath: string): boolean {
+  const res = spawnSync('git', ['ls-files', '--error-unmatch', '--', basename(filePath)], {
+    cwd: dirname(filePath),
+    stdio: 'ignore',
+    timeout: 5000,
+  });
+  return res.status === 0;
 }
 
 function writeAtomic(filePath: string, body: string): void {
   mkdirSync(dirname(filePath), { recursive: true });
   const tmp = `${filePath}.${process.pid}.tmp`;
-  writeFileSync(tmp, body, { encoding: 'utf8', mode: 0o600 });
-  renameSync(tmp, filePath);
+  try {
+    writeFileSync(tmp, body, { encoding: 'utf8', mode: 0o600 });
+    renameSync(tmp, filePath);
+  } catch (err) {
+    rmSync(tmp, { force: true });
+    throw err;
+  }
   chmodSync(filePath, 0o600);
 }
 
