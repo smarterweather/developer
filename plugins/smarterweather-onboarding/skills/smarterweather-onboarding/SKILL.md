@@ -21,6 +21,15 @@ config. Never wire it into a long-lived config alongside the weather MCP
 
 ## Flow
 
+Prefer CLI when possible:
+
+```bash
+npx -y @smarterweather/mcp-onboarding@latest login   # human present
+npx -y @smarterweather/mcp-onboarding@latest trial   # no human
+```
+
+Both write `.env` and print only a key prefix. Otherwise:
+
 1. Connect with no credentials. Call `get_plans` / `get_documentation` /
    `sign_up`.
 2. `sign_up` returns a Clerk signup URL. A human opens it and creates a
@@ -30,11 +39,12 @@ config. Never wire it into a long-lived config alongside the weather MCP
    port `3334` — keep that port free. Cursor's native `cursor://` OAuth
    against Clerk is broken ([#7184](https://github.com/smarterweather/SmarterWeather/issues/7184));
    prefer the stdio bridge for gated tools.
-4. Call `create_api_key` (idempotent). Store the plaintext once.
-5. Call `configure_mcp`. It emits an env-slot config — put the key in
-   `SMARTERWEATHER_API_KEY` (or a host secret store). Never paste
-   `sw_live_` / `sw_test_` into committed JSON. REST and weather MCP
-   use `Authorization: Bearer $SMARTERWEATHER_API_KEY` (not `X-API-Key`).
+4. Call `create_api_key` (idempotent). Via the stdio bridge the key is
+   written to `.env` and not returned. Prefer CLI `login` when a human
+   can approve a device code.
+5. Call `configure_mcp`. Cursor gets `envFile: ${workspaceFolder}/.env`;
+   Claude Desktop keeps an env slot a human fills locally. Never paste
+   `sw_live_` / `sw_test_` into committed JSON.
 6. Install the weather plugin or `@smarterweather/mcp-weather`, then
    remove this onboarding server.
 

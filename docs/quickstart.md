@@ -29,7 +29,8 @@ WWW-Authenticate: Bearer realm="api.smarterweather.com"
     "recommended": "device_flow",
     "device_flow": {
       "href": "https://developers.smarterweather.com/quickstart?utm_…#device-flow",
-      "description": "No install, no loopback port: POST device_authorization_endpoint, show the human the code, poll, then GET /developer/keys.",
+      "description": "Human present: run command. It writes SMARTERWEATHER_API_KEY to ./.env and prints only a key prefix.",
+      "command": "npx -y @smarterweather/mcp-onboarding@latest login",
       "client_id": "k2h05BUoTP393zcD",
       "device_authorization_endpoint": "https://clerk.smarterweather.com/oauth/device_authorization",
       "token_endpoint": "https://clerk.smarterweather.com/oauth/token",
@@ -54,33 +55,36 @@ an agent never has to guess where to go.
 
 Pick one:
 
-- **Device flow (401 `recommended` for agents).** Follow
-  `next_steps.device_flow`: POST `device_authorization_endpoint` with
-  the advertised `client_id` and `scope=openid email`, show the human
-  `verification_uri` + `user_code`, poll `token_endpoint`, then GET
-  `https://api.smarterweather.com/developer/keys`. POST a key only if
-  that list is empty, with an agent-generated `Idempotency-Key` UUID
-  (never `first-key`). Discard the access token afterwards. Recipe:
-  <https://developers.smarterweather.com/quickstart#device-flow>.
-- **Dashboard (when a human is present).** Sign in at
+- **Human present (recommended).**
+  `npx -y @smarterweather/mcp-onboarding@latest login` — RFC 8628 device
+  grant; writes `SMARTERWEATHER_API_KEY` to `./.env` (0600, gitignored)
+  and prints only a key prefix. Named by `next_steps.device_flow.command`.
+- **No human present.**
+  `npx -y @smarterweather/mcp-onboarding@latest trial` (or stdio
+  `start_trial`) — same sink; named by `next_steps.trial.command` when
+  trial is advertised.
+- **Dashboard.** Sign in at
   <https://developers.smarterweather.com/dashboard/api-keys> (free, no
-  card) and click **New key**. The key is shown exactly once
-  (`sw_live_...` or `sw_test_...`).
-- **Onboarding MCP (when the client speaks MCP).** Connect anonymously
-  to `https://mcp.developers.smarterweather.com` (Streamable HTTP) and
-  call `get_plans` / `sign_up`; after the host completes OAuth 2.1, call
-  `create_api_key` (idempotent) then `configure_mcp`. Remove the
-  onboarding server from the client config afterwards; it is one-shot.
-  See [`mcp-onboarding.md`](./mcp-onboarding.md).
+  card) and click **New key**. Write the shown-once value straight to
+  `.env`.
+- **Onboarding MCP.** Connect anonymously to
+  `https://mcp.developers.smarterweather.com`; after OAuth, via the stdio
+  bridge `create_api_key` sinks into `.env`. Call `configure_mcp` for
+  paste-ready Cursor (`envFile`) / Claude Desktop configs. See
+  [`mcp-onboarding.md`](./mcp-onboarding.md).
 - **Wallet, no account.** Agents holding USDC on Base can pay per call
   on the weather MCP via x402; see
   <https://developers.smarterweather.com/agents#x402>.
+- **Raw HTTP (curl / conformance only).** `POST /developer/keys` and
+  `POST /developer/keys/trial` return the bearer in the body (`key` /
+  `api_key`) — write only that field to `.env` as
+  `SMARTERWEATHER_API_KEY=`; never print it. Recipe:
+  <https://developers.smarterweather.com/quickstart#device-flow>.
 
-**Key handling, every time:** write the key to `.env` as
-`SMARTERWEATHER_API_KEY=...`, add `.env` to `.gitignore`, read it from
-the environment in code, and never echo it into chat, logs, or a
-commit. Use `sw_test_*` keys in CI. If a key ever lands in a
-repository, rotate it from the dashboard.
+**Key handling, every time:** keep the key only in `.env` as
+`SMARTERWEATHER_API_KEY=...`, read it from the environment in code, and
+never echo it into chat, logs, or a commit. Use `sw_test_*` keys in CI.
+If a key ever lands in a repository, rotate it from the dashboard.
 
 Your key is tied to a **tier** (free, developer, professional,
 enterprise) which dictates your rate limit, monthly request allowance,

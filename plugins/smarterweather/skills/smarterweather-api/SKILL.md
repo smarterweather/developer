@@ -39,15 +39,19 @@ export SMARTERWEATHER_API_KEY="sw_live_..."
 
 Hard rules:
 
+- **Prefer** `npx -y @smarterweather/mcp-onboarding@latest login` (human
+  present) or `… trial` / stdio `start_trial` (no human). They write
+  `.env` and return only a prefix.
 - **Never** paste a key into chat history, prompts, or commit messages.
 - **Never** commit a key to a repo, even temporarily. Smarter Weather
   participates in GitHub secret scanning; leaked keys are revoked
   automatically.
 - **Always** use `sw_test_*` prefixed keys in tests, examples, and local
   dev scaffolds. Production code uses `sw_live_*`.
-- Keys are minted, rotated, and revoked at
+- Keys are also minted at
   <https://developers.smarterweather.com/dashboard/api-keys>, or by an
-  agent through the onboarding MCP (`create_api_key`).
+  agent through the onboarding MCP (stdio bridge sinks
+  `create_api_key` into `.env`).
 
 ## REST API
 
