@@ -29,9 +29,11 @@ info:
     extension member: a machine-readable map of where to go next
     (`recommended` names the link to take first), so a client -- or a
     coding agent acting for one -- can recover from "no key", "wrong
-    scope", or "over quota" without leaving the response. `401` and
-    `403` also carry an RFC 6750 `WWW-Authenticate: Bearer` challenge.
-    Every `type` URI dereferences to a human-readable explanation at
+    scope", or "over quota" without leaving the response. Trial keys
+    whose free value has ended receive `402` with
+    `next_steps.recommended = claim`. `401` and `403` also carry an
+    RFC 6750 `WWW-Authenticate: Bearer` challenge. Every `type` URI
+    dereferences to a human-readable explanation at
     [developers.smarterweather.com/errors](https://developers.smarterweather.com/errors).
 
     ## Authentication
@@ -283,6 +285,12 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
           content:
             application/json:
               schema:
@@ -300,6 +308,8 @@ paths:
           $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '500':
           $ref: '#/components/responses/Problem500'
         '502':
@@ -363,6 +373,12 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
           content:
             application/json:
               schema:
@@ -375,6 +391,8 @@ paths:
           $ref: '#/components/responses/Problem403'
         '429':
           $ref: '#/components/responses/Problem429'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '500':
           $ref: '#/components/responses/Problem500'
         '502':
@@ -454,6 +472,12 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
           content:
             application/json:
               schema:
@@ -468,6 +492,8 @@ paths:
           $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '500':
           $ref: '#/components/responses/Problem500'
         '502':
@@ -1613,6 +1639,12 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
           content:
             application/json:
               schema:
@@ -1627,6 +1659,8 @@ paths:
           $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '500':
           $ref: '#/components/responses/Problem500'
         '502':
@@ -1730,6 +1764,12 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
           content:
             application/json:
               schema:
@@ -1742,6 +1782,8 @@ paths:
           $ref: '#/components/responses/Problem403'
         '429':
           $ref: '#/components/responses/Problem429'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '500':
           $ref: '#/components/responses/Problem500'
         '502':
@@ -1822,6 +1864,12 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
           content:
             application/json:
               schema:
@@ -1836,6 +1884,8 @@ paths:
           $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '500':
           $ref: '#/components/responses/Problem500'
         '502':
@@ -2123,6 +2173,162 @@ paths:
           $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/windows:
+    get:
+      operationId: getWindows
+      summary: Consecutive hours that meet activity criteria.
+      description: |
+        Returns runs of forecast hours that satisfy the caller's
+        criteria, the REST twin of MCP `find_best_window`. The scan is
+        deterministic. An optional `activity` string may attach a
+        favorability `rating` and `limiting_factor` to one window when
+        activity rating is enabled for the service. When rating is off,
+        or the scorer does not return a usable verdict, `rating` and
+        `limiting_factor` are omitted and the windows stay in
+        chronological order.
+
+        When a rating lands, the rated window is first and the remaining
+        windows follow by duration (longer first).
+
+        Location selectors match `GET /v1/weather`: exactly one of
+        `lat`+`lon`, `zip`, or `location`.
+
+        Outside CONUS, Alaska, and Hawaii the response is `200` with
+        `windows: []` and `message` explaining that window search uses
+        NBM. An empty scan inside coverage may also return `windows: []`
+        with `message` when no forecast series is available.
+
+        `activity` does not change the metered weight of the call.
+      tags: [Weather]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LatQuery'
+        - $ref: '#/components/parameters/LonQuery'
+        - $ref: '#/components/parameters/ZipQuery'
+        - $ref: '#/components/parameters/LocationQuery'
+        - $ref: '#/components/parameters/UnitsQuery'
+        - name: hours
+          in: query
+          required: false
+          description: How far ahead to search, in hours.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 168
+            default: 72
+        - name: activity_duration_hours
+          in: query
+          required: false
+          description: Minimum consecutive hours that must meet the criteria.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+            default: 2
+        - name: daylight_only
+          in: query
+          required: false
+          description: |
+            When true (the default), hours outside sunrise–sunset are
+            excluded when sun times are available. If sun times cannot
+            be loaded, the daylight filter is skipped.
+          schema:
+            type: boolean
+            default: true
+        - name: max_precipitation_probability
+          in: query
+          required: false
+          description: Drop hours whose precipitation probability exceeds this percent.
+          schema:
+            type: number
+            format: double
+            minimum: 0
+            maximum: 100
+        - name: min_temperature
+          in: query
+          required: false
+          description: Drop hours colder than this, in the selected units.
+          schema:
+            type: number
+            format: double
+        - name: max_temperature
+          in: query
+          required: false
+          description: Drop hours warmer than this, in the selected units.
+          schema:
+            type: number
+            format: double
+        - name: max_wind_speed
+          in: query
+          required: false
+          description: Drop hours with sustained wind above this, in the selected units.
+          schema:
+            type: number
+            format: double
+        - name: max_wind_gust
+          in: query
+          required: false
+          description: Drop hours with a gust above this, in the selected units.
+          schema:
+            type: number
+            format: double
+        - name: min_visibility
+          in: query
+          required: false
+          description: Drop hours with visibility below this, in the selected units.
+          schema:
+            type: number
+            format: double
+        - name: min_ceiling
+          in: query
+          required: false
+          description: Drop hours with a cloud ceiling below this, in the selected units.
+          schema:
+            type: number
+            format: double
+        - name: activity
+          in: query
+          required: false
+          description: |
+            Free-text activity used only when activity rating is enabled.
+            At most 200 characters. Accepted and ignored when rating is off.
+          schema:
+            type: string
+            maxLength: 200
+      responses:
+        '200':
+          description: Windows that meet the criteria, possibly empty.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WindowsResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
         '504':
           $ref: '#/components/responses/Problem504'
 
@@ -2599,6 +2805,24 @@ components:
       schema:
         type: integer
         minimum: 0
+    XTrialClaimUrl:
+      description: |
+        Portal claim URL for this trial key
+        (`https://developers.smarterweather.com/claim#key=<raw bearer>`).
+        Present on every served trial response while the claim window is open.
+      schema:
+        type: string
+        format: uri
+    XTrialExpiresAt:
+      description: RFC 3339 instant when this trial key stops serving (key clock).
+      schema:
+        type: string
+        format: date-time
+    XTrialCallsRemaining:
+      description: Remaining lifetime calls on this trial key after this request.
+      schema:
+        type: integer
+        minimum: 0
 
   examples:
     WeatherBoston:
@@ -2765,9 +2989,9 @@ components:
         an identical wire format; parsers written for either work.
 
         Beyond the five standard members the object may carry extension
-        members (RFC 9457 §3.2). Today `401`, `403`, and `429` carry
-        `next_steps`. Clients MUST ignore extension members they do not
-        understand.
+        members (RFC 9457 §3.2). Today `401`, `402`, `403`, and `429`
+        carry `next_steps`. Clients MUST ignore extension members they
+        do not understand.
       required: [type, title, status]
       additionalProperties: true
       properties:
@@ -2797,24 +3021,46 @@ components:
         next_steps:
           $ref: '#/components/schemas/ProblemNextSteps'
 
+    ProblemTrialEnded:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [reason]
+          properties:
+            reason:
+              type: string
+              enum: [exhausted, expired]
+              description: |
+                Why free value ended. `exhausted` = lifetime call cap
+                spent; `expired` = key clock ended while the claim
+                window is still open.
+            claim_expires_at:
+              type: string
+              format: date-time
+              description: |
+                RFC 3339 instant when the claim window closes (row TTL).
+                After this, the key is unknown and returns a standard 401.
+
     ProblemNextSteps:
       type: object
       description: |
-        Extension member on `401`, `403`, and `429` problems: where to go
-        next, as a map of link relations. `recommended` names the relation
-        a client should take first; when present, `if_no_human_present`
-        names the relation an autonomous agent should take when nobody can
-        act on the recommended one right now. Every other key is a link
-        relation (`get_key`, `quickstart`, `agents`, `onboarding_mcp`,
+        Extension member on `401`, `402`, `403`, and `429` problems: where
+        to go next, as a map of link relations. `recommended` names the
+        relation a client should take first; when present,
+        `if_no_human_present` names the relation an autonomous agent
+        should take when nobody can act on the recommended one right
+        now. Every other key is a link relation (`device_flow`,
+        `get_key`, `quickstart`, `agents`, `onboarding_mcp`,
         `keyless_x402`, `key_handling`, `errors`, `upgrade`, `pricing`,
-        `usage`) whose value is a `ProblemNextStepLink`. New relations may
-        be added over time; unknown relations MUST be ignored.
+        `usage`, `claim`) whose value is a `ProblemNextStepLink`. New
+        relations may be added over time; unknown relations MUST be
+        ignored.
       required: [recommended]
       properties:
         recommended:
           type: string
           description: The link relation to take first.
-          example: get_key
+          example: device_flow
         if_no_human_present:
           type: string
           description: |
@@ -2824,7 +3070,14 @@ components:
       additionalProperties:
         $ref: '#/components/schemas/ProblemNextStepLink'
       example:
-        recommended: get_key
+        recommended: device_flow
+        device_flow:
+          href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api#device-flow
+          description: "No install, no loopback port: POST device_authorization_endpoint, show the human the code, poll, then GET /developer/keys."
+          client_id: k2h05BUoTP393zcD
+          device_authorization_endpoint: https://clerk.smarterweather.com/oauth/device_authorization
+          token_endpoint: https://clerk.smarterweather.com/oauth/token
+          api_keys_endpoint: https://api.smarterweather.com/developer/keys
         get_key:
           href: https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api
           description: "Sign in (free, no card) and mint an API key. Pass it as 'Authorization: Bearer sw_live_*'."
@@ -2837,7 +3090,11 @@ components:
 
     ProblemNextStepLink:
       type: object
-      description: One destination in `next_steps`.
+      description: |
+        One destination in `next_steps`. `href` and `description` are
+        always present. The `device_flow` relation also carries the
+        public Clerk device-grant recipe fields so a 401 body is
+        complete without a second fetch.
       required: [href, description]
       properties:
         href:
@@ -2849,6 +3106,23 @@ components:
         description:
           type: string
           description: One sentence a human or agent can act on.
+        client_id:
+          type: string
+          description: Public OAuth client id (device_flow only).
+        device_authorization_endpoint:
+          type: string
+          format: uri
+          description: Clerk device-authorization URL (device_flow only). No UTM.
+        token_endpoint:
+          type: string
+          format: uri
+          description: Clerk token URL (device_flow only). No UTM.
+        api_keys_endpoint:
+          type: string
+          format: uri
+          description: |
+            Key CRUD URL to call with the device-grant access token
+            (device_flow only). No UTM.
 
     PlatformStatus:
       type: object
@@ -3171,6 +3445,101 @@ components:
         intensity:
           type: string
           enum: [none, light, moderate, heavy]
+
+    WindowsResponse:
+      type: object
+      required:
+        - location
+        - units
+        - windows
+        - criteria_applied
+        - daylight_only
+        - activity_duration_hours
+      properties:
+        location:
+          $ref: '#/components/schemas/Location'
+        units:
+          type: string
+          enum: [imperial, metric]
+        windows:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeatherWindow'
+        criteria_applied:
+          $ref: '#/components/schemas/WindowCriteria'
+        daylight_only:
+          type: boolean
+        activity_duration_hours:
+          type: integer
+          minimum: 1
+          maximum: 24
+        sun_times:
+          type: array
+          description: Present when daylight filtering used sunrise and sunset.
+          items:
+            type: object
+            required: [sunrise, sunset]
+            properties:
+              sunrise:
+                type: string
+                format: date-time
+              sunset:
+                type: string
+                format: date-time
+        message:
+          type: string
+          description: |
+            Set when `windows` is empty because the point is outside NBM
+            coverage or no forecast series was available.
+
+    WeatherWindow:
+      type: object
+      required: [start, end, hours]
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+          description: Timestamp of the last hour in the run.
+        hours:
+          type: integer
+          minimum: 1
+          description: Count of passing hours in the run.
+        rating:
+          type: string
+          enum: [unworkable, poor, workable, good, ideal]
+          description: Present only on the window a favorability score landed on.
+        limiting_factor:
+          type: string
+          enum: [wind, precip, temperature, visibility, storms, none]
+
+    WindowCriteria:
+      type: object
+      description: Criteria echoed back in the requested units. Omitted fields were not set.
+      properties:
+        max_precipitation_probability:
+          type: number
+          format: double
+        min_temperature:
+          type: number
+          format: double
+        max_temperature:
+          type: number
+          format: double
+        max_wind_speed:
+          type: number
+          format: double
+        max_wind_gust:
+          type: number
+          format: double
+        min_visibility:
+          type: number
+          format: double
+        min_ceiling:
+          type: number
+          format: double
 
     # -----------------------------------------------------------------------
     # Location / current / hourly / daily
@@ -6091,7 +6460,8 @@ components:
     Problem401:
       description: |
         Missing or invalid API key. Carries a `WWW-Authenticate` challenge
-        and a `next_steps` extension telling the caller how to get a key.
+        and a `next_steps` extension. `recommended` is `device_flow`: the
+        object is a complete no-install mint recipe.
       headers:
         WWW-Authenticate:
           $ref: '#/components/headers/WWWAuthenticate'
@@ -6105,7 +6475,14 @@ components:
             status: 401
             detail: "Missing Authorization header. Pass your API key as 'Authorization: Bearer sw_live_*'."
             next_steps:
-              recommended: get_key
+              recommended: device_flow
+              device_flow:
+                href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api#device-flow
+                description: "No install, no loopback port: POST device_authorization_endpoint, show the human the code, poll, then GET /developer/keys."
+                client_id: k2h05BUoTP393zcD
+                device_authorization_endpoint: https://clerk.smarterweather.com/oauth/device_authorization
+                token_endpoint: https://clerk.smarterweather.com/oauth/token
+                api_keys_endpoint: https://api.smarterweather.com/developer/keys
               get_key:
                 href: https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api
                 description: "Sign in (free, no card) and mint an API key. Pass it as 'Authorization: Bearer sw_live_*'."
@@ -6170,6 +6547,30 @@ components:
           $ref: '#/components/headers/RateLimitRemaining'
         RateLimit-Reset:
           $ref: '#/components/headers/RateLimitReset'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    TrialEnded:
+      description: |
+        Trial key free value ended (lifetime cap spent or key clock
+        expired) while the claim window is still open. Carries
+        `next_steps.recommended = claim` and the per-key claim href.
+      headers:
+        X-Trial-Claim-Url:
+          $ref: '#/components/headers/XTrialClaimUrl'
+        X-Trial-Expires-At:
+          $ref: '#/components/headers/XTrialExpiresAt'
+        X-Trial-Calls-Remaining:
+          $ref: '#/components/headers/XTrialCallsRemaining'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemTrialEnded'
+    TrialRouteNotAllowed:
+      description: |
+        Trial key authenticated but is not allowed to call this route.
+        Carries `next_steps.recommended = claim`.
       content:
         application/problem+json:
           schema:
