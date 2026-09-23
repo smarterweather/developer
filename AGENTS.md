@@ -46,8 +46,9 @@ Canonical machine-readable contracts:
    a Clerk signup URL; a human completes account creation in the browser
    (no credit card for the free tier).
 3. Complete Clerk OAuth when the host prompts.
-4. Call `create_api_key` (idempotent) and `configure_mcp`.
-5. Use the returned key against the weather MCP or REST API, then remove
+4. Prefer stdio `start_trial` (writes `.env`, never prints the bearer) or,
+   after OAuth, `create_api_key` (idempotent) and `configure_mcp`.
+5. Use the key against the weather MCP or REST API, then remove
    the onboarding server from the client config (it is one-shot).
 
 stdio bridges (local clients that cannot speak Streamable HTTP):
