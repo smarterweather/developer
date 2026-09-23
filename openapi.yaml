@@ -2808,7 +2808,8 @@ components:
     XTrialClaimUrl:
       description: |
         Portal claim URL for this trial key
-        (`https://developers.smarterweather.com/claim#key=<raw bearer>`).
+        (`https://developers.smarterweather.com/claim#ticket=<claim ticket>`).
+        Pre-ticket trial rows still use leftover `#key=<raw bearer>` until they TTL.
         Present on every served trial response while the claim window is open.
       schema:
         type: string

@@ -63,8 +63,9 @@ may be added; ignore unknown ones. Every `href` carries
 endpoints on `device_flow` do not get UTM. When a trial key's free value
 ends, the response is `402` with `next_steps.recommended = claim` (see
 [ADR 071](../developer/adr/071-agent-first-developer-onboarding.md)); the
-per-key claim href puts the raw bearer in the URL fragment
-(`https://developers.smarterweather.com/claim#key=<bearer>`).
+per-key claim href uses a claim ticket in the URL fragment
+(`https://developers.smarterweather.com/claim#ticket=<ticket>`).
+Pre-ticket rows still use leftover `#key=<bearer>` until they TTL.
 ```http
 HTTP/1.1 401 Unauthorized
 Content-Type: application/problem+json
