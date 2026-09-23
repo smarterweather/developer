@@ -2,7 +2,7 @@
 
 > The hosted weather MCP server at
 > `https://mcp.smarterweather.com` is **live in production**,
-> serving the full 29-tool catalog with API-key and OAuth 2.1 auth.
+> serving the full 33-tool catalog with API-key and OAuth 2.1 auth.
 > Install the stdio bridge with `npx -y @smarterweather/mcp-weather`
 > (untagged — `latest` is the only tag). Clients that speak
 > streamable HTTP natively can connect to the hosted endpoint
@@ -180,7 +180,7 @@ package default.
 
 ## Tool catalog (current)
 
-The hosted server exposes **29 tools** organized around
+The hosted server exposes **33 tools** organized around
 meteorologist workflows rather than raw endpoints. Every
 location-aware tool accepts either a free-text `location` string or
 explicit `lat`/`lon`. Call `tools/list` for the live, canonical
@@ -225,6 +225,10 @@ catalog with full input/output schemas.
 - `get_tropical` — active tropical systems, track and cone.
 - `get_population_exposure` — population inside a hazard footprint.
 - `get_climate_records` — record highs/lows and normals.
+- `get_climate_normals` — day-of-year NCEI 1991–2020 normals from
+  the nearest station.
+- `get_path_exposure` — civic points of interest (schools, hospitals,
+  airports, ...) inside a caller-supplied GeoJSON polygon.
 - `get_storm_cells` — storm-scale cell tracks, hail, mesocyclone and
   TVS signatures.
 - `get_air_quality` — AQI and constituent pollutants.
@@ -244,6 +248,15 @@ catalog with full input/output schemas.
   an event or trip.
 - `find_best_window` — rank time windows against weather criteria
   ("best 3-hour window for a run this week").
+- `get_forecast_skill` — how accurate our forecasts have been near a
+  location, measured against observed analysis truth.
+- `get_forecast_skill_map` — the same skill measurement as hexes
+  inside a bounding box.
+
+### Platform
+
+- `get_platform_status` — data-freshness state per source; check it
+  before reporting data as current.
 
 ### Visual
 
