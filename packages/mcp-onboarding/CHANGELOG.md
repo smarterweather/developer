@@ -1,5 +1,11 @@
 # @smarterweather/mcp-onboarding
 
+## 0.2.0
+
+### Minor Changes
+
+- [#84](https://github.com/smarterweather/developer/pull/84) [`af85dc9`](https://github.com/smarterweather/developer/commit/af85dc91394b50c41624b694bfdfc445c710247c) Thanks [@afisch710](https://github.com/afisch710)! - CLI `trial` / `login` subcommands and proxy sinks for hosted create/rotate write `SMARTERWEATHER_API_KEY` to `.env` (mode 0600) and return only a key prefix — never the bearer, access token, or device code. Every mint path refuses a git-tracked `.env` before minting; `help` prints usage.
+
 ## 0.1.0
 
 ### Minor Changes
