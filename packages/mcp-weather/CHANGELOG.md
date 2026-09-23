@@ -1,5 +1,11 @@
 # @smarterweather/mcp-weather
 
+## 0.1.0
+
+### Minor Changes
+
+- [#84](https://github.com/smarterweather/developer/pull/84) [`af85dc9`](https://github.com/smarterweather/developer/commit/af85dc91394b50c41624b694bfdfc445c710247c) Thanks [@afisch710](https://github.com/afisch710)! - Resolve the API key from env → `SMARTERWEATHER_ENV_FILE` → `cwd/.env` (unexpanded `${…}` counts as unset) and pass `Authorization:${SMARTERWEATHER_AUTH_HEADER}` so the bearer never appears in argv or mcp-remote's header log. With no key found, one stderr line names every place checked.
+
 ## 0.0.1
 
 ### Patch Changes
