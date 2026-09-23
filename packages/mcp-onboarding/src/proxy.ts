@@ -87,7 +87,7 @@ export function attachJsonRpcProxy(opts: {
   const pendingListIds = new Set<string | number>();
   const pendingRoots = new Map<string, (uris: string[]) => void>();
   let rootsSeq = 0;
-  const rootsTimeoutMs = opts.rootsTimeoutMs ?? 500;
+  const rootsTimeoutMs = opts.rootsTimeoutMs ?? 2000;
 
   const hostRl = createInterface({ input: opts.hostIn, crlfDelay: Infinity });
   const childRl = createInterface({ input: opts.childOut, crlfDelay: Infinity });

@@ -24,6 +24,11 @@ export type StartTrialOk = {
   key_prefix: string;
   env_path: string;
   claim_ticket?: string;
+  claim_url?: string;
+  claim_expires_at?: string;
+  expires_at?: string;
+  limits?: unknown;
+  consume: string;
 };
 
 export type StartTrialAlready = {
@@ -67,6 +72,9 @@ type MintOkBody = {
   api_key?: string;
   claim_ticket?: string;
   claim_url?: string;
+  claim_expires_at?: string;
+  expires_at?: string;
+  limits?: unknown;
 };
 
 let inFlight: Promise<StartTrialResult> | undefined;
@@ -134,7 +142,7 @@ async function runStartTrial(deps: StartTrialDeps): Promise<StartTrialResult> {
 
   let minted: MintOkBody;
   try {
-    const res = await fetchImpl(`${base}/developer/keys/trial/mint`, {
+    const res = await fetchImpl(`${base}/developer/keys/trial`, {
       method: 'POST',
       headers: { accept: 'application/json', 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -188,9 +196,17 @@ async function runStartTrial(deps: StartTrialDeps): Promise<StartTrialResult> {
     status: 'ok',
     key_prefix: displayPrefix(minted.api_key),
     env_path: target.path,
+    consume:
+      'set -a; . ./.env; set +a; curl -sS -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \'https://api.smarterweather.com/v1/weather?lat=41.66&lon=-91.53\'. Do not cat .env. Restart the weather MCP with SMARTERWEATHER_API_KEY set.',
   };
   if (typeof minted.claim_ticket === 'string' && minted.claim_ticket.startsWith('sw_claim_')) {
     result.claim_ticket = minted.claim_ticket;
   }
+  if (typeof minted.claim_url === 'string' && minted.claim_url.includes('#ticket=')) {
+    result.claim_url = minted.claim_url;
+  }
+  if (typeof minted.claim_expires_at === 'string') result.claim_expires_at = minted.claim_expires_at;
+  if (typeof minted.expires_at === 'string') result.expires_at = minted.expires_at;
+  if (minted.limits !== undefined) result.limits = minted.limits;
   return result;
 }

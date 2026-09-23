@@ -32,7 +32,7 @@ describe('startTrial', () => {
         if (url.endsWith('/developer/keys/trial/challenge')) {
           return jsonResponse(200, { challenge_token: TOKEN, difficulty_bits: BITS });
         }
-        if (url.endsWith('/developer/keys/trial/mint')) {
+        if (url.endsWith('/developer/keys/trial')) {
           return jsonResponse(200, {
             api_key: FAKE,
             claim_ticket: 'sw_claim_testticket',
@@ -48,6 +48,8 @@ describe('startTrial', () => {
       expect(result.key_prefix).toBe(FAKE.slice(0, 12));
       expect(result.env_path).toBe(envPath);
       expect(result.claim_ticket).toBe('sw_claim_testticket');
+      expect(result.claim_url).toBeUndefined();
+      expect(result.consume).toContain('set -a');
       const dumped = JSON.stringify(result);
       expect(dumped.includes(FAKE)).toBe(false);
       expect(dumped.includes('#key=')).toBe(false);

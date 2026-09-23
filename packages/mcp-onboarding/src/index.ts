@@ -61,7 +61,8 @@ proxy = attachJsonRpcProxy({
     return startTrial({
       envFile,
       processEnvKey: process.env[KEY_VAR],
-      keyApiBase: process.env.SMARTERWEATHER_KEY_API_BASE,
+      keyApiBase:
+        process.env.SMARTERWEATHER_API_BASE_URL ?? process.env.SMARTERWEATHER_KEY_API_BASE,
       rootUris: envFile ? [] : await proxy.requestHostRoots(),
       cwd: process.cwd(),
       homedir: homedir(),
