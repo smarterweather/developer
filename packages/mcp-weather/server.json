@@ -27,7 +27,7 @@
       "environmentVariables": [
         {
           "name": "SMARTERWEATHER_API_KEY",
-          "description": "Smarter Weather API key (sw_live_* or sw_test_*) with the 'mcp' scope. When set, the bridge skips the OAuth flow and forwards the key as 'Authorization: Bearer <key>' on every proxied request. When unset, the bridge runs the full MCP OAuth 2.1 + PKCE client and caches tokens at ~/.mcp-auth/. Mint keys at https://smarterweather.com/developers/api-keys.",
+          "description": "Smarter Weather API key (sw_live_* or sw_test_*) with the 'mcp' scope. When set (and not an unexpanded ${…} placeholder), the bridge skips OAuth and forwards Authorization via SMARTERWEATHER_AUTH_HEADER in the child env — never on argv. When unset, falls through to SMARTERWEATHER_ENV_FILE then cwd/.env; otherwise runs MCP OAuth 2.1 + PKCE. Mint with `npx -y @smarterweather/mcp-onboarding@latest login` or trial.",
           "isRequired": false,
           "isSecret": true,
           "format": "string"

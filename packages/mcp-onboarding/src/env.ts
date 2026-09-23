@@ -1,5 +1,6 @@
-import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, dirname, resolve } from 'node:path';
 
 export const KEY_VAR = 'SMARTERWEATHER_API_KEY';
 export const ENV_FILE_VAR = 'SMARTERWEATHER_ENV_FILE';
@@ -12,6 +13,15 @@ export function displayPrefix(key: string): string {
 
 export function isGuardedCwd(cwd: string, homedir: string): boolean {
   return resolve(cwd) === resolve('/') || resolve(cwd) === resolve(homedir);
+}
+
+const UNEXPANDED_RE = /^\$\{.+\}$/;
+
+/** Empty or still-unexpanded `${…}` (a host that didn't interpolate) counts as unset. */
+export function isUsableKey(value: string | undefined): value is string {
+  if (value === undefined) return false;
+  const trimmed = value.trim();
+  return trimmed !== '' && !UNEXPANDED_RE.test(trimmed);
 }
 
 export function parseEnvKey(contents: string): string | undefined {
@@ -84,14 +94,36 @@ export function readExistingKey(filePath: string): string | undefined {
   try {
     return parseEnvKey(readFileSync(filePath, 'utf8'));
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT' || code === 'ENOTDIR') return undefined;
     throw err;
   }
 }
 
-export function upsertEnvKey(filePath: string, key: string): void {
-  mkdirSync(dirname(filePath), { recursive: true });
+/** True when git tracks `filePath`. No git, not a repo, or untracked → false. */
+export function isGitTracked(filePath: string): boolean {
+  const res = spawnSync('git', ['ls-files', '--error-unmatch', '--', basename(filePath)], {
+    cwd: dirname(filePath),
+    stdio: 'ignore',
+    timeout: 5000,
+  });
+  return res.status === 0;
+}
 
+function writeAtomic(filePath: string, body: string): void {
+  mkdirSync(dirname(filePath), { recursive: true });
+  const tmp = `${filePath}.${process.pid}.tmp`;
+  try {
+    writeFileSync(tmp, body, { encoding: 'utf8', mode: 0o600 });
+    renameSync(tmp, filePath);
+  } catch (err) {
+    rmSync(tmp, { force: true });
+    throw err;
+  }
+  chmodSync(filePath, 0o600);
+}
+
+export function upsertEnvKey(filePath: string, key: string): void {
   let existing = '';
   try {
     existing = readFileSync(filePath, 'utf8');
@@ -107,10 +139,49 @@ export function upsertEnvKey(filePath: string, key: string): void {
       ? `${existing}${KEY_VAR}=${key}\n`
       : `${existing}\n${KEY_VAR}=${key}\n`;
 
-  const tmp = `${filePath}.${process.pid}.tmp`;
-  writeFileSync(tmp, next, { encoding: 'utf8', mode: 0o600 });
-  renameSync(tmp, filePath);
-  chmodSync(filePath, 0o600);
+  writeAtomic(filePath, next);
+}
+
+/** Replace (or append) SMARTERWEATHER_API_KEY. Atomic tmp+rename, mode 0600. */
+export function replaceEnvKey(filePath: string, key: string): void {
+  let existing = '';
+  try {
+    existing = readFileSync(filePath, 'utf8');
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+  }
+
+  const lines = existing.length === 0 ? [] : existing.split(/\r?\n/);
+  let replaced = false;
+  const out: string[] = [];
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      out.push(rawLine);
+      continue;
+    }
+    const eq = trimmed.indexOf('=');
+    if (eq >= 0 && trimmed.slice(0, eq).trim() === KEY_VAR) {
+      if (!replaced) {
+        out.push(`${KEY_VAR}=${key}`);
+        replaced = true;
+      }
+      continue;
+    }
+    out.push(rawLine);
+  }
+  if (!replaced) {
+    if (out.length > 0 && out[out.length - 1] === '') {
+      out[out.length - 1] = `${KEY_VAR}=${key}`;
+      out.push('');
+    } else {
+      out.push(`${KEY_VAR}=${key}`);
+    }
+  }
+
+  let body = out.join('\n');
+  if (!body.endsWith('\n')) body += '\n';
+  writeAtomic(filePath, body);
 }
 
 export function ensureGitignore(dir: string): void {

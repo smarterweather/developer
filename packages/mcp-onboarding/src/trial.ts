@@ -1,12 +1,12 @@
-import { dirname } from 'node:path';
 import { createRequire } from 'node:module';
 import {
-  displayPrefix,
-  ensureGitignore,
-  readExistingKey,
-  resolveEnvPath,
-  upsertEnvKey,
-} from './env.js';
+  checkAlreadyConfigured,
+  resolveSinkTarget,
+  trackedEnvError,
+  writeNewKey,
+  type AlreadyConfigured,
+} from './sink.js';
+import { displayPrefix, readExistingKey } from './env.js';
 import { solvePow } from './pow.js';
 
 const require = createRequire(import.meta.url);
@@ -31,11 +31,7 @@ export type StartTrialOk = {
   consume: string;
 };
 
-export type StartTrialAlready = {
-  status: 'already_configured';
-  key_prefix: string;
-  env_path: string;
-};
+export type StartTrialAlready = AlreadyConfigured;
 
 export type StartTrialErr = {
   status: 'error';
@@ -91,25 +87,19 @@ export function resetStartTrialLock(): void {
   inFlight = undefined;
 }
 
+export const TRIAL_CONSUME =
+  'set -a; . ./.env; set +a; curl -sS -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \'https://api.smarterweather.com/v1/weather?lat=41.66&lon=-91.53\'. Do not cat .env. Restart the weather MCP with SMARTERWEATHER_API_KEY set.';
+
 async function runStartTrial(deps: StartTrialDeps): Promise<StartTrialResult> {
-  const target = resolveEnvPath({
-    envFile: deps.envFile,
-    rootUris: deps.rootUris,
-    cwd: deps.cwd,
-    homedir: deps.homedir,
-  });
+  const target = resolveSinkTarget(deps);
   if (!target.ok) {
     return { status: 'error', error: 'env_path', detail: target.error };
   }
+  const tracked = trackedEnvError(target.path);
+  if (tracked) return { status: 'error', error: 'env_path', detail: tracked };
 
-  const existing = deps.processEnvKey || readExistingKey(target.path);
-  if (existing) {
-    return {
-      status: 'already_configured',
-      key_prefix: displayPrefix(existing),
-      env_path: target.path,
-    };
-  }
+  const already = checkAlreadyConfigured(deps.processEnvKey, target.path);
+  if (already) return already;
 
   const fetchImpl = deps.fetchImpl ?? fetch;
   const base = (deps.keyApiBase ?? DEFAULT_KEY_API_BASE).replace(/\/$/, '');
@@ -178,35 +168,37 @@ async function runStartTrial(deps: StartTrialDeps): Promise<StartTrialResult> {
   }
 
   try {
-    upsertEnvKey(target.path, minted.api_key);
-    ensureGitignore(dirname(target.path));
+    const written = writeNewKey(target.path, minted.api_key);
+    const result: StartTrialOk = {
+      status: 'ok',
+      key_prefix: written.key_prefix,
+      env_path: written.env_path,
+      consume: TRIAL_CONSUME,
+    };
+    if (typeof minted.claim_ticket === 'string' && minted.claim_ticket.startsWith('sw_claim_')) {
+      result.claim_ticket = minted.claim_ticket;
+    }
+    if (typeof minted.claim_url === 'string' && minted.claim_url.includes('#ticket=')) {
+      result.claim_url = minted.claim_url;
+    }
+    if (typeof minted.claim_expires_at === 'string') result.claim_expires_at = minted.claim_expires_at;
+    if (typeof minted.expires_at === 'string') result.expires_at = minted.expires_at;
+    if (minted.limits !== undefined) result.limits = minted.limits;
+    return result;
   } catch (err) {
     if ((err as Error).message.includes('already set')) {
       const again = readExistingKey(target.path);
       return {
         status: 'already_configured',
         key_prefix: displayPrefix(again ?? minted.api_key),
+        source: 'env_file',
         env_path: target.path,
       };
     }
-    return { status: 'error', error: 'env_path', detail: (err as Error).message };
+    return {
+      status: 'error',
+      error: 'env_path',
+      detail: `trial key ${displayPrefix(minted.api_key)} was minted but could not be written (${(err as Error).message}); it expires unclaimed. Fix the path and retry.`,
+    };
   }
-
-  const result: StartTrialOk = {
-    status: 'ok',
-    key_prefix: displayPrefix(minted.api_key),
-    env_path: target.path,
-    consume:
-      'set -a; . ./.env; set +a; curl -sS -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \'https://api.smarterweather.com/v1/weather?lat=41.66&lon=-91.53\'. Do not cat .env. Restart the weather MCP with SMARTERWEATHER_API_KEY set.',
-  };
-  if (typeof minted.claim_ticket === 'string' && minted.claim_ticket.startsWith('sw_claim_')) {
-    result.claim_ticket = minted.claim_ticket;
-  }
-  if (typeof minted.claim_url === 'string' && minted.claim_url.includes('#ticket=')) {
-    result.claim_url = minted.claim_url;
-  }
-  if (typeof minted.claim_expires_at === 'string') result.claim_expires_at = minted.claim_expires_at;
-  if (typeof minted.expires_at === 'string') result.expires_at = minted.expires_at;
-  if (minted.limits !== undefined) result.limits = minted.limits;
-  return result;
 }

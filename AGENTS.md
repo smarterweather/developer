@@ -11,9 +11,10 @@ and carries an RFC 6750 `WWW-Authenticate: Bearer` challenge.
 curl -sS -D - 'https://api.smarterweather.com/v1/weather?lat=41.66&lon=-91.53'
 ```
 
-Then get a key (see below), write it to `.env` as
-`SMARTERWEATHER_API_KEY`, add `.env` to `.gitignore`, and call again with
-`Authorization: Bearer sw_live_*`.
+Then get a key (see below). Every recommended mint path writes
+`SMARTERWEATHER_API_KEY` to a local `.env` (mode `0600`, gitignored) and
+prints only a 12-character prefix — never the bearer. Call again with
+`Authorization: Bearer $SMARTERWEATHER_API_KEY` (from the env file).
 
 ## Surfaces
 
@@ -32,24 +33,37 @@ Canonical machine-readable contracts:
 
 ## Getting a key
 
-- **Human present (recommended):** send them to
-  <https://developers.smarterweather.com/dashboard/api-keys> (free, no
-  card; the key is shown once) and have them put it in `.env`, not chat.
-- **Client speaks MCP:** use the onboarding MCP path below.
+- **Human present (recommended):**
+  `npx -y @smarterweather/mcp-onboarding@latest login` — RFC 8628 device
+  grant; prints a verification URL for the human, writes `.env`, prints
+  only a key prefix. `login` blocks until the human approves; run it in
+  the background or with a long shell timeout and relay the printed URL.
+- **No human present:**
+  `npx -y @smarterweather/mcp-onboarding@latest trial` (or stdio
+  `start_trial`) — mints a trial key into `.env`, returns a prefix +
+  claim link.
 - **Agent holds a wallet:** pay per call on the weather MCP via x402
   (USDC on Base); no account needed.
+- **Raw HTTP (curl / conformance only):** `POST /developer/keys` and
+  `POST /developer/keys/trial` return the bearer in the body — write only
+  the `key` / `api_key` field to `.env` as `SMARTERWEATHER_API_KEY=`
+  (e.g. `jq -er '"SMARTERWEATHER_API_KEY=" + .key' >> .env`); never print
+  it.
 
 ## Onboarding MCP path
 
-1. Connect to the **onboarding MCP** with no credentials.
+1. Connect to the **onboarding MCP** with no credentials (or use the
+   `login` / `trial` CLI above with no MCP host).
 2. Call `get_plans` / `get_documentation` / `sign_up`. `sign_up` returns
    a Clerk signup URL; a human completes account creation in the browser
    (no credit card for the free tier).
 3. Complete Clerk OAuth when the host prompts.
-4. Prefer stdio `start_trial` (writes `.env`, never prints the bearer) or,
-   after OAuth, `create_api_key` (idempotent) and `configure_mcp`.
-5. Use the key against the weather MCP or REST API, then remove
-   the onboarding server from the client config (it is one-shot).
+4. Prefer stdio `start_trial` / CLI `trial` (writes `.env`, never prints
+   the bearer). Via the stdio bridge, hosted `create_api_key` /
+   `rotate_api_key` also sink into `.env` and strip the plaintext.
+5. Use the key against the weather MCP or REST API (`mcp-weather` reads
+   `.env` automatically), then remove the onboarding server from the
+   client config (it is one-shot).
 
 stdio bridges (local clients that cannot speak Streamable HTTP):
 
@@ -58,13 +72,14 @@ npx -y @smarterweather/mcp-onboarding
 npx -y @smarterweather/mcp-weather
 ```
 
-Do **not** append `@preview` — `latest` is the GA bridge. Set
-`SMARTERWEATHER_API_KEY` in the process environment for headless weather
-calls; set `SMARTERWEATHER_ONBOARDING_AUTH=required` to force onboarding
-OAuth for account-scoped tools. Authenticated onboarding uses a
-pre-registered public PKCE Clerk client (DCR off); ensure port `3334` is
-free for the loopback callback. Prefer the stdio bridge over Cursor's
-native `url` OAuth for gated tools (Clerk + `cursor://` is broken).
+Do **not** append `@preview` — `latest` is the GA bridge. Prefer
+`envFile: "${workspaceFolder}/.env"` (Cursor) over pasting the key;
+`mcp-weather` also falls back to `cwd/.env`. Set
+`SMARTERWEATHER_ONBOARDING_AUTH=required` to force onboarding OAuth for
+account-scoped tools. Authenticated onboarding uses a pre-registered
+public PKCE Clerk client (DCR off); ensure port `3334` is free for the
+loopback callback. Prefer the stdio bridge over Cursor's native `url`
+OAuth for gated tools (Clerk + `cursor://` is broken).
 
 ## Auth and errors
 

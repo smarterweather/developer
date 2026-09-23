@@ -35,16 +35,21 @@ Smarter Weather ships two MCP packages on npm and two Agent Plugins:
 
 The recommended onboarding flow is:
 
-1. Install the onboarding plugin or `@smarterweather/mcp-onboarding`.
-   Restart the client. Tell the agent "set up Smarter Weather for me."
-   It will open a Clerk signup URL, OAuth you, mint a key, and emit
-   weather-client config (`configure_mcp`).
-2. Restart the client with the weather plugin or
-   `@smarterweather/mcp-weather` wired in.
-3. Remove the onboarding plugin / `@smarterweather/mcp-onboarding` — it
+1. Prefer the CLI with no MCP host when you can:
+   - Human present: `npx -y @smarterweather/mcp-onboarding@latest login`
+   - No human: `npx -y @smarterweather/mcp-onboarding@latest trial`
+   Both write `.env` and print only a key prefix.
+2. Or install the onboarding plugin / `@smarterweather/mcp-onboarding`,
+   restart the client, and tell the agent "set up Smarter Weather for me."
+   It will open a Clerk signup URL, OAuth you, mint a key into `.env`
+   (`start_trial` / sunk `create_api_key`), and emit weather-client
+   config (`configure_mcp`).
+3. Restart the client with the weather plugin or
+   `@smarterweather/mcp-weather` wired in (`envFile` /
+   `cwd/.env` is enough — no key in argv).
+4. Remove the onboarding plugin / `@smarterweather/mcp-onboarding` — it
    has done its job and its account tools should not sit in a long-lived
-   config. (The two servers live on different hosts and do not conflict;
-   the removal is hygiene, not a compatibility rule.)
+   config.
 
 Per-client config snippets live in
 [`docs/mcp-weather.md`](./mcp-weather.md) and

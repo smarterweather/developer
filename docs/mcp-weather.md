@@ -2,7 +2,7 @@
 
 > The hosted weather MCP server at
 > `https://mcp.smarterweather.com` is **live in production**,
-> serving the full 29-tool catalog with API-key and OAuth 2.1 auth.
+> serving the full 33-tool catalog with API-key and OAuth 2.1 auth.
 > Install the stdio bridge with `npx -y @smarterweather/mcp-weather`
 > (untagged — `latest` is the only tag). Clients that speak
 > streamable HTTP natively can connect to the hosted endpoint
@@ -23,9 +23,12 @@ Two pieces ship together as the "weather MCP" surface:
    (Claude Desktop, Claude Code, Cursor, MCP Inspector) talk to the
    hosted server. The bridge runs the full MCP OAuth client when no
    API key is configured (discovery → DCR → PKCE → loopback
-   callback → token cache); when `SMARTERWEATHER_API_KEY` is set,
-   it forwards the key as an `Authorization: Bearer` header
-   instead.
+   callback → token cache). When a key is available (process env,
+   `SMARTERWEATHER_ENV_FILE`, or `cwd/.env`), it forwards
+   `Authorization:${SMARTERWEATHER_AUTH_HEADER}` with the bearer in
+   the child env — never on argv — so process listings and
+   mcp-remote's pre-expansion header log never see the key.
+   Unexpanded `${…}` placeholders in the env count as unset.
 
 All tool implementations live server-side. The bridge does not
 see, parse, or modify weather data — it's purely a config-and-spawn
@@ -58,11 +61,16 @@ that already speak MCP OAuth natively can talk to
 ### API key (headless / CI)
 
 Set `SMARTERWEATHER_API_KEY=sw_live_…` (or `sw_test_…`) in the
-bridge's environment. The bridge forwards the key as
-`Authorization: Bearer <key>` on every proxied request. Skips
-the browser flow entirely — useful for scripted or CI usage.
+bridge's environment, or write it to `.env` via
+`npx -y @smarterweather/mcp-onboarding@latest login` / `trial` /
+`start_trial`. Resolution order: process env →
+`SMARTERWEATHER_ENV_FILE` → `cwd/.env` (refuses `/` and `$HOME`).
+An unexpanded `${SMARTERWEATHER_API_KEY}` literal counts as unset
+and falls through (one stderr warning). The bridge never puts the
+key on argv.
 
-Mint keys at <https://developers.smarterweather.com/dashboard/api-keys>.
+Mint keys with the onboarding CLI (`login` / `trial`) or at
+<https://developers.smarterweather.com/dashboard/api-keys>.
 Keys need the `mcp` scope to authenticate against `sw-mcp`.
 
 ### Keyless x402 (wallet agents)
@@ -93,25 +101,26 @@ OAuth:
 }
 ```
 
-API key:
+API key — in the project `.cursor/mcp.json`, use `envFile` so the
+bridge reads the `.env` written by `login` / `trial` / `start_trial`
+(Cursor requires `"type": "stdio"` for `envFile`):
 
 ```jsonc
 {
   "mcpServers": {
     "smarterweather": {
+      "type": "stdio",
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"],
-      "env": {
-        "SMARTERWEATHER_API_KEY": "${env:SMARTERWEATHER_API_KEY}"
-      }
+      "envFile": "${workspaceFolder}/.env"
     }
   }
 }
 ```
 
-Cursor interpolates `${env:NAME}` from the process environment. Do
-not paste `sw_live_` / `sw_test_` into the JSON. Other hosts (and
-`configure_mcp`) use the `${SMARTERWEATHER_API_KEY}` slot.
+Cursor also interpolates `${env:NAME}` from the process environment.
+Do not paste `sw_live_` / `sw_test_` into the JSON. The bridge itself
+falls back to `cwd/.env` when the process env is unset.
 
 > **Note (Cursor built-in OAuth):** Cursor's *built-in* MCP OAuth
 > client (`cursor://` redirect) is currently incompatible with
@@ -133,6 +142,24 @@ uses the identical `mcpServers` shape:
     "smarterweather": {
       "command": "npx",
       "args": ["-y", "@smarterweather/mcp-weather"]
+    }
+  }
+}
+```
+
+API key — Claude Desktop does not interpolate `${…}`, so point the
+bridge at the project `.env` by absolute path instead of pasting the
+key:
+
+```jsonc
+{
+  "mcpServers": {
+    "smarterweather": {
+      "command": "npx",
+      "args": ["-y", "@smarterweather/mcp-weather"],
+      "env": {
+        "SMARTERWEATHER_ENV_FILE": "/absolute/path/to/your/project/.env"
+      }
     }
   }
 }
@@ -173,7 +200,7 @@ package default.
 
 ## Tool catalog (current)
 
-The hosted server exposes **29 tools** organized around
+The hosted server exposes **33 tools** organized around
 meteorologist workflows rather than raw endpoints. Every
 location-aware tool accepts either a free-text `location` string or
 explicit `lat`/`lon`. Call `tools/list` for the live, canonical
@@ -218,6 +245,10 @@ catalog with full input/output schemas.
 - `get_tropical` — active tropical systems, track and cone.
 - `get_population_exposure` — population inside a hazard footprint.
 - `get_climate_records` — record highs/lows and normals.
+- `get_climate_normals` — day-of-year NCEI 1991–2020 normals from
+  the nearest station.
+- `get_path_exposure` — civic points of interest (schools, hospitals,
+  airports, ...) inside a caller-supplied GeoJSON polygon.
 - `get_storm_cells` — storm-scale cell tracks, hail, mesocyclone and
   TVS signatures.
 - `get_air_quality` — AQI and constituent pollutants.
@@ -237,6 +268,15 @@ catalog with full input/output schemas.
   an event or trip.
 - `find_best_window` — rank time windows against weather criteria
   ("best 3-hour window for a run this week").
+- `get_forecast_skill` — how accurate our forecasts have been near a
+  location, measured against observed analysis truth.
+- `get_forecast_skill_map` — the same skill measurement as hexes
+  inside a bounding box.
+
+### Platform
+
+- `get_platform_status` — data-freshness state per source; check it
+  before reporting data as current.
 
 ### Visual
 

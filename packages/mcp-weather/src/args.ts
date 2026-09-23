@@ -15,19 +15,21 @@
 //   3. opts.defaultUrl (the package-baked-in default).
 //
 // Precedence rules (Authorization header):
-//   - If opts.apiKey is set AND the user did not pass their own
-//     --header "Authorization:..." flag, inject
-//     --header "Authorization:Bearer <apiKey>".
-//   - The "no space" form (Authorization:Bearer X, not
-//     "Authorization: Bearer X") is what mcp-remote's README
-//     recommends for Windows / Cursor arg-escaping safety.
+//   - If opts.injectAuthHeader is true AND the user did not pass their
+//     own --header "Authorization:..." flag, inject
+//     --header "Authorization:${SMARTERWEATHER_AUTH_HEADER}".
+//     The child process env must set SMARTERWEATHER_AUTH_HEADER to
+//     "Bearer <key>" so mcp-remote expands the placeholder — the key
+//     never appears in argv (or in mcp-remote's pre-expansion header log).
+//   - A user-supplied --header Authorization: still wins.
+
+import { AUTH_HEADER_VAR } from './env.js';
 
 export interface BuildArgsOptions {
   /** Optional URL override (typically from SMARTERWEATHER_MCP_URL). */
   url?: string | undefined;
-  /** Optional API key (typically from SMARTERWEATHER_API_KEY) to
-   * inject as a Bearer Authorization header. */
-  apiKey?: string | undefined;
+  /** When true, inject Authorization:${SMARTERWEATHER_AUTH_HEADER}. */
+  injectAuthHeader?: boolean | undefined;
   /** Default URL when neither a user-provided positional nor opts.url
    * is set. */
   defaultUrl: string;
@@ -46,15 +48,15 @@ export function buildArgs(userArgs: readonly string[], opts: BuildArgsOptions): 
     args.unshift(resolved);
   }
 
-  // API-key Authorization header injection.
-  if (opts.apiKey !== undefined && opts.apiKey !== '') {
+  // Authorization header via env-expanded placeholder (never the raw key).
+  if (opts.injectAuthHeader) {
     const userHasAuthHeader = userArgs.some((a, i) => {
       if (a !== '--header') return false;
       const next = userArgs[i + 1];
       return typeof next === 'string' && AUTH_HEADER_RE.test(next);
     });
     if (!userHasAuthHeader) {
-      args.push('--header', `Authorization:Bearer ${opts.apiKey}`);
+      args.push('--header', `Authorization:\${${AUTH_HEADER_VAR}}`);
     }
   }
 
