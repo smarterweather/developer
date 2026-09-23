@@ -1,7 +1,12 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildArgs } from '../src/args.js';
+import { KEY_VAR, resolveApiKey } from '../src/env.js';
 
 const DEFAULT_URL = 'https://mcp.smarterweather.com';
+const FAKE = `sw_live_${'op'.repeat(20)}`;
 
 describe('buildArgs', () => {
   describe('URL resolution', () => {
@@ -39,7 +44,6 @@ describe('buildArgs', () => {
     });
 
     it('does not inject default when user passes a port positional WITH a URL', () => {
-      // mcp-remote signature: <url> [port]. User passes both.
       const args = buildArgs(['https://example.com/mcp', '4567'], {
         defaultUrl: DEFAULT_URL,
       });
@@ -48,33 +52,26 @@ describe('buildArgs', () => {
   });
 
   describe('API-key header injection', () => {
-    it('does not inject Authorization when apiKey is undefined', () => {
+    it('does not inject Authorization when injectAuthHeader is false', () => {
       const args = buildArgs([], { defaultUrl: DEFAULT_URL });
       expect(args).not.toContain('--header');
     });
 
-    it('does not inject Authorization when apiKey is empty string', () => {
-      const args = buildArgs([], { apiKey: '', defaultUrl: DEFAULT_URL });
-      expect(args).not.toContain('--header');
-    });
-
-    it('injects Authorization Bearer header when apiKey is set', () => {
-      const args = buildArgs([], { apiKey: 'sw_live_test', defaultUrl: DEFAULT_URL });
-      expect(args).toEqual([DEFAULT_URL, '--header', 'Authorization:Bearer sw_live_test']);
-    });
-
-    it('uses the no-space form recommended by mcp-remote (Authorization:Bearer X, not Authorization: Bearer X)', () => {
-      const args = buildArgs([], { apiKey: 'sw_live_test', defaultUrl: DEFAULT_URL });
-      const headerIdx = args.indexOf('--header');
-      expect(headerIdx).toBeGreaterThanOrEqual(0);
-      expect(args[headerIdx + 1]).toBe('Authorization:Bearer sw_live_test');
+    it('injects Authorization:${SMARTERWEATHER_AUTH_HEADER} when requested', () => {
+      const args = buildArgs([], { injectAuthHeader: true, defaultUrl: DEFAULT_URL });
+      expect(args).toEqual([
+        DEFAULT_URL,
+        '--header',
+        'Authorization:${SMARTERWEATHER_AUTH_HEADER}',
+      ]);
+      expect(args.join(' ').includes(FAKE)).toBe(false);
     });
 
     it('does not double-inject when the user already passed --header Authorization', () => {
-      const args = buildArgs(
-        ['--header', 'Authorization:Bearer custom-token'],
-        { apiKey: 'sw_live_test', defaultUrl: DEFAULT_URL },
-      );
+      const args = buildArgs(['--header', 'Authorization:Bearer custom-token'], {
+        injectAuthHeader: true,
+        defaultUrl: DEFAULT_URL,
+      });
       const headerCount = args.filter((a) => a === '--header').length;
       expect(headerCount).toBe(1);
       expect(args).toEqual([
@@ -85,25 +82,25 @@ describe('buildArgs', () => {
     });
 
     it('detects an existing Authorization header case-insensitively', () => {
-      const args = buildArgs(
-        ['--header', 'authorization:Bearer custom'],
-        { apiKey: 'sw_live_test', defaultUrl: DEFAULT_URL },
-      );
+      const args = buildArgs(['--header', 'authorization:Bearer custom'], {
+        injectAuthHeader: true,
+        defaultUrl: DEFAULT_URL,
+      });
       const headerCount = args.filter((a) => a === '--header').length;
       expect(headerCount).toBe(1);
     });
 
     it('still injects when the user passed a non-Authorization --header', () => {
-      const args = buildArgs(
-        ['--header', 'X-Custom:value'],
-        { apiKey: 'sw_live_test', defaultUrl: DEFAULT_URL },
-      );
+      const args = buildArgs(['--header', 'X-Custom:value'], {
+        injectAuthHeader: true,
+        defaultUrl: DEFAULT_URL,
+      });
       expect(args).toEqual([
         DEFAULT_URL,
         '--header',
         'X-Custom:value',
         '--header',
-        'Authorization:Bearer sw_live_test',
+        'Authorization:${SMARTERWEATHER_AUTH_HEADER}',
       ]);
     });
   });
@@ -113,12 +110,7 @@ describe('buildArgs', () => {
       const args = buildArgs(['--debug', '--transport', 'http-only'], {
         defaultUrl: DEFAULT_URL,
       });
-      expect(args).toEqual([
-        DEFAULT_URL,
-        '--debug',
-        '--transport',
-        'http-only',
-      ]);
+      expect(args).toEqual([DEFAULT_URL, '--debug', '--transport', 'http-only']);
     });
 
     it('preserves user arg order', () => {
@@ -134,17 +126,66 @@ describe('buildArgs', () => {
       ]);
     });
 
-    it('combines positional override + flags + injected API-key header', () => {
-      const args = buildArgs(
-        ['https://override.example.com/mcp', '--debug'],
-        { apiKey: 'sw_live_test', defaultUrl: DEFAULT_URL },
-      );
+    it('combines positional override + flags + injected auth header placeholder', () => {
+      const args = buildArgs(['https://override.example.com/mcp', '--debug'], {
+        injectAuthHeader: true,
+        defaultUrl: DEFAULT_URL,
+      });
       expect(args).toEqual([
         'https://override.example.com/mcp',
         '--debug',
         '--header',
-        'Authorization:Bearer sw_live_test',
+        'Authorization:${SMARTERWEATHER_AUTH_HEADER}',
       ]);
+      expect(JSON.stringify(args).includes('sw_live_')).toBe(false);
     });
+  });
+});
+
+describe('resolveApiKey', () => {
+  it('prefers a usable process env key', () => {
+    const hit = resolveApiKey({
+      processEnvKey: FAKE,
+      cwd: '/tmp/proj',
+      homedir: '/Users/nobody',
+      warn: () => undefined,
+    });
+    expect(hit).toEqual({ ok: true, key: FAKE, source: 'env' });
+  });
+
+  it('treats unexpanded ${…} as unset and falls through to .env', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-weather-env-'));
+    writeFileSync(join(dir, '.env'), `${KEY_VAR}=${FAKE}\n`);
+    const warnings: string[] = [];
+    const hit = resolveApiKey({
+      processEnvKey: '${SMARTERWEATHER_API_KEY}',
+      cwd: dir,
+      homedir: '/Users/nobody',
+      warn: (m) => warnings.push(m),
+    });
+    expect(hit).toEqual({ ok: true, key: FAKE, source: 'cwd' });
+    expect(warnings.length).toBe(1);
+  });
+
+  it('reads SMARTERWEATHER_ENV_FILE', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-weather-env-'));
+    const custom = join(dir, 'custom.env');
+    writeFileSync(custom, `${KEY_VAR}=${FAKE}\n`);
+    const hit = resolveApiKey({
+      envFile: custom,
+      cwd: '/',
+      homedir: '/Users/nobody',
+      warn: () => undefined,
+    });
+    expect(hit).toEqual({ ok: true, key: FAKE, source: 'env_file' });
+  });
+
+  it('refuses guarded cwd when no env key', () => {
+    const hit = resolveApiKey({
+      cwd: '/',
+      homedir: '/Users/nobody',
+      warn: () => undefined,
+    });
+    expect(hit).toEqual({ ok: false, reason: 'guarded_cwd' });
   });
 });

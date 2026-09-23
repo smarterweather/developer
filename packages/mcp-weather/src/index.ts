@@ -10,19 +10,23 @@
 // SmarterWeather URL defaults and an optional Authorization header
 // injection so users only need to install one package.
 //
-// All real argv assembly lives in ./args.ts so it stays unit-
-// testable. This file owns:
-//   - --version / -v short-circuit (so packages-ci.yml's post-build
-//     smoke test can invoke the bin without blocking on stdio).
-//   - Resolving the mcp-remote proxy entry point via createRequire
-//     (avoids depending on a bin symlink layout that may differ
-//     between npm / pnpm / yarn / npx tmpdirs).
-//   - Spawning the child + forwarding stdio + signals so Ctrl-C
-//     in the MCP client cleanly tears down the bridge.
+// The API key is resolved from SMARTERWEATHER_API_KEY →
+// SMARTERWEATHER_ENV_FILE → cwd/.env. Unexpanded ${…} placeholders
+// count as unset. The bearer is passed to the child as
+// SMARTERWEATHER_AUTH_HEADER (never on argv), and buildArgs injects
+// Authorization:${SMARTERWEATHER_AUTH_HEADER} so mcp-remote's
+// pre-expansion header log never sees the key.
 
 import { spawn } from 'node:child_process';
+import { homedir } from 'node:os';
 import { createRequire } from 'node:module';
 import { buildArgs } from './args.js';
+import {
+  AUTH_HEADER_VAR,
+  ENV_FILE_VAR,
+  KEY_VAR,
+  resolveApiKey,
+} from './env.js';
 
 const require = createRequire(import.meta.url);
 
@@ -43,9 +47,16 @@ if (userArgs.includes('--version') || userArgs.includes('-v')) {
   process.exit(0);
 }
 
+const resolved = resolveApiKey({
+  processEnvKey: process.env[KEY_VAR],
+  envFile: process.env[ENV_FILE_VAR],
+  cwd: process.cwd(),
+  homedir: homedir(),
+});
+
 const args = buildArgs(userArgs, {
   url: process.env.SMARTERWEATHER_MCP_URL,
-  apiKey: process.env.SMARTERWEATHER_API_KEY,
+  injectAuthHeader: resolved.ok,
   // The live prod hostname is the baked default. For dev/staging,
   // users override via SMARTERWEATHER_MCP_URL=http://<dev-alb>/mcp;
   // see README for the dev/staging snippet.
@@ -57,8 +68,14 @@ const args = buildArgs(userArgs, {
 // (workspace symlinks, npx temp dirs, global installs) works.
 const proxyEntry = require.resolve('mcp-remote/dist/proxy.js');
 
+const childEnv = { ...process.env };
+if (resolved.ok) {
+  childEnv[AUTH_HEADER_VAR] = `Bearer ${resolved.key}`;
+}
+
 const child = spawn(process.execPath, [proxyEntry, ...args], {
   stdio: 'inherit',
+  env: childEnv,
 });
 
 // Forward signals so the host MCP client's tear-down (Ctrl-C,

@@ -6,16 +6,20 @@
 // Thin spawn() wrapper around `mcp-remote`
 // (https://www.npmjs.com/package/mcp-remote), same pattern as
 // @smarterweather/mcp-weather, plus a local JSON-RPC interceptor
-// for `start_trial`: the stdio package mints over HTTPS, writes
-// SMARTERWEATHER_API_KEY to .env (mode 0600), and returns only a
-// key prefix. mcp-remote never sees the bearer.
+// for `start_trial` / create_api_key / rotate_api_key: the stdio
+// package mints or sinks over HTTPS, writes SMARTERWEATHER_API_KEY
+// to .env (mode 0600), and returns only a key prefix.
+//
+// Subcommands (no MCP host): `trial` and `login` [--json].
 
 import { spawn } from 'node:child_process';
 import { homedir } from 'node:os';
 import { createRequire } from 'node:module';
 import { buildArgs } from './args.js';
+import { parseCliArgs, runLoginCli, runTrialCli } from './cli.js';
 import { ENV_FILE_VAR, KEY_VAR } from './env.js';
 import { attachJsonRpcProxy } from './proxy.js';
+import { resolveEnvPath } from './sink.js';
 import { startTrial } from './trial.js';
 
 const require = createRequire(import.meta.url);
@@ -35,6 +39,23 @@ if (userArgs.includes('--version') || userArgs.includes('-v')) {
   // eslint-disable-next-line no-console
   console.log(`mcp-remote ${mcpRemotePkg.version}`);
   process.exit(0);
+}
+
+const cli = parseCliArgs(userArgs);
+if (cli) {
+  const deps = {
+    envFile: process.env[ENV_FILE_VAR],
+    processEnvKey: process.env[KEY_VAR],
+    keyApiBase:
+      process.env.SMARTERWEATHER_API_BASE_URL ?? process.env.SMARTERWEATHER_KEY_API_BASE,
+    cwd: process.cwd(),
+    homedir: homedir(),
+  };
+  const code =
+    cli.command === 'trial'
+      ? await runTrialCli(deps, { json: cli.json })
+      : await runLoginCli(deps, { json: cli.json });
+  process.exit(code);
 }
 
 const args = buildArgs(userArgs, {
@@ -67,6 +88,18 @@ proxy = attachJsonRpcProxy({
       cwd: process.cwd(),
       homedir: homedir(),
     });
+  },
+  sink: {
+    processEnvKey: process.env[KEY_VAR],
+    resolveEnvPath: async () => {
+      const envFile = process.env[ENV_FILE_VAR];
+      return resolveEnvPath({
+        envFile,
+        rootUris: envFile ? [] : await proxy.requestHostRoots(),
+        cwd: process.cwd(),
+        homedir: homedir(),
+      });
+    },
   },
 });
 

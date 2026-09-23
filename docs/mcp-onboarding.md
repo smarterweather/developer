@@ -27,6 +27,20 @@ install [`plugins/smarterweather/`](https://github.com/smarterweather/developer/
 for the weather MCP. Cursor Marketplace discovery is the second entry
 in [`.cursor-plugin/marketplace.json`](https://github.com/smarterweather/developer/blob/main/.cursor-plugin/marketplace.json).
 
+### CLI (no MCP host)
+
+```bash
+# Human present — RFC 8628 device grant; blocks until approved
+npx -y @smarterweather/mcp-onboarding@latest login
+
+# No human — trial mint into ./.env
+npx -y @smarterweather/mcp-onboarding@latest trial
+```
+
+Both write `SMARTERWEATHER_API_KEY` to `.env` (mode `0600`, gitignored) and
+print only a key prefix. Use `--json` for a single whitelisted object.
+`login` never prints or persists the access token or device code.
+
 ## Connect
 
 ### Hosted (Streamable HTTP)
@@ -75,8 +89,8 @@ Registration) and pins the loopback callback to
 | `get_plans` | none | Plan/pricing catalog with feature matrices. |
 | `get_documentation` | none | Keyword-searchable documentation index + content. |
 | `sign_up` | none | Referral-tagged Clerk signup URL. A human completes free-tier account creation in the browser. |
-| `start_trial` | none (stdio) | **Local to `@smarterweather/mcp-onboarding`.** Mints a trial key over HTTPS, writes `SMARTERWEATHER_API_KEY` to `.env` (mode `0600`), returns only `key_prefix`. Hosted Streamable HTTP does not mint. After `npm` upgrade, restart the MCP server. |
-| `create_api_key` / `list_api_keys` / `rotate_api_key` / `revoke_api_key` | OAuth | Full key lifecycle, acting as the signed-in developer. |
+| `start_trial` | none (stdio / CLI) | **Local to `@smarterweather/mcp-onboarding`.** Also available as `npx -y @smarterweather/mcp-onboarding@latest trial`. Mints a trial key over HTTPS, writes `SMARTERWEATHER_API_KEY` to `.env` (mode `0600`), returns only `key_prefix`. Hosted Streamable HTTP does not mint. After `npm` upgrade, restart the MCP server. |
+| `create_api_key` / `list_api_keys` / `rotate_api_key` / `revoke_api_key` | OAuth | Full key lifecycle. Via the stdio bridge, `create_api_key` / `rotate_api_key` write `.env` and strip the plaintext from the tool result. Prefer CLI `login` when a human can approve a device code. |
 | `configure_mcp` | OAuth | Ready-to-paste `@smarterweather/mcp-weather` client config for your editor/agent. |
 | `get_quickstart` | OAuth | Personalized quickstart (key + first calls). |
 | `get_usage` / `get_billing_status` | OAuth | Usage against plan limits; subscription + invoice preview. |

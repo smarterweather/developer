@@ -3,7 +3,11 @@
 A stdio-to-Streamable-HTTP bridge for the [Smarter Weather hosted MCP server](https://github.com/afisch710/SmarterWeather/issues/7148). Lets local-only MCP clients (Claude Desktop, Claude Code, Cursor, MCP Inspector, etc.) talk to `sw-mcp` over the network and authenticate via either:
 
 - **OAuth 2.1 + PKCE** (recommended for end users). The bridge runs the full MCP OAuth client — discovery, dynamic client registration, browser-based consent on `localhost`, and token caching at `~/.mcp-auth/`. You sign in once with your SmarterWeather account; tokens auto-refresh.
-- **`SMARTERWEATHER_API_KEY`** environment variable. Useful for headless / CI / scripted clients that don't want a browser pop-up. The bridge forwards the key as an `Authorization: Bearer …` header on every proxied request.
+- **`SMARTERWEATHER_API_KEY`** (or `.env`). Useful for headless / CI /
+  scripted clients. The bridge resolves the key from process env →
+  `SMARTERWEATHER_ENV_FILE` → `cwd/.env`, then passes
+  `Authorization:${SMARTERWEATHER_AUTH_HEADER}` with the bearer in the
+  child env — never on argv. Unexpanded `${…}` placeholders count as unset.
 
 The package itself is a thin wrapper around [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) — no weather logic ships here, no protocol implementation forks. All tools, schemas, rate-limiting, and metering live server-side in `sw-mcp`.
 
@@ -68,8 +72,21 @@ Add to `~/.cursor/mcp.json`. OAuth:
 }
 ```
 
-API key — Cursor interpolates `${env:NAME}` from the process
-environment:
+API key — Cursor `envFile` (preferred after `login` / `trial`):
+
+```json
+{
+  "mcpServers": {
+    "smarterweather": {
+      "command": "npx",
+      "args": ["-y", "@smarterweather/mcp-weather"],
+      "envFile": "${workspaceFolder}/.env"
+    }
+  }
+}
+```
+
+Or `${env:NAME}` from the process environment:
 
 ```json
 {
@@ -116,7 +133,8 @@ Or pass the URL as a positional arg (precedence: positional > env > default):
 | Variable | Purpose | Default |
 |---|---|---|
 | `SMARTERWEATHER_MCP_URL` | Override the target MCP endpoint. Useful for dev / staging. | `https://mcp.smarterweather.com` |
-| `SMARTERWEATHER_API_KEY` | Inject `Authorization: Bearer <key>` on every proxied request. Bypasses the OAuth flow. | unset (use OAuth) |
+| `SMARTERWEATHER_API_KEY` | Prefer this when set (skips OAuth). Unexpanded `${…}` falls through. | unset (then `.env`, else OAuth) |
+| `SMARTERWEATHER_ENV_FILE` | Absolute `.env` path when the process env key is unset. | unset → `cwd/.env` (not `/` or `$HOME`) |
 | `MCP_REMOTE_CONFIG_DIR` | OAuth token cache directory (passed through to `mcp-remote`). | `~/.mcp-auth/` |
 
 Power users can pass any [`mcp-remote` flag](https://www.npmjs.com/package/mcp-remote) verbatim — they're forwarded unchanged. Examples:

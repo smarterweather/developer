@@ -1,6 +1,14 @@
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { describe, expect, it } from 'vitest';
+import { KEY_VAR } from '../src/env.js';
 import { attachJsonRpcProxy, rewriteToolsList } from '../src/proxy.js';
+
+const FAKE = `sw_live_${'kl'.repeat(20)}`;
+const FAKE2 = `sw_live_${'mn'.repeat(20)}`;
+const KEY_LEAK_RE = /sw_(?:live|test)_[A-Za-z0-9_-]{20,}/;
 
 describe('json-rpc proxy', () => {
   it('rewriteToolsList replaces hosted start_trial and keeps other tools', () => {
@@ -103,5 +111,197 @@ describe('json-rpc proxy', () => {
 
     expect(await childP).toMatch(/ping/);
     expect(await hostP).toMatch(/ok/);
+  });
+
+  it('create_api_key already_configured does not forward', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-proxy-'));
+    writeFileSync(join(dir, '.env'), `${KEY_VAR}=${FAKE}\n`);
+    const hostIn = new PassThrough();
+    const hostOut = new PassThrough();
+    const childIn = new PassThrough();
+    const childOut = new PassThrough();
+    const childSaw: string[] = [];
+    childIn.on('data', (c: Buffer) => childSaw.push(c.toString('utf8')));
+
+    attachJsonRpcProxy({
+      hostIn,
+      hostOut,
+      childIn,
+      childOut,
+      startTrial: async () => ({}),
+      sink: {
+        resolveEnvPath: async () => ({ ok: true, path: join(dir, '.env') }),
+      },
+    });
+
+    const outP = new Promise<string>((resolve) => {
+      hostOut.once('data', (c: Buffer) => resolve(c.toString('utf8')));
+    });
+    hostIn.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'create_api_key', arguments: { name: 'x' } } })}\n`,
+    );
+    const msg = JSON.parse(await outP);
+    expect(msg.result.structuredContent.status).toBe('already_configured');
+    expect(KEY_LEAK_RE.test(JSON.stringify(msg))).toBe(false);
+    expect(childSaw.join('')).toBe('');
+  });
+
+  it('sinks create_api_key and strips key from the result', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-proxy-'));
+    const envPath = join(dir, '.env');
+    const hostIn = new PassThrough();
+    const hostOut = new PassThrough();
+    const childIn = new PassThrough();
+    const childOut = new PassThrough();
+
+    attachJsonRpcProxy({
+      hostIn,
+      hostOut,
+      childIn,
+      childOut,
+      startTrial: async () => ({}),
+      sink: {
+        resolveEnvPath: async () => ({ ok: true, path: envPath }),
+      },
+    });
+
+    const childP = new Promise<void>((resolve) => {
+      childIn.once('data', () => resolve());
+    });
+    hostIn.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 11, method: 'tools/call', params: { name: 'create_api_key', arguments: { name: 'x' } } })}\n`,
+    );
+    await childP;
+
+    const outP = new Promise<string>((resolve) => {
+      hostOut.once('data', (c: Buffer) => resolve(c.toString('utf8')));
+    });
+    childOut.write(
+      `${JSON.stringify({
+        jsonrpc: '2.0',
+        id: 11,
+        result: {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                key: FAKE,
+                keyId: 'key_1',
+                keyPrefix: FAKE.slice(0, 12),
+                handling: 'shown once',
+              }),
+            },
+          ],
+          structuredContent: {
+            key: FAKE,
+            keyId: 'key_1',
+            keyPrefix: FAKE.slice(0, 12),
+            handling: 'shown once',
+          },
+        },
+      })}\n`,
+    );
+
+    const msg = JSON.parse(await outP);
+    expect(msg.result.structuredContent.key).toBeUndefined();
+    expect(msg.result.structuredContent.env_path).toBe(envPath);
+    expect(msg.result.structuredContent.handling).toMatch(/written to \.env/);
+    expect(KEY_LEAK_RE.test(JSON.stringify(msg))).toBe(false);
+    expect(readFileSync(envPath, 'utf8')).toContain(FAKE);
+  });
+
+  it('sinks rotate_api_key and strips newKey.key', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-proxy-'));
+    const envPath = join(dir, '.env');
+    writeFileSync(envPath, `${KEY_VAR}=${FAKE}\n`);
+    const hostIn = new PassThrough();
+    const hostOut = new PassThrough();
+    const childIn = new PassThrough();
+    const childOut = new PassThrough();
+
+    attachJsonRpcProxy({
+      hostIn,
+      hostOut,
+      childIn,
+      childOut,
+      startTrial: async () => ({}),
+      sink: {
+        resolveEnvPath: async () => ({ ok: true, path: envPath }),
+      },
+    });
+
+    hostIn.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 12, method: 'tools/call', params: { name: 'rotate_api_key', arguments: { key_id: 'k' } } })}\n`,
+    );
+    await new Promise((r) => setTimeout(r, 10));
+
+    const outP = new Promise<string>((resolve) => {
+      hostOut.once('data', (c: Buffer) => resolve(c.toString('utf8')));
+    });
+    childOut.write(
+      `${JSON.stringify({
+        jsonrpc: '2.0',
+        id: 12,
+        result: {
+          structuredContent: {
+            newKey: { key: FAKE2, keyId: 'key_2', keyPrefix: FAKE2.slice(0, 12) },
+            oldKey: { keyId: 'key_1', keyPrefix: FAKE.slice(0, 12), revokedAt: '2099-01-01T00:00:00Z' },
+          },
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                newKey: { key: FAKE2, keyId: 'key_2', keyPrefix: FAKE2.slice(0, 12) },
+                oldKey: { keyId: 'key_1', keyPrefix: FAKE.slice(0, 12), revokedAt: '2099-01-01T00:00:00Z' },
+              }),
+            },
+          ],
+        },
+      })}\n`,
+    );
+
+    const msg = JSON.parse(await outP);
+    expect(msg.result.structuredContent.newKey.key).toBeUndefined();
+    expect(msg.result.structuredContent.env_path).toBe(envPath);
+    expect(KEY_LEAK_RE.test(JSON.stringify(msg))).toBe(false);
+    expect(readFileSync(envPath, 'utf8')).toContain(FAKE2);
+    expect(readFileSync(envPath, 'utf8').includes(FAKE)).toBe(false);
+  });
+
+  it('passes through unparseable create results unchanged', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-proxy-'));
+    const hostIn = new PassThrough();
+    const hostOut = new PassThrough();
+    const childIn = new PassThrough();
+    const childOut = new PassThrough();
+
+    attachJsonRpcProxy({
+      hostIn,
+      hostOut,
+      childIn,
+      childOut,
+      startTrial: async () => ({}),
+      sink: {
+        resolveEnvPath: async () => ({ ok: true, path: join(dir, '.env') }),
+      },
+    });
+
+    hostIn.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 13, method: 'tools/call', params: { name: 'create_api_key', arguments: {} } })}\n`,
+    );
+    await new Promise((r) => setTimeout(r, 10));
+
+    const outP = new Promise<string>((resolve) => {
+      hostOut.once('data', (c: Buffer) => resolve(c.toString('utf8')));
+    });
+    childOut.write(
+      `${JSON.stringify({
+        jsonrpc: '2.0',
+        id: 13,
+        result: { content: [{ type: 'text', text: 'not-json' }] },
+      })}\n`,
+    );
+    const msg = JSON.parse(await outP);
+    expect(msg.result.content[0].text).toBe('not-json');
   });
 });

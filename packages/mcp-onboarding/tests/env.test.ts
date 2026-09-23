@@ -11,6 +11,7 @@ import {
   parseEnvKey,
   readExistingKey,
   resolveEnvPath,
+  replaceEnvKey,
   upsertEnvKey,
 } from '../src/env.js';
 
@@ -97,5 +98,14 @@ describe('env', () => {
     ensureGitignore(dir);
     const lines = readFileSync(join(dir, '.gitignore'), 'utf8').trim().split('\n');
     expect(lines.filter((l) => l === '.env')).toEqual(['.env']);
+  });
+
+  it('replaceEnvKey replaces in place at mode 0600', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-onboarding-env-'));
+    const file = join(dir, '.env');
+    upsertEnvKey(file, FAKE);
+    replaceEnvKey(file, `sw_live_${'zz'.repeat(20)}`);
+    expect(readExistingKey(file)?.startsWith('sw_live_zz')).toBe(true);
+    expect(statSync(file).mode & 0o777).toBe(0o600);
   });
 });

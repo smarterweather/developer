@@ -2,7 +2,7 @@
   "name": "@smarterweather/mcp-weather",
   "version": "0.0.1",
   "mcpName": "io.github.smarterweather/weather",
-  "description": "stdio bridge to the Smarter Weather hosted MCP server (sw-mcp). Thin wrapper around mcp-remote with SmarterWeather URL defaults and optional Authorization header injection.",
+  "description": "stdio bridge to the Smarter Weather hosted MCP server (sw-mcp). Thin wrapper around mcp-remote with SmarterWeather URL defaults; resolves the API key from env/.env and passes Authorization via SMARTERWEATHER_AUTH_HEADER (never on argv).",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

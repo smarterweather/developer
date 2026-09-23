@@ -2,7 +2,16 @@
 
 stdio bridge to the [Smarter Weather developer onboarding MCP server](https://mcp.developers.smarterweather.com) — the agent-first way onto the Smarter Weather platform. Your AI coding agent can explore plans and docs, sign you up, mint API keys, configure your MCP client, and manage billing, all from inside your editor.
 
-A thin wrapper around [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) with Smarter Weather defaults. Discovery and account tools run server-side. `start_trial` is answered **locally**: the package mints over HTTPS, writes `SMARTERWEATHER_API_KEY` to `.env` (mode `0600`), and returns only a 12-character `key_prefix`. After upgrading the package, restart the MCP server so the new interceptor is loaded.
+A thin wrapper around [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) with Smarter Weather defaults. Discovery and account tools run server-side. `start_trial` is answered **locally**: the package mints over HTTPS, writes `SMARTERWEATHER_API_KEY` to `.env` (mode `0600`), and returns only a 12-character `key_prefix`. Via the stdio bridge, hosted `create_api_key` / `rotate_api_key` also sink into `.env` and strip the plaintext. After upgrading the package, restart the MCP server so the new interceptor is loaded.
+
+## CLI (no MCP host)
+
+```bash
+npx -y @smarterweather/mcp-onboarding@latest login   # human present (device grant)
+npx -y @smarterweather/mcp-onboarding@latest trial   # no human (trial mint)
+```
+
+Both write `.env` and print only a key prefix. `login` blocks until the human approves — run it in the background or with a long shell timeout and relay the printed URL. Pass `--json` for a single whitelisted object.
 
 ## Quick start (anonymous)
 
@@ -48,9 +57,9 @@ Ensure port `3334` is free when authenticating; if mcp-remote falls back to a ra
 | `SMARTERWEATHER_ONBOARDING_MCP_URL` | `https://mcp.developers.smarterweather.com` | Target endpoint override (dev/staging). A positional URL argument takes precedence over both. |
 | `SMARTERWEATHER_ONBOARDING_AUTH` | *(unset)* | `required` → opt into the OAuth challenge and account-scoped tools. |
 | `SMARTERWEATHER_ONBOARDING_OAUTH_CLIENT_ID` | `PQcxOLVZg5kxzhoC` | Override the pre-registered Clerk OAuth client_id (staging / alternate apps). |
-| `SMARTERWEATHER_ENV_FILE` | *(unset)* | Absolute path for the local `start_trial` sink. When unset, the bridge uses the first MCP `file://` root (skipping `/` and `$HOME`), then `cwd/.env`. |
-| `SMARTERWEATHER_API_KEY` | *(unset)* | If already set, `start_trial` is a no-op (`already_configured`) and does not mint. |
-| `SMARTERWEATHER_API_BASE_URL` | `https://api.smarterweather.com` | Override the trial challenge/mint origin (dev/staging). |
+| `SMARTERWEATHER_ENV_FILE` | *(unset)* | Absolute path for the local `start_trial` / CLI / proxy sink. When unset, the bridge uses the first MCP `file://` root (skipping `/` and `$HOME`), then `cwd/.env`. CLI subcommands have no roots — they require this var or a non-guarded cwd. |
+| `SMARTERWEATHER_API_KEY` | *(unset)* | If already set, `start_trial` / `trial` / `login` / create sink are a no-op (`already_configured`) and do not mint. |
+| `SMARTERWEATHER_API_BASE_URL` | `https://api.smarterweather.com` | Override the trial/login key-api origin (dev/staging). |
 
 Any extra CLI arguments (`--debug`, `--transport http-only`, `--header X:y`, …) pass through verbatim to `mcp-remote`. If you already pass a callback port or `--static-oauth-client-info`, the bridge will not double-inject them.
 
