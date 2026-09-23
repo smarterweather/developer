@@ -75,6 +75,7 @@ Registration) and pins the loopback callback to
 | `get_plans` | none | Plan/pricing catalog with feature matrices. |
 | `get_documentation` | none | Keyword-searchable documentation index + content. |
 | `sign_up` | none | Referral-tagged Clerk signup URL. A human completes free-tier account creation in the browser. |
+| `start_trial` | none (stdio) | **Local to `@smarterweather/mcp-onboarding`.** Mints a trial key over HTTPS, writes `SMARTERWEATHER_API_KEY` to `.env` (mode `0600`), returns only `key_prefix`. Hosted Streamable HTTP does not mint. After `npm` upgrade, restart the MCP server. |
 | `create_api_key` / `list_api_keys` / `rotate_api_key` / `revoke_api_key` | OAuth | Full key lifecycle, acting as the signed-in developer. |
 | `configure_mcp` | OAuth | Ready-to-paste `@smarterweather/mcp-weather` client config for your editor/agent. |
 | `get_quickstart` | OAuth | Personalized quickstart (key + first calls). |

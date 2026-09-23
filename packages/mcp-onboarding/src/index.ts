@@ -5,27 +5,18 @@
 //
 // Thin spawn() wrapper around `mcp-remote`
 // (https://www.npmjs.com/package/mcp-remote), same pattern as
-// @smarterweather/mcp-weather. Two modes:
-//
-//   Anonymous (default): the hosted server serves the open discovery
-//   tools (get_plans, get_documentation, sign_up) with no auth at
-//   all -- a cold-start agent can explore the platform immediately.
-//
-//   Authenticated (SMARTERWEATHER_ONBOARDING_AUTH=required): the
-//   bridge appends ?auth=required to the target URL; the server then
-//   401-challenges the first request, which kicks off mcp-remote's
-//   OAuth client (pre-registered public PKCE client_id + loopback
-//   callback on port 3334 + browser consent + token cache at
-//   ~/.mcp-auth/). Production Clerk keeps Dynamic Client Registration
-//   OFF; the bridge skips DCR via --static-oauth-client-info. After
-//   the browser dance, account-scoped tools (create_api_key,
-//   get_usage, upgrade_plan, ...) appear alongside the open ones.
-//
-// All argv assembly lives in ./args.ts so it stays unit-testable.
+// @smarterweather/mcp-weather, plus a local JSON-RPC interceptor
+// for `start_trial`: the stdio package mints over HTTPS, writes
+// SMARTERWEATHER_API_KEY to .env (mode 0600), and returns only a
+// key prefix. mcp-remote never sees the bearer.
 
 import { spawn } from 'node:child_process';
+import { homedir } from 'node:os';
 import { createRequire } from 'node:module';
 import { buildArgs } from './args.js';
+import { ENV_FILE_VAR, KEY_VAR } from './env.js';
+import { attachJsonRpcProxy } from './proxy.js';
+import { startTrial } from './trial.js';
 
 const require = createRequire(import.meta.url);
 
@@ -53,17 +44,31 @@ const args = buildArgs(userArgs, {
   defaultUrl: 'https://mcp.developers.smarterweather.com',
 });
 
-// mcp-remote ships its CLI entry point at dist/proxy.js; resolve the
-// absolute path through createRequire so any install layout
-// (workspace symlinks, npx temp dirs, global installs) works.
 const proxyEntry = require.resolve('mcp-remote/dist/proxy.js');
 
 const child = spawn(process.execPath, [proxyEntry, ...args], {
-  stdio: 'inherit',
+  stdio: ['pipe', 'pipe', 'inherit'],
 });
 
-// Forward signals so the host MCP client's tear-down reaches
-// mcp-remote cleanly and deterministically.
+let proxy: ReturnType<typeof attachJsonRpcProxy>;
+proxy = attachJsonRpcProxy({
+  hostIn: process.stdin,
+  hostOut: process.stdout,
+  childIn: child.stdin!,
+  childOut: child.stdout!,
+  startTrial: async () => {
+    const envFile = process.env[ENV_FILE_VAR];
+    return startTrial({
+      envFile,
+      processEnvKey: process.env[KEY_VAR],
+      keyApiBase: process.env.SMARTERWEATHER_KEY_API_BASE,
+      rootUris: envFile ? [] : await proxy.requestHostRoots(),
+      cwd: process.cwd(),
+      homedir: homedir(),
+    });
+  },
+});
+
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
   process.on(sig, () => {
     if (!child.killed) child.kill(sig);
@@ -72,8 +77,6 @@ for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
 
 child.on('exit', (code, signal) => {
   if (signal !== null) {
-    // Re-raise so the parent's exit status reflects the tear-down
-    // cause (clean SIGINT vs crash).
     process.kill(process.pid, signal);
     return;
   }

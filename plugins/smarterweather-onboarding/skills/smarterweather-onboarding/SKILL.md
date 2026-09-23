@@ -30,7 +30,10 @@ config. Never wire it into a long-lived config alongside the weather MCP
    port `3334` — keep that port free. Cursor's native `cursor://` OAuth
    against Clerk is broken ([#7184](https://github.com/smarterweather/SmarterWeather/issues/7184));
    prefer the stdio bridge for gated tools.
-4. Call `create_api_key` (idempotent). Store the plaintext once.
+4. On the stdio bridge, call `start_trial` first — it writes
+   `SMARTERWEATHER_API_KEY` to `.env` (mode `0600`) and returns only a
+   `key_prefix`. After OAuth, `create_api_key` remains the account-owned
+   path. Never echo a `sw_live_` / `sw_test_` bearer into chat.
 5. Call `configure_mcp`. It emits an env-slot config — put the key in
    `SMARTERWEATHER_API_KEY` (or a host secret store). Never paste
    `sw_live_` / `sw_test_` into committed JSON. REST and weather MCP
