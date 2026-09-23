@@ -1,7 +1,12 @@
 import { createInterface } from 'node:readline';
 import type { Readable, Writable } from 'node:stream';
-import { displayPrefix, readExistingKey } from './env.js';
-import { writeNewKey, writeReplacedKey } from './sink.js';
+import { displayPrefix, isUsableKey, readExistingKey } from './env.js';
+import {
+  alreadyConfiguredHandling,
+  checkAlreadyConfigured,
+  writeNewKey,
+  writeReplacedKey,
+} from './sink.js';
 
 export type JsonRpc = {
   jsonrpc?: string;
@@ -236,17 +241,12 @@ export function attachJsonRpcProxy(opts: {
           });
           return;
         }
-        const existing = opts.sink!.processEnvKey || readExistingKey(target.path);
-        if (existing) {
+        const already = checkAlreadyConfigured(opts.sink!.processEnvKey, target.path);
+        if (already) {
           writeLine(opts.hostOut, {
             jsonrpc: '2.0',
             id,
-            result: toolResult({
-              status: 'already_configured',
-              key_prefix: displayPrefix(existing),
-              env_path: target.path,
-              handling: 'written to .env; not shown',
-            }),
+            result: toolResult({ ...already, handling: alreadyConfiguredHandling(already) }),
           });
           return;
         }
@@ -384,7 +384,8 @@ async function sinkChildResult(
     return result;
   }
 
-  const existing = sink.processEnvKey || readExistingKey(target.path);
+  const fromFile = readExistingKey(target.path);
+  const existing = isUsableKey(fromFile) ? fromFile : undefined;
   if (existing) {
     const existingPrefix = displayPrefix(existing);
     const oldPrefix = typeof oldKey?.keyPrefix === 'string' ? oldKey.keyPrefix : undefined;

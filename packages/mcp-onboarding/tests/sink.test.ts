@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { KEY_VAR, parseEnvKey, replaceEnvKey } from '../src/env.js';
 import {
+  alreadyConfiguredHandling,
   checkAlreadyConfigured,
   writeNewKey,
   writeReplacedKey,
@@ -45,12 +46,28 @@ describe('sink', () => {
     expect(parseEnvKey(readFileSync(envPath, 'utf8'))).toBe(FAKE);
   });
 
-  it('checkAlreadyConfigured short-circuits on process env', () => {
-    const hit = checkAlreadyConfigured(
-      { cwd: '/tmp/proj', homedir: '/Users/nobody', processEnvKey: FAKE },
-      '/tmp/proj/.env',
-    );
+  it('checkAlreadyConfigured short-circuits on process env without claiming a file', () => {
+    const hit = checkAlreadyConfigured(FAKE, '/tmp/proj/.env');
     expect(hit?.status).toBe('already_configured');
+    expect(hit?.source).toBe('process_env');
+    expect(hit?.env_path).toBeUndefined();
     expect(hit && JSON.stringify(hit).includes(FAKE)).toBe(false);
+    expect(hit && alreadyConfiguredHandling(hit)).toContain('process environment');
+  });
+
+  it('checkAlreadyConfigured ignores an unexpanded ${...} placeholder', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-sink-'));
+    expect(checkAlreadyConfigured('${SMARTERWEATHER_API_KEY}', join(dir, '.env'))).toBeUndefined();
+    expect(checkAlreadyConfigured('  ', join(dir, '.env'))).toBeUndefined();
+  });
+
+  it('checkAlreadyConfigured reports the file when the key is in .env', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-sink-'));
+    const envPath = join(dir, '.env');
+    writeFileSync(envPath, `SMARTERWEATHER_API_KEY=${FAKE}\n`);
+    const hit = checkAlreadyConfigured('${SMARTERWEATHER_API_KEY}', envPath);
+    expect(hit?.source).toBe('env_file');
+    expect(hit?.env_path).toBe(envPath);
+    expect(hit && alreadyConfiguredHandling(hit)).toContain(envPath);
   });
 });

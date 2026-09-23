@@ -3,6 +3,7 @@ import {
   checkAlreadyConfigured,
   resolveSinkTarget,
   writeNewKey,
+  type AlreadyConfigured,
 } from './sink.js';
 import { displayPrefix, readExistingKey } from './env.js';
 import { solvePow } from './pow.js';
@@ -29,11 +30,7 @@ export type StartTrialOk = {
   consume: string;
 };
 
-export type StartTrialAlready = {
-  status: 'already_configured';
-  key_prefix: string;
-  env_path: string;
-};
+export type StartTrialAlready = AlreadyConfigured;
 
 export type StartTrialErr = {
   status: 'error';
@@ -98,7 +95,7 @@ async function runStartTrial(deps: StartTrialDeps): Promise<StartTrialResult> {
     return { status: 'error', error: 'env_path', detail: target.error };
   }
 
-  const already = checkAlreadyConfigured(deps, target.path);
+  const already = checkAlreadyConfigured(deps.processEnvKey, target.path);
   if (already) return already;
 
   const fetchImpl = deps.fetchImpl ?? fetch;
@@ -191,6 +188,7 @@ async function runStartTrial(deps: StartTrialDeps): Promise<StartTrialResult> {
       return {
         status: 'already_configured',
         key_prefix: displayPrefix(again ?? minted.api_key),
+        source: 'env_file',
         env_path: target.path,
       };
     }

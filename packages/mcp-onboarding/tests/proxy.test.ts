@@ -142,8 +142,71 @@ describe('json-rpc proxy', () => {
     );
     const msg = JSON.parse(await outP);
     expect(msg.result.structuredContent.status).toBe('already_configured');
+    expect(msg.result.structuredContent.source).toBe('env_file');
     expect(KEY_LEAK_RE.test(JSON.stringify(msg))).toBe(false);
     expect(childSaw.join('')).toBe('');
+  });
+
+  it('create_api_key with a process-env key reports no env_path', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-proxy-'));
+    const hostIn = new PassThrough();
+    const hostOut = new PassThrough();
+    const childIn = new PassThrough();
+    const childOut = new PassThrough();
+    const childSaw: string[] = [];
+    childIn.on('data', (c: Buffer) => childSaw.push(c.toString('utf8')));
+
+    attachJsonRpcProxy({
+      hostIn,
+      hostOut,
+      childIn,
+      childOut,
+      startTrial: async () => ({}),
+      sink: {
+        processEnvKey: FAKE,
+        resolveEnvPath: async () => ({ ok: true, path: join(dir, '.env') }),
+      },
+    });
+
+    const outP = new Promise<string>((resolve) => {
+      hostOut.once('data', (c: Buffer) => resolve(c.toString('utf8')));
+    });
+    hostIn.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 21, method: 'tools/call', params: { name: 'create_api_key', arguments: { name: 'x' } } })}\n`,
+    );
+    const sc = JSON.parse(await outP).result.structuredContent;
+    expect(sc.source).toBe('process_env');
+    expect(sc.env_path).toBeUndefined();
+    expect(sc.handling).toContain('process environment');
+    expect(childSaw.join('')).toBe('');
+  });
+
+  it('create_api_key with an unexpanded placeholder forwards (not configured)', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sw-proxy-'));
+    const hostIn = new PassThrough();
+    const hostOut = new PassThrough();
+    const childIn = new PassThrough();
+    const childOut = new PassThrough();
+
+    attachJsonRpcProxy({
+      hostIn,
+      hostOut,
+      childIn,
+      childOut,
+      startTrial: async () => ({}),
+      sink: {
+        processEnvKey: '${SMARTERWEATHER_API_KEY}',
+        resolveEnvPath: async () => ({ ok: true, path: join(dir, '.env') }),
+      },
+    });
+
+    const childP = new Promise<string>((resolve) => {
+      childIn.once('data', (c: Buffer) => resolve(c.toString('utf8')));
+    });
+    hostIn.write(
+      `${JSON.stringify({ jsonrpc: '2.0', id: 22, method: 'tools/call', params: { name: 'create_api_key', arguments: { name: 'x' } } })}\n`,
+    );
+    expect(await childP).toMatch(/create_api_key/);
   });
 
   it('sinks create_api_key and strips key from the result', async () => {

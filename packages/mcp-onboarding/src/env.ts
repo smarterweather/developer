@@ -14,6 +14,15 @@ export function isGuardedCwd(cwd: string, homedir: string): boolean {
   return resolve(cwd) === resolve('/') || resolve(cwd) === resolve(homedir);
 }
 
+const UNEXPANDED_RE = /^\$\{.+\}$/;
+
+/** Empty or still-unexpanded `${…}` (a host that didn't interpolate) counts as unset. */
+export function isUsableKey(value: string | undefined): value is string {
+  if (value === undefined) return false;
+  const trimmed = value.trim();
+  return trimmed !== '' && !UNEXPANDED_RE.test(trimmed);
+}
+
 export function parseEnvKey(contents: string): string | undefined {
   for (const rawLine of contents.split(/\r?\n/)) {
     const line = rawLine.trim();

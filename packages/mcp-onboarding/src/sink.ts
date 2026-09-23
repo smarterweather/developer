@@ -6,6 +6,7 @@ import { dirname } from 'node:path';
 import {
   displayPrefix,
   ensureGitignore,
+  isUsableKey,
   readExistingKey,
   replaceEnvKey,
   resolveEnvPath,
@@ -21,10 +22,12 @@ export type SinkWritten = {
   env_path: string;
 };
 
+/** `env_path` is set only when the key is in that file; a process-env key has no file. */
 export type AlreadyConfigured = {
   status: 'already_configured';
   key_prefix: string;
-  env_path: string;
+  source: 'process_env' | 'env_file';
+  env_path?: string;
 };
 
 export type SinkResolveDeps = {
@@ -45,18 +48,33 @@ export function resolveSinkTarget(deps: SinkResolveDeps): EnvTarget {
   });
 }
 
-/** If process env or the target .env already has the key, return already_configured. */
+/** If process env or the target .env already has a usable key, return already_configured. */
 export function checkAlreadyConfigured(
-  deps: SinkResolveDeps,
+  processEnvKey: string | undefined,
   targetPath: string,
 ): AlreadyConfigured | undefined {
-  const existing = deps.processEnvKey || readExistingKey(targetPath);
-  if (!existing) return undefined;
+  if (isUsableKey(processEnvKey)) {
+    return {
+      status: 'already_configured',
+      key_prefix: displayPrefix(processEnvKey.trim()),
+      source: 'process_env',
+    };
+  }
+  const fromFile = readExistingKey(targetPath);
+  if (!isUsableKey(fromFile)) return undefined;
   return {
     status: 'already_configured',
-    key_prefix: displayPrefix(existing),
+    key_prefix: displayPrefix(fromFile),
+    source: 'env_file',
     env_path: targetPath,
   };
+}
+
+/** Handling copy for an already_configured result; never contains the key. */
+export function alreadyConfiguredHandling(a: AlreadyConfigured): string {
+  return a.source === 'env_file'
+    ? `SMARTERWEATHER_API_KEY is already in ${a.env_path}; not shown. Remove that line to mint a fresh key.`
+    : 'SMARTERWEATHER_API_KEY is already set in this process environment; not shown. Unset it to write a key to .env.';
 }
 
 /** Write a new key (fails if already set). Ensures .gitignore has .env. */

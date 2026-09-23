@@ -7,9 +7,11 @@ import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { ENV_FILE_VAR } from './env.js';
 import {
+  alreadyConfiguredHandling,
   checkAlreadyConfigured,
   resolveSinkTarget,
   writeNewKey,
+  type AlreadyConfigured,
   type SinkResolveDeps,
 } from './sink.js';
 import { DEFAULT_KEY_API_BASE, startTrial, TRIAL_CONSUME } from './trial.js';
@@ -78,6 +80,24 @@ function resolveCliTarget(deps: CliDeps):
   return { ok: true, path: target.path };
 }
 
+function printAlreadyConfigured(
+  deps: CliDeps,
+  already: AlreadyConfigured,
+  json: boolean | undefined,
+): number {
+  const payload = {
+    status: 'already_configured' as const,
+    key_prefix: already.key_prefix,
+    source: already.source,
+    ...(already.env_path ? { env_path: already.env_path } : {}),
+    handling: alreadyConfiguredHandling(already),
+  };
+  assertNoLeak(payload);
+  if (json) out(deps, JSON.stringify(payload));
+  else out(deps, `already_configured ${payload.key_prefix} (${payload.handling})`);
+  return 0;
+}
+
 export async function runTrialCli(
   deps: CliDeps,
   opts: { json?: boolean } = {},
@@ -88,21 +108,8 @@ export async function runTrialCli(
     return 2;
   }
 
-  const already = checkAlreadyConfigured(deps, target.path);
-  if (already) {
-    const payload = {
-      status: 'already_configured' as const,
-      key_prefix: already.key_prefix,
-      env_path: already.env_path,
-    };
-    assertNoLeak(payload);
-    if (opts.json) {
-      out(deps, JSON.stringify(payload));
-    } else {
-      out(deps, `already_configured ${payload.key_prefix} ${payload.env_path}`);
-    }
-    return 0;
-  }
+  const already = checkAlreadyConfigured(deps.processEnvKey, target.path);
+  if (already) return printAlreadyConfigured(deps, already, opts.json);
 
   const result = await startTrial({
     ...deps,
@@ -112,15 +119,7 @@ export async function runTrialCli(
   });
 
   if (result.status === 'already_configured') {
-    const payload = {
-      status: 'already_configured' as const,
-      key_prefix: result.key_prefix,
-      env_path: result.env_path,
-    };
-    assertNoLeak(payload);
-    if (opts.json) out(deps, JSON.stringify(payload));
-    else out(deps, `already_configured ${payload.key_prefix} ${payload.env_path}`);
-    return 0;
+    return printAlreadyConfigured(deps, result, opts.json);
   }
 
   if (result.status === 'error') {
@@ -195,18 +194,8 @@ export async function runLoginCli(
     return 2;
   }
 
-  const already = checkAlreadyConfigured(deps, target.path);
-  if (already) {
-    const payload = {
-      status: 'already_configured' as const,
-      key_prefix: already.key_prefix,
-      env_path: already.env_path,
-    };
-    assertNoLeak(payload);
-    if (opts.json) out(deps, JSON.stringify(payload));
-    else out(deps, `already_configured ${payload.key_prefix} ${payload.env_path}`);
-    return 0;
-  }
+  const already = checkAlreadyConfigured(deps.processEnvKey, target.path);
+  if (already) return printAlreadyConfigured(deps, already, opts.json);
 
   const fetchImpl = deps.fetchImpl ?? fetch;
   const sleep = deps.sleep ?? defaultSleep;
