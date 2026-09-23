@@ -34,13 +34,15 @@ Tool descriptors for the weather MCP:
 
 ## Recommended onboarding flow (agents)
 
-1. Connect to the **onboarding MCP** with no credentials.
-2. Call `get_plans` / `get_documentation` / `sign_up`.
-3. Complete Clerk OAuth when the host prompts (the stdio bridge runs a
-   loopback callback on port `3334` — ensure it is free).
-4. Call `create_api_key` (idempotent) and `configure_mcp`.
-5. Use the returned key against the weather MCP or the REST API, then
-   remove the onboarding server from the client config.
+1. Prefer the CLI with no MCP host when you can:
+   - Human present: `npx -y @smarterweather/mcp-onboarding@latest login`
+   - No human: `npx -y @smarterweather/mcp-onboarding@latest trial`
+2. Or connect to the **onboarding MCP** with no credentials, call
+   `get_plans` / `get_documentation` / `sign_up`, complete Clerk OAuth
+   (stdio bridge loopback on port `3334`), then `create_api_key` /
+   `configure_mcp`. Via the stdio bridge, create/rotate sink into `.env`.
+3. Point `@smarterweather/mcp-weather` at the project `.env`
+   (`envFile` or cwd fallback). Remove the onboarding server afterwards.
 
 Anonymous connections to the onboarding MCP list only the three
 discovery tools; the account-scoped tools appear after OAuth. This is by

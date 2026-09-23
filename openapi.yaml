@@ -3093,9 +3093,12 @@ components:
       type: object
       description: |
         One destination in `next_steps`. `href` and `description` are
-        always present. The `device_flow` relation also carries the
-        public Clerk device-grant recipe fields so a 401 body is
-        complete without a second fetch.
+        always present. Optional `command` names a one-liner that sinks
+        the key to `.env` (preferred over raw endpoints). The
+        `device_flow` relation also carries the public Clerk device-grant
+        recipe fields; `trial` carries `challenge_endpoint` /
+        `mint_endpoint` (raw HTTP mints that return the bearer in the
+        body — labeled as such in `description`).
       required: [href, description]
       properties:
         href:
@@ -3107,6 +3110,11 @@ components:
         description:
           type: string
           description: One sentence a human or agent can act on.
+        command:
+          type: string
+          description: |
+            Preferred one-liner (e.g. `npx -y @smarterweather/mcp-onboarding@latest login`).
+            No UTM. Writes the key to `.env` and prints only a prefix.
         client_id:
           type: string
           description: Public OAuth client id (device_flow only).
@@ -3124,6 +3132,17 @@ components:
           description: |
             Key CRUD URL to call with the device-grant access token
             (device_flow only). No UTM.
+        challenge_endpoint:
+          type: string
+          format: uri
+          description: Trial PoW challenge URL (trial only). No UTM. Returns challenge material, not a key.
+        mint_endpoint:
+          type: string
+          format: uri
+          description: |
+            Trial mint URL (trial only). No UTM. Returns the bearer in the
+            response body's `api_key` field — write only that field to
+            `.env` as `SMARTERWEATHER_API_KEY=`; never print it.
 
     PlatformStatus:
       type: object
@@ -6479,7 +6498,8 @@ components:
               recommended: device_flow
               device_flow:
                 href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api#device-flow
-                description: "No install, no loopback port: POST device_authorization_endpoint, show the human the code, poll, then GET /developer/keys."
+                description: "Human present: run command. It shows the human a verification URL and code, writes SMARTERWEATHER_API_KEY to ./.env (0600, gitignored), and prints only a key prefix. Without Node: device grant at the endpoints below, then POST api_keys_endpoint and write only the response's key field to .env as a SMARTERWEATHER_API_KEY= line (e.g. pipe through jq -r .key). Never print the key or access token."
+                command: "npx -y @smarterweather/mcp-onboarding@latest login"
                 client_id: k2h05BUoTP393zcD
                 device_authorization_endpoint: https://clerk.smarterweather.com/oauth/device_authorization
                 token_endpoint: https://clerk.smarterweather.com/oauth/token
