@@ -31,6 +31,12 @@ export const DEVICE_AUTHORIZATION_ENDPOINT =
   'https://clerk.smarterweather.com/oauth/device_authorization';
 export const TOKEN_ENDPOINT = 'https://clerk.smarterweather.com/oauth/token';
 export const DEVICE_SCOPE = 'openid email';
+/** Our approval page; Clerk's verification_uri is the stock Account Portal page. */
+export const DEVICE_VERIFICATION_PAGE = 'https://developers.smarterweather.com/device';
+
+export function deviceVerificationUrl(userCode: string): string {
+  return `${DEVICE_VERIFICATION_PAGE}?user_code=${encodeURIComponent(userCode)}`;
+}
 
 /** key-api config.maxApiKeyNameLength */
 export const KEY_NAME_MAX = 64;
@@ -249,10 +255,7 @@ export async function runLoginCli(
     return fail(deps, 'login', opts.json, 'device_authorization', 'malformed device authorization response');
   }
 
-  const verifyUrl =
-    typeof device.verification_uri_complete === 'string' && device.verification_uri_complete
-      ? device.verification_uri_complete
-      : `${device.verification_uri} (code ${device.user_code})`;
+  const verifyUrl = deviceVerificationUrl(device.user_code);
 
   // Flush immediately so an agent can relay the URL while we poll.
   if (opts.json) {
@@ -260,16 +263,14 @@ export async function runLoginCli(
       deps,
       JSON.stringify({
         status: 'pending_approval',
-        verification_uri:
-          typeof device.verification_uri_complete === 'string' && device.verification_uri_complete
-            ? device.verification_uri_complete
-            : device.verification_uri,
+        verification_uri: verifyUrl,
         user_code: device.user_code,
         note: 'login blocks until the human approves (≤ expires_in); run in background or with a long shell timeout and relay the printed URL.',
       }),
     );
   } else {
     out(deps, `Open this URL to approve: ${verifyUrl}`);
+    out(deps, `Code: ${device.user_code} (check it matches on that page)`);
     out(
       deps,
       'login blocks until the human approves (≤ the device code expires_in); run it in the background or with a long shell timeout and relay the printed URL.',
