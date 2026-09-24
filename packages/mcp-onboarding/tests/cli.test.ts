@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  deviceVerificationUrl,
   KEY_NAME_MAX,
   keyNameForEnvPath,
   parseCliArgs,
@@ -38,6 +39,17 @@ describe('parseCliArgs', () => {
     expect(parseCliArgs(['signup'])).toEqual({ command: 'unknown', arg: 'signup' });
     expect(parseCliArgs([])).toBeNull();
     expect(parseCliArgs(['https://mcp.example.com', '--header', 'X:1'])).toBeNull();
+  });
+});
+
+describe('deviceVerificationUrl', () => {
+  it('points at our /device page and encodes the code', () => {
+    expect(deviceVerificationUrl('ABCD-EFGH')).toBe(
+      'https://developers.smarterweather.com/device?user_code=ABCD-EFGH',
+    );
+    expect(deviceVerificationUrl('AB CD&x=1')).toBe(
+      'https://developers.smarterweather.com/device?user_code=AB%20CD%26x%3D1',
+    );
   });
 });
 
@@ -183,7 +195,11 @@ describe('runLoginCli', () => {
     expect(KEY_LEAK_RE.test(joined)).toBe(false);
     expect(TOKEN_LEAK_RE.test(joined)).toBe(false);
     expect(joined.includes('devcode-secret')).toBe(false);
-    expect(joined).toContain('Open this URL to approve:');
+    expect(joined).toContain(
+      'Open this URL to approve: https://developers.smarterweather.com/device?user_code=ABCD-EFGH',
+    );
+    expect(joined).toContain('Code: ABCD-EFGH');
+    expect(joined).not.toContain('accounts.smarterweather.com');
     expect(joined).toContain(FAKE.slice(0, 12));
     expect(statSync(join(dir, '.env')).mode & 0o777).toBe(0o600);
   });
@@ -206,9 +222,11 @@ describe('runLoginCli', () => {
           const url = String(input);
           if (url.includes('/device_authorization')) {
             return jsonResponse(200, {
-              device_code: 'x',
-              user_code: 'Y',
-              verification_uri: 'https://example.com',
+              device_code: 'devcode-secret',
+              user_code: 'WXYZ-2345',
+              verification_uri: 'https://accounts.smarterweather.com/device',
+              verification_uri_complete:
+                'https://accounts.smarterweather.com/device?user_code=WXYZ-2345',
               expires_in: 100,
               interval: 1,
             });
@@ -220,6 +238,14 @@ describe('runLoginCli', () => {
     );
     expect(code).toBe(1);
     expect(KEY_LEAK_RE.test(lines.join('\n'))).toBe(false);
+    expect(lines.join('\n')).not.toContain('devcode-secret');
+    const pending = JSON.parse(lines[0]);
+    expect(pending).toMatchObject({
+      status: 'pending_approval',
+      verification_uri: 'https://developers.smarterweather.com/device?user_code=WXYZ-2345',
+      user_code: 'WXYZ-2345',
+    });
+    expect(pending).not.toHaveProperty('device_code');
   });
 
   it('exits 1 on expired_token', async () => {

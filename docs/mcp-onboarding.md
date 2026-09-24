@@ -39,7 +39,9 @@ npx -y @smarterweather/mcp-onboarding@latest trial
 
 Both write `SMARTERWEATHER_API_KEY` to `.env` (mode `0600`, gitignored) and
 print only a key prefix. Use `--json` for a single whitelisted object.
-`login` never prints or persists the access token or device code.
+`login` prints an approval link to
+`https://developers.smarterweather.com/device` plus the code to check there,
+and never prints or persists the access token or device code.
 
 ## Connect
 
