@@ -1,5 +1,11 @@
 # @smarterweather/mcp-onboarding
 
+## 0.2.1
+
+### Patch Changes
+
+- [#88](https://github.com/smarterweather/developer/pull/88) [`f47b2fe`](https://github.com/smarterweather/developer/commit/f47b2fe039d61c5d703e2554d36e916d26877648) Thanks [@afisch710](https://github.com/afisch710)! - `login` links to the Smarter Weather approval page (`https://developers.smarterweather.com/device?user_code=…`) instead of Clerk's stock Account Portal page, and prints the code on its own line so the human can check it matches. `--json` `verification_uri` uses the same link.
+
 ## 0.2.0
 
 ### Minor Changes
