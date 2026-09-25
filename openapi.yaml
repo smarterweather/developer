@@ -1437,6 +1437,161 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/tropical/observations:
+    get:
+      operationId: getTropicalObservations
+      summary: Get Hurricane Hunter aircraft reconnaissance as GeoJSON.
+      description: |
+        Returns a GeoJSON `FeatureCollection` of NOAA/USAF Hurricane
+        Hunter aircraft observations: vortex data message (VDM) center
+        fixes and high-density (HDOB) flight-level observations. These
+        are **aircraft observations, not surface stations** — METAR
+        station reports are `GET /v1/observations`. NHC cones, tracks,
+        and outlook areas stay on the sibling `GET /v1/tropical`
+        overlay and are never merged into this payload.
+
+        Foreign member `storms[]` is the newest VDM fix per storm (or
+        unnumbered USAF mission), queried independently of `kind` and
+        `limit`. Unnumbered USAF missions carry `atcf: null` /
+        `storm_name: null`, so `storm=` never matches them; `kind=hdob`
+        without `storm` is how to see them.
+
+        Retention is 72 hours (`hours` max). The schema is
+        `x-stability: experimental`: dropsonde/RECCO (`kind` values and
+        properties) will land later and experimental excludes this
+        resource from the 90-day breaking-change commitment.
+
+        ### Filters
+
+        - `kind` — `vdm` (vortex fixes), `hdob` (flight-level obs), or
+          `all` (both). Default `all`.
+        - `storm` — ATCF id (`al14`) or name (`polo`). 1–32 letters,
+          digits, spaces, or hyphens.
+        - `hours` — lookback window, integer 1–72. Default 24.
+        - `limit` — maximum features, integer 1–2000. Default 500.
+        - `min_lon`, `min_lat`, `max_lon`, `max_lat` — optional bbox.
+          All four must be supplied together as numbers. The box must
+          satisfy `-180 <= min_lon <= max_lon <= 180` and
+          `-90 <= min_lat <= max_lat <= 90` (NaN rejected);
+          antimeridian-crossing boxes are not supported.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: public, max-age=30,
+        stale-while-revalidate=30`.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Storms]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          description: |
+            `vdm` = vortex fixes; `hdob` = flight-level obs; `all` =
+            both. Default `all`.
+          schema:
+            type: string
+            enum: [vdm, hdob, all]
+            default: all
+          example: "vdm"
+        - name: storm
+          in: query
+          required: false
+          description: |
+            ATCF id (`al14`) or storm name (`polo`). Unnumbered USAF
+            missions carry `atcf`/`storm_name` null, so `storm=` never
+            matches them.
+          schema:
+            type: string
+            maxLength: 32
+            pattern: '^[A-Za-z0-9 -]{1,32}$'
+          example: "polo"
+        - name: hours
+          in: query
+          required: false
+          description: |
+            Lookback window in hours (1-72). Default 24. Retention is
+            72 hours.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 72
+            default: 24
+          example: 24
+        - name: limit
+          in: query
+          required: false
+          description: Maximum features to return (1-2000). Default 500.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2000
+            default: 500
+          example: 500
+        - name: min_lon
+          in: query
+          schema:
+            type: number
+          description: |
+            Western bbox edge. Required together with min_lat, max_lon,
+            and max_lat. The box must satisfy
+            `-180 <= min_lon <= max_lon <= 180` (NaN rejected).
+        - name: min_lat
+          in: query
+          schema:
+            type: number
+          description: |
+            Southern bbox edge. Required together with the other three
+            bbox params. The box must satisfy
+            `-90 <= min_lat <= max_lat <= 90` (NaN rejected).
+        - name: max_lon
+          in: query
+          schema:
+            type: number
+          description: Eastern bbox edge.
+        - name: max_lat
+          in: query
+          schema:
+            type: number
+          description: Northern bbox edge.
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection of recon features. Empty
+            `features` and `storms` arrays when no aircraft has flown
+            in the window (200, not 404).
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/TropicalObservationsFeatureCollection'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/record-events:
     get:
       operationId: getRecordEvents
@@ -4857,6 +5012,71 @@ components:
           items:
             $ref: '#/components/schemas/TropicalDiscussion'
       additionalProperties: true
+
+    TropicalObservationsFeatureCollection:
+      type: object
+      x-stability: experimental
+      description: |
+        GeoJSON FeatureCollection of Hurricane Hunter VDM fixes and/or
+        HDOB flight-level observations. Returned as `application/geo+json`
+        from `GET /v1/tropical/observations`. Each feature is a Point
+        with `valid_time` in `properties`; additional recon keys
+        (kind, atcf, aircraft, …) may appear without a sw-api release.
+
+        Foreign member `storms[]` is the newest VDM fix per storm or
+        unnumbered USAF mission, queried independently of `kind` and
+        `limit`. Experimental: dropsonde/RECCO will add `kind` values
+        and properties.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONReportsFeature'
+        storms:
+          type: array
+          description: |
+            Newest VDM fix per storm (or unnumbered USAF mission).
+            Always present; empty array when none match the window.
+          items:
+            $ref: '#/components/schemas/TropicalObservationStorm'
+      additionalProperties: true
+
+    TropicalObservationStorm:
+      type: object
+      x-stability: experimental
+      description: |
+        Newest VDM center fix for one storm or unnumbered USAF mission.
+        `atcf` and `storm_name` are JSON null on unnumbered missions
+        (`WXWXA`).
+      required: [latest_fix_time, lat, lon]
+      properties:
+        atcf:
+          type: [string, "null"]
+        storm_name:
+          type: [string, "null"]
+        latest_fix_time:
+          type: string
+          format: date-time
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        min_slp_mb:
+          type: [number, "null"]
+        max_fl_wind_kt:
+          type: [number, "null"]
+        eye:
+          type: [string, "null"]
+        aircraft:
+          type: [string, "null"]
+        mission_id:
+          type: [string, "null"]
 
     TropicalDiscussion:
       type: object
