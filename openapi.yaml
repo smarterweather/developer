@@ -1833,13 +1833,21 @@ paths:
         Returns up to `count` location candidates whose names match the
         partial `input` string. Designed for client-side typeahead
         widgets: latency is dominated by the reader's PostGIS prefix
-        index; `Cache-Control: private, max-age=300` keeps repeated
-        keystrokes off the read replica.
+        index.
 
-        `private` lets your own client reuse the response for the full
-        `max-age` while keeping shared caches (CDNs, proxies) out, since
-        each request on a partner key is metered and rate-limited
-        individually.
+        ### Caching
+
+        A complete response carries `Cache-Control: max-age=30`, so
+        repeated keystrokes for the same text reuse it for 30 seconds.
+        Partner keys get `private, max-age=30`: your own client may
+        reuse the response for the full `max-age`, while shared caches
+        (CDNs, proxies) stay out, since each request on a partner key is
+        metered and rate-limited individually. First-party callers get
+        `public, max-age=30`.
+
+        A response that carries `meta` (incomplete results; see the
+        `200` response) is sent with `Cache-Control: no-store`, so no
+        cache replays a partial list after the upstream recovers.
 
         ### Auth
 
@@ -1912,6 +1920,18 @@ paths:
           description: |
             Match results. Empty `results` array when no candidates
             match the input.
+
+            A result section that did not finish still returns `200`
+            with whatever rows are available, and is reported in
+            `meta.warnings[]`: `code` is `upstream_timeout` or
+            `partial_fetch`, and `section` is `address`, `poi`, or
+            `_request` (one warning covering any other incomplete part
+            of the request, such as an unreadable upstream status).
+            `detail` is human-readable text; branch on
+            `code` and `section`, not `detail`. Treat any warning as
+            incomplete results. `meta` is absent when the
+            results are complete, and a response with `meta` is sent
+            with `Cache-Control: no-store`.
           headers:
             RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
@@ -5248,9 +5268,12 @@ components:
       type: object
       description: |
         Envelope returned by `GET /v1/geocode/autosuggest` and
-        `GET /v1/geocode/search`. The `results` array is the only
-        stable key; additional sibling fields may appear without a
-        sw-api release (e.g. server-side annotations).
+        `GET /v1/geocode/search`. `results` is always present. `meta`
+        is a stable, documented, optional field: autosuggest includes
+        it only when the results are incomplete, and clients should
+        treat any `meta.warnings` entry as incomplete results.
+        Additional undocumented sibling fields may appear without a
+        sw-api release (e.g. server-side annotations); ignore them.
 
         An empty array is returned when no candidates match.
       required: [results]
@@ -5260,6 +5283,12 @@ components:
           description: Match candidates, ordered by reader-side score.
           items:
             $ref: '#/components/schemas/GeocodeAutosuggestResult'
+        meta:
+          $ref: '#/components/schemas/Meta'
+          description: |
+            Autosuggest only. Present only when the results are
+            incomplete; `meta.warnings[]` names each section that did
+            not finish. Absent on complete responses and on search.
       additionalProperties: true
 
     GeocodeAutosuggestResult:
