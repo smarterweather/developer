@@ -3900,6 +3900,23 @@ components:
           description: |
             Current precipitation type. Omitted when no precipitation data
             is available for the location.
+        precip_24h:
+          type: [number, "null"]
+          format: double
+          x-stability: experimental
+          description: |
+            Observed precipitation accumulated over the trailing 24 hours,
+            from MRMS MultiSensor QPE Pass 2. The window ends at the
+            product's valid time, listed under `meta.freshness`. Always
+            millimetres regardless of `units`. CONUS only; `null` outside
+            CONUS, when no sample is available, or when the sample's valid
+            time is older than the product's hourly-cadence staleness
+            window (currently 3 hours, the same window `/v1/point` uses to
+            mark it approximate). Source resolution is about 2 mm.
+
+            **Experimental.** May change during Phase 2 closed beta without
+            notice; the 90-day breaking-change commitment applies at general
+            availability per ADR 001.
         lightning_density:
           type: [number, "null"]
           format: double
