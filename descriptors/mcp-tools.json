@@ -990,7 +990,7 @@
     {
       "name": "get_current_conditions",
       "title": "Get current conditions",
-      "description": "Current weather right now at a location from two independent sources in one call: the RTMA gridded analysis (exact-point values, updated sub-hourly) and the nearest METAR station observation (ground truth with raw METAR, flight category). Use the analysis for point-accurate values and the station for verification. For a forecast, use get_forecast. Example: {\"location\": \"Pella, IA\"}.",
+      "description": "Current weather right now at a location from two independent sources in one call: the RTMA gridded analysis (exact-point values, updated sub-hourly) and the nearest METAR station observation (ground truth with raw METAR, flight category). Use the analysis for point-accurate values and the station for verification. Analysis fields: temperature_2m, dew_point_2m, relative_humidity_2m (derived here from temperature and dew point; listed in analysis.derived), wind_speed_10m, wind_direction_10m, wind_gusts_10m, surface_pressure (station pressure at ground level, not sea-level pressure), visibility, cloud_cover, cloud_ceiling. Analysis values are SI by default; pass units \"imperial\" or \"metric\" to convert them (labels in analysis.unit_labels; get_forecast defaults to imperial). nearest_station is the station's own report, unconverted. For a forecast, use get_forecast. Example: {\"location\": \"Pella, IA\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1011,6 +1011,16 @@
             "minimum": -180,
             "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric",
+              "si"
+            ],
+            "default": "si",
+            "description": "Unit system for the analysis values: si (default; K, m/s, Pa, m, as RTMA serves them), imperial (°F, mph, inHg, mi, ft) or metric (°C, km/h, hPa, km, m). Unlike get_forecast, which defaults to imperial. Does not apply to nearest_station."
           }
         },
         "additionalProperties": false,
@@ -1038,6 +1048,14 @@
             ],
             "additionalProperties": false
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric",
+              "si"
+            ]
+          },
           "analysis": {
             "anyOf": [
               {
@@ -1062,6 +1080,33 @@
                           "null"
                         ]
                       }
+                    }
+                  },
+                  "reference_time": {
+                    "type": "string"
+                  },
+                  "reference_times": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "unit_labels": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "derived": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "notes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
                     }
                   }
                 },
@@ -1091,6 +1136,7 @@
         },
         "required": [
           "location",
+          "units",
           "analysis",
           "nearest_station"
         ],
@@ -1424,7 +1470,7 @@
     {
       "name": "get_forecast_distribution",
       "title": "Get forecast distribution",
-      "description": "Probabilistic forecast guidance from NBM for one aspect of the weather: percentile ranges (p10-p90), exceedance probabilities, and ensemble spread. Use this for any question about odds, ranges, potential or confidence (\"how much could we get\", \"worst case for the wind\", \"how sure is this\") -- a deterministic forecast value cannot answer one. Reading the percentiles: p50 is the most likely outcome, p90 is the reasonable worst case when the risk is the high end (snow totals, wind, rainfall), and p10 is the reasonable worst case when the risk is the low end (cold, minimum visibility, ceiling). A single percentile is not the forecast -- report the likely value with the tail that matters, and label which is which. Aspects: precip (PoP, QPF + percentiles), snow (accumulation percentiles, >1/2/4in probabilities, snow level), ice (freezing rain, accretion), temperature (temp/dewpoint + stddev), wind (speed/gust percentiles), severe (hail/tornado/damaging-wind probabilities), aviation (LIFR/IFR/MVFR visibility + ceiling probabilities), confidence (ensemble stddev; low spread = settled forecast, high spread = details still in play). Examples: {\"location\": \"Denver\", \"aspect\": \"snow\", \"hours\": 72} or {\"lat\": 32.9, \"lon\": -97.0, \"aspect\": \"severe\"}.",
+      "description": "Probabilistic forecast guidance from NBM for one aspect of the weather: percentile ranges (p10-p90), exceedance probabilities, and ensemble spread. Use this for any question about odds, ranges, potential or confidence (\"how much could we get\", \"worst case for the wind\", \"how sure is this\") -- a deterministic forecast value cannot answer one. Reading the percentiles: p50 is the most likely outcome, p90 is the reasonable worst case when the risk is the high end (snow totals, wind, rainfall), and p10 is the reasonable worst case when the risk is the low end (cold, minimum visibility, ceiling). A single percentile is not the forecast -- report the likely value with the tail that matters, and label which is which. Aspects: precip (PoP, QPF + percentiles), snow (accumulation percentiles, >1/2/4in probabilities, snow level, snow-type probability), ice (freezing-rain ice accretion, freezing-rain / ice-pellet type probabilities), temperature (temp/dewpoint + stddev), wind (speed/gust percentiles), severe (thunderstorm probability plus NBM CWASP, the Craven-Wiedenfeld Aggregate Severe Parameter, a severe-environment index, both in percent: severe_weather_prob_p50 is the median CWASP value and severe_weather_prob_above_75 the probability CWASP exceeds 75; NBM has no tornado, hail or damaging-wind probabilities, so use get_outlooks hazard=severe for SPC's), aviation (LIFR/IFR/MVFR visibility + ceiling probabilities), confidence (ensemble stddev; low spread = settled forecast, high spread = details still in play). Examples: {\"location\": \"Denver\", \"aspect\": \"snow\", \"hours\": 72} or {\"lat\": 32.9, \"lon\": -97.0, \"aspect\": \"severe\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
