@@ -4414,7 +4414,7 @@
     {
       "name": "list_datasets",
       "title": "List datasets",
-      "description": "Discover the datasets (model grids, analyses, observations) available at a location, with per-dataset freshness (data age, latest model run). Datasets vary by domain (CONUS/Alaska/Hawaii). Use this to find dataset_id values for query_dataset and describe_dataset, or to assess whether data is current before making decisions. Example: {\"location\": \"Anchorage\"}.",
+      "description": "Discover the datasets (model grids, analyses, observations) available at a location, keyed by dataset_id, with per-dataset freshness where tracked (latest model run as latest_run, latest_time, data_age_seconds, freshness_status). Only datasets covering the point are listed: its domain (CONUS/Alaska/Hawaii/Caribbean) plus global grids and the GOES full disks that see it. Use this to find dataset_id values for query_dataset, or to check whether data is current. Variables, units and standard names come from describe_dataset. Example: {\"location\": \"Anchorage, AK\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -4439,7 +4439,7 @@
           "include_freshness": {
             "type": "boolean",
             "default": true,
-            "description": "Include per-dataset data age and run times. Default true."
+            "description": "Include latest model run and data age where tracked. Default true."
           }
         },
         "additionalProperties": false,
@@ -4467,13 +4467,76 @@
             ],
             "additionalProperties": false
           },
+          "domain": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "datasets": {
             "type": "object",
-            "additionalProperties": {}
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "domain": {
+                  "type": "string"
+                },
+                "latest_time": {
+                  "type": "string"
+                },
+                "latest_run": {
+                  "type": "string"
+                },
+                "data_age_seconds": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "freshness_status": {
+                  "type": "string",
+                  "enum": [
+                    "fresh",
+                    "stale",
+                    "missing"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
           },
           "freshness": {
             "type": "object",
-            "additionalProperties": {}
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "fresh",
+                    "stale",
+                    "missing"
+                  ]
+                },
+                "age": {
+                  "type": "string"
+                },
+                "max_age": {
+                  "type": "string"
+                },
+                "latest_time": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
           }
         },
         "required": [
