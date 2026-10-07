@@ -1168,7 +1168,7 @@
     {
       "name": "get_forecast",
       "title": "Get forecast",
-      "description": "Complete weather overview for a location: current conditions, daily forecast (day/night periods, SPC threats, severity, CAPE, UV), active alerts, and convective outlooks in one call. Data is pre-aggregated across NBM, HRRR, GFS, RTMA, and SPC and unit-converted server-side. This is the primary weather tool; reach for lower-level tools only when you need raw observations or a specific dataset. Accepts a place name directly. Examples: {\"location\": \"Denver\"} or {\"location\": \"Portland, OR\", \"days\": 5} or {\"lat\": 41.4, \"lon\": -92.9}.",
+      "description": "Complete weather overview for a location: current conditions, daily forecast (day/night periods, SPC threats, severity, CAPE, UV), active alerts, and convective outlooks in one call. Data is pre-aggregated across NBM, HRRR, GFS, RTMA, and SPC and unit-converted server-side. This is the primary weather tool; reach for lower-level tools only when you need raw observations or a specific dataset. Times are UTC ISO 8601; quote daily[].astro.local to users, not UTC. If forecast.location.timezone_resolved is false, zone unknown: state times as UTC, never as local. Accepts a place name directly. Examples: {\"location\": \"Denver\"} or {\"location\": \"Portland, OR\", \"days\": 5} or {\"lat\": 41.4, \"lon\": -92.9}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -4178,7 +4178,7 @@
     {
       "name": "get_time_context",
       "title": "Get time context",
-      "description": "Complete temporal context for a location: local time, timezone, 14-day calendar with day names and Today/Tomorrow offsets, sunrise/sunset/solar times (from the weather pipeline's astro product), and moon phase. Use whenever you need to reason about dates, times, or daylight for a location -- including \"what time is sunset?\", \"is it dark there now?\", or \"what day of the week is the 4th-day forecast?\". Accepts a place name directly. Example: {\"location\": \"Seattle\"}.",
+      "description": "Complete temporal context for a location: local time, timezone, 14-day calendar with day names and Today/Tomorrow offsets, sunrise/sunset/solar times (from the weather pipeline's astro product), and moon phase. Use whenever you need to reason about dates, times, or daylight for a location -- including \"what time is sunset?\", \"is it dark there now?\", or \"what day of the week is the 4th-day forecast?\". If current_time.timezone_resolved is false, zone unknown: state times as UTC, never as local. Accepts a place name directly. Example: {\"location\": \"Seattle\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
