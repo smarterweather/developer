@@ -1470,7 +1470,7 @@
     {
       "name": "get_forecast_distribution",
       "title": "Get forecast distribution",
-      "description": "Probabilistic forecast guidance from NBM for one aspect of the weather: percentile ranges (p10-p90), exceedance probabilities, and ensemble spread. Use this for any question about odds, ranges, potential or confidence (\"how much could we get\", \"worst case for the wind\", \"how sure is this\") -- a deterministic forecast value cannot answer one. Reading the percentiles: p50 is the most likely outcome, p90 is the reasonable worst case when the risk is the high end (snow totals, wind, rainfall), and p10 is the reasonable worst case when the risk is the low end (cold, minimum visibility, ceiling). A single percentile is not the forecast -- report the likely value with the tail that matters, and label which is which. Aspects: precip (PoP, QPF + percentiles), snow (accumulation percentiles, >1/2/4in probabilities, snow level, snow-type probability), ice (freezing-rain ice accretion, freezing-rain / ice-pellet type probabilities), temperature (temp/dewpoint + stddev), wind (speed/gust percentiles), severe (thunderstorm probability plus NBM CWASP, the Craven-Wiedenfeld Aggregate Severe Parameter, a severe-environment index, both in percent: severe_weather_prob_p50 is the median CWASP value and severe_weather_prob_above_75 the probability CWASP exceeds 75; NBM has no tornado, hail or damaging-wind probabilities, so use get_outlooks hazard=severe for SPC's), aviation (LIFR/IFR/MVFR visibility + ceiling probabilities), confidence (ensemble stddev; low spread = settled forecast, high spread = details still in play). Examples: {\"location\": \"Denver\", \"aspect\": \"snow\", \"hours\": 72} or {\"lat\": 32.9, \"lon\": -97.0, \"aspect\": \"severe\"}.",
+      "description": "NBM probabilistic guidance for one weather aspect: percentiles (p10-p90), exceedance probabilities and ensemble spread. Use this for any question about odds, ranges, potential or confidence (\"how much could we get\", \"range of possible highs\", \"how sure is this\") -- a deterministic forecast value cannot answer one. Reading the percentiles: p50 is the most likely outcome, p90 is the reasonable worst case when the risk is the high end (snow totals, wind, rainfall), and p10 when the risk is the low end (cold, visibility, ceiling). A single percentile is not the forecast -- report the likely value with the tail that matters, and label which is which. Aspects: precip (PoP, QPF + percentiles), snow (accumulation percentiles, >1/2/4in probabilities, snow level, snow-type probability), ice (ice accretion, freezing-rain / ice-pellet probabilities), temperature (`daily` high/low p10/p50/p90: the NBM value -/+ 1.28 stddev; hourly temp + stddev), wind (speed/gust percentiles), severe (thunderstorm probability plus NBM CWASP, a severe-environment index, both in percent: severe_weather_prob_p50 is the median CWASP value and severe_weather_prob_above_75 the probability CWASP exceeds 75; NBM has no tornado, hail or damaging-wind probabilities, so use get_outlooks hazard=severe for SPC's), aviation (LIFR/IFR/MVFR visibility + ceiling odds), confidence (ensemble stddev; low = settled, high = details still in play). Labels in unit_labels. Example: {\"location\": \"Denver\", \"aspect\": \"snow\", \"hours\": 72}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1504,13 +1504,23 @@
               "aviation",
               "confidence"
             ],
-            "description": "Which distribution family to return (see tool description)."
+            "description": "Distribution family (see description)."
           },
           "hours": {
             "type": "integer",
             "minimum": 1,
             "maximum": 264,
-            "description": "Forecast hours (1-264). Default varies by aspect (48-72)."
+            "description": "Forecast hours; default 48-72 by aspect."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric",
+              "si"
+            ],
+            "default": "imperial",
+            "description": "imperial (default: °F, mph, in), metric, or si (NBM native: K, m/s, mm)."
           }
         },
         "required": [
@@ -1557,6 +1567,14 @@
           "hours": {
             "type": "number"
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric",
+              "si"
+            ]
+          },
           "series": {
             "type": "array",
             "items": {
@@ -1582,21 +1600,112 @@
                       ]
                     }
                   }
+                },
+                "unit_labels": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "reference_time": {
+                  "type": "string"
+                },
+                "reference_times": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               },
               "required": [
                 "dataset_id",
                 "valid_times",
-                "data"
+                "data",
+                "unit_labels"
               ],
               "additionalProperties": false
             }
+          },
+          "daily": {
+            "type": "object",
+            "properties": {
+              "dataset_id": {
+                "type": "string"
+              },
+              "reference_time": {
+                "type": "string"
+              },
+              "reference_times": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "derived": {
+                "type": "string",
+                "const": "nbm_spread_normal"
+              },
+              "unit": {
+                "type": "string"
+              },
+              "local_date": {
+                "type": "string"
+              },
+              "days": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "high": {
+                      "type": "object",
+                      "properties": {
+                        "p10": {
+                          "type": "number"
+                        },
+                        "p50": {
+                          "type": "number"
+                        },
+                        "p90": {
+                          "type": "number"
+                        },
+                        "stddev": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "p50"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "low": {
+                      "$ref": "#/properties/daily/properties/days/items/properties/high"
+                    }
+                  },
+                  "required": [
+                    "date"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "dataset_id",
+              "derived",
+              "unit",
+              "local_date",
+              "days"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
           "location",
           "aspect",
           "hours",
+          "units",
           "series"
         ],
         "additionalProperties": false,
