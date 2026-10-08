@@ -1389,7 +1389,7 @@
             "type": "string",
             "minLength": 3,
             "maxLength": 12,
-            "description": "Full AWIPS identifier (e.g. TCDAT1, PMDSPD). More specific than type + location. Exact source_ref match."
+            "description": "AWIPS id (e.g. TCDAT1, PMDSPD; CPC: PMDMRD 6-10/8-14d, PMDTHR hazards, PMDENS ENSO). Exact source_ref; beats type+location."
           },
           "wfo": {
             "type": "string",
