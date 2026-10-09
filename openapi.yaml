@@ -2743,7 +2743,10 @@ paths:
         `valid_end`). When a 6-10 or 8-14 day
         period is present, `narrative` carries CPC's prognostic
         discussion (`PMDMRD`) unless it is more than 72 hours old.
-        Seasonal (3-month) outlooks are not served yet.
+        This answer keeps one entry per period and leaves out the
+        seasonal (3-month) outlooks; `GET /v1/outlooks/climate` serves
+        every CPC outlook, seasonal leads included, without `day` or
+        `probabilities`.
 
         ### Probabilities
 
@@ -2860,6 +2863,180 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OutlookDetail'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+  # TODO(#17612): next month's outlook (CPC's mid-month
+  # 0.5-month-lead monthly) arrives as a second `monthly` entry with a later
+  # sw-api change; document it then.
+  /v1/outlooks/climate:
+    get:
+      operationId: getClimateOutlooks
+      summary: CPC climate outlooks at a location, from 6-10 day to seasonal.
+      description: |
+        Returns every Climate Prediction Center outlook covering a US
+        location: the 6-10 day, 8-14 day, week 3-4, monthly and seasonal
+        (three-month) temperature and precipitation outlooks. Each entry
+        gives the tercile CPC favors (`above`, `below`, `near`, or
+        `equal_chances`) and the probability bin it assigns to that
+        tercile (`probability_min`/`probability_max`, fractional, so
+        `0.4`/`0.5` is 40-50%). `equal_chances` means CPC favors no
+        tercile and carries no bin; it is not the same as `near`.
+
+        ### Periods
+
+        Entries are ordered by period (`610`, `814`, `wk34`, `monthly`,
+        `seasonal`), then by `valid_start`, then temperature before
+        precipitation. Each entry has its own `valid_start` and
+        `valid_end`.
+
+        - `seasonal` has up to 13 entries per variable, one per
+          overlapping three-month lead (`lead` 1-13, lead 1 starting the
+          month after issuance), labelled by `valid_label`
+          (`NDJ 2026-2027`).
+        - `monthly` is this month's outlook, labelled by `valid_label`
+          (`Oct 2026`).
+
+        `variable` and `period` narrow the answer. A period (or lead)
+        with no outlook polygon at the location is omitted, an answer of
+        "no outlook here", not equal chances; locations outside the US
+        get an empty `periods` array.
+
+        ### Narrative
+
+        When a 6-10 or 8-14 day entry is present, `narrative` carries
+        CPC's prognostic discussion (`PMDMRD`) unless it is more than 72
+        hours old. The longer periods have no discussion.
+
+        ### Relation to /v1/outlooks
+
+        `GET /v1/outlooks?hazard=temperature|precipitation` returns the
+        6-10 day through monthly periods in the SPC-shaped
+        `OutlookDetail`, with a meaningless `day: 1` and an always-empty
+        `probabilities`. This endpoint is the period-based shape and the
+        only one that serves the seasonal outlooks.
+
+        ### Caching
+
+        Successful responses are cacheable for 5 minutes, although CPC
+        issues these outlooks at most daily.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Weather]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitude in decimal degrees.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 41.88
+        - name: lon
+          in: query
+          required: true
+          description: Longitude in decimal degrees.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -87.63
+        - name: variable
+          in: query
+          required: false
+          description: |
+            `temperature` or `precipitation`. Defaults to both.
+          schema:
+            type: string
+            enum: [temperature, precipitation]
+          example: temperature
+        - name: period
+          in: query
+          required: false
+          description: |
+            `610` (6-10 day), `814` (8-14 day), `wk34` (week 3-4),
+            `monthly`, or `seasonal` (all three-month leads). Defaults to
+            all periods.
+          schema:
+            type: string
+            enum: ['610', '814', wk34, monthly, seasonal]
+          example: seasonal
+      responses:
+        '200':
+          description: CPC climate outlooks at the location.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimateOutlooks'
+              examples:
+                chicagoTemperature:
+                  summary: Chicago temperature, one entry per period (two seasonal leads shown)
+                  value:
+                    periods:
+                      - product_id: cpc_610_temp
+                        period: '610'
+                        variable: temperature
+                        category: above
+                        probability_min: 0.4
+                        probability_max: 0.5
+                        label: Above normal 40-50%
+                        valid_start: '2026-10-21T00:00:00Z'
+                        valid_end: '2026-10-26T00:00:00Z'
+                        issued_at: '2026-10-15T19:00:00Z'
+                      - product_id: cpc_monthly_temp
+                        period: monthly
+                        valid_label: Oct 2026
+                        variable: temperature
+                        category: equal_chances
+                        label: Equal chances
+                        valid_start: '2026-10-01T00:00:00Z'
+                        valid_end: '2026-11-01T00:00:00Z'
+                        issued_at: '2026-09-30T19:00:00Z'
+                      - product_id: cpc_seasonal_temp
+                        period: seasonal
+                        lead: 1
+                        valid_label: NDJ 2026-2027
+                        variable: temperature
+                        category: below
+                        probability_min: 0.4
+                        probability_max: 0.5
+                        label: Below normal 40-50%
+                        valid_start: '2026-11-01T00:00:00Z'
+                        valid_end: '2027-02-01T00:00:00Z'
+                        issued_at: '2026-10-15T12:30:00Z'
+                      - product_id: cpc_seasonal_temp
+                        period: seasonal
+                        lead: 2
+                        valid_label: DJF 2026-2027
+                        variable: temperature
+                        category: below
+                        probability_min: 0.33
+                        probability_max: 0.4
+                        label: Below normal 33-40%
+                        valid_start: '2026-12-01T00:00:00Z'
+                        valid_end: '2027-03-01T00:00:00Z'
+                        issued_at: '2026-10-15T12:30:00Z'
+                    narrative:
+                      awips_id: PMDMRD
+                      issued_at: '2026-10-15T19:00:00Z'
+                      summary: Above-normal temperatures favored across the Great Lakes in the 6-10 day period.
         '400':
           $ref: '#/components/responses/Problem400'
         '502':
@@ -4970,6 +5147,25 @@ components:
         narrative:
           $ref: '#/components/schemas/OutlookNarrative'
 
+    ClimateOutlooks:
+      type: object
+      description: |
+        The CPC climate outlooks at a location, as returned by
+        `GET /v1/outlooks/climate`.
+      required: [periods]
+      properties:
+        periods:
+          type: array
+          description: |
+            One entry per period, seasonal lead, and variable that has an
+            outlook polygon at the location, ordered by period (`610`,
+            `814`, `wk34`, `monthly`, `seasonal`), then `valid_start`,
+            then temperature before precipitation. Empty outside the US.
+          items:
+            $ref: '#/components/schemas/ClimateOutlook'
+        narrative:
+          $ref: '#/components/schemas/OutlookNarrative'
+
     ClimateOutlook:
       type: object
       description: |
@@ -4984,11 +5180,30 @@ components:
           example: "cpc_814_temp"
         period:
           type: string
-          enum: ['610', '814', wk34, monthly]
+          enum: ['610', '814', wk34, monthly, seasonal]
           description: |
-            `610` (6-10 day), `814` (8-14 day), `wk34` (week 3-4), or
-            `monthly` (the next calendar month).
+            `610` (6-10 day), `814` (8-14 day), `wk34` (week 3-4),
+            `monthly` (a calendar month), or `seasonal` (a three-month
+            season; see `lead`). `GET /v1/outlooks` returns only the
+            first four, one entry each.
           example: "814"
+        lead:
+          type: integer
+          minimum: 1
+          maximum: 13
+          description: |
+            The seasonal lead, for `period: seasonal` only. CPC issues 13
+            overlapping three-month outlooks; lead 1 starts the month
+            after issuance and each later lead starts one month later.
+          example: 1
+        valid_label:
+          type: string
+          description: |
+            CPC's name for the outlook window, for `monthly` and
+            `seasonal` entries from `GET /v1/outlooks/climate`: a month
+            (`Oct 2026`) or a three-month season of month initials
+            (`NDJ 2026-2027`).
+          example: "NDJ 2026-2027"
         variable:
           type: string
           enum: [temperature, precipitation]

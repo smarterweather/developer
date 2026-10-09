@@ -3283,7 +3283,7 @@
     {
       "name": "get_outlooks",
       "title": "Get hazard outlooks",
-      "description": "Hazard outlooks affecting a location. severe: SPC convective (day 1-8 categorical + tornado/wind/hail probabilities); fire: SPC fire weather; rain: WPC Excessive Rainfall (days 1-3); heat: NWS HeatRisk index (0-4, days 1-3); temperature/precipitation: CPC 6-10 day, 8-14 day, week 3-4 and monthly outlooks (favored category + probability bin). include_narrative=true adds the forecaster discussion (SWO, FWD, QPFERD, or CPC PMDMRD). Empty means no outlook covers the point, not a failure. Examples: {\"location\": \"Moore, OK\", \"hazard\": \"severe\", \"include_narrative\": true} or {\"location\": \"Denver\", \"hazard\": \"temperature\"}.",
+      "description": "Hazard outlooks affecting a location. severe: SPC convective (day 1-8 categorical + tornado/wind/hail probabilities); fire: SPC fire weather; rain: WPC Excessive Rainfall (days 1-3); heat: NWS HeatRisk index (0-4, days 1-3); temperature/precipitation: CPC 6-10 day, 8-14 day, week 3-4 and monthly outlooks (favored category + probability bin; period=seasonal: 3-month leads). include_narrative=true adds the forecaster discussion (SWO, FWD, QPFERD, or CPC PMDMRD). Empty means no outlook covers the point, not a failure. Examples: {\"location\": \"Moore, OK\", \"hazard\": \"severe\", \"include_narrative\": true} or {\"location\": \"Denver\", \"hazard\": \"temperature\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3315,8 +3315,7 @@
               "temperature",
               "precipitation"
             ],
-            "default": "severe",
-            "description": "Hazard family (see description). Winter/WSSI is a planned expansion."
+            "description": "Hazard family (see description). Default severe; with period, both CPC hazards."
           },
           "day": {
             "type": "integer",
@@ -3329,6 +3328,17 @@
             "type": "boolean",
             "default": false,
             "description": "Include the forecaster narrative (all hazards but heat)."
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "610",
+              "814",
+              "wk34",
+              "monthly",
+              "seasonal"
+            ],
+            "description": "Temperature/precipitation only. Default: all but seasonal."
           }
         },
         "additionalProperties": false,
