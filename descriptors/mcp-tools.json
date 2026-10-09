@@ -134,6 +134,10 @@
               ],
               "additionalProperties": false
             }
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values."
           }
         },
         "required": [
@@ -184,6 +188,10 @@
           "detail": {
             "type": "object",
             "additionalProperties": {}
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values."
           }
         },
         "required": [
@@ -3678,6 +3686,10 @@
           },
           "message": {
             "type": "string"
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values."
           }
         },
         "required": [
@@ -4826,6 +4838,10 @@
               ],
               "additionalProperties": false
             }
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values."
           }
         },
         "required": [
