@@ -2691,13 +2691,15 @@ paths:
   /v1/outlooks:
     get:
       operationId: getOutlookDetail
-      summary: SPC outlook detail for a location, day, and hazard family.
+      summary: Outlook detail for a location and hazard family (SPC, WPC, CPC).
       description: |
         Returns everything the Storm Prediction Center says about one
         outlook day at a point for a hazard family: the risk band, any
         probabilistic hazards (severe only), whether the location falls
         in a hatched significant-severe area, and the forecaster's full
-        written discussion.
+        written discussion. For `hazard=temperature|precipitation` it
+        instead returns the Climate Prediction Center's extended-range
+        outlooks at the point (see "Climate outlooks" below).
 
         This is the drill-down behind a risk area on a map. `GET
         /v1/weather?include=outlooks` already reports the single
@@ -2720,6 +2722,31 @@ paths:
         Rainfall Outlook band (`MRGL`/`SLGT`/`MDT`/`HIGH`) for days 1-3
         and the QPFERD discussion (one PIL; day is selected from
         `properties.outlook_day`).
+
+        ### Climate outlooks
+
+        `hazard=temperature` and `hazard=precipitation` return the CPC
+        outlooks for the 6-10 day, 8-14 day, week 3-4, and monthly
+        periods in `periods`, one entry per period, in that order. Each
+        entry gives the tercile CPC favors (`above`, `below`, `near`, or
+        `equal_chances`) and the probability bin it assigns to that
+        tercile (`probability_min`/`probability_max`, fractional, so
+        `0.4`/`0.5` is 40-50%). `equal_chances` means CPC favors no
+        tercile and carries no bin; it is not the same as `near`.
+
+        `period` (`610`, `814`, `wk34`, or `monthly`) narrows the answer
+        to one period. `day` does not apply and is ignored. A period
+        with no outlook polygon at the location is omitted (an answer of
+        "no outlook here", not equal chances); locations outside the US
+        get an empty `periods` array. `probabilities` is always empty; `day` is always `1` and
+        carries no meaning (each period has its own `valid_start` and
+        `valid_end`). When a 6-10 or 8-14 day
+        period is present, `narrative` carries CPC's prognostic
+        discussion (`PMDMRD`) unless it is more than 72 hours old.
+        This answer keeps one entry per period and leaves out the
+        seasonal (3-month) outlooks; `GET /v1/outlooks/climate` serves
+        every CPC outlook, seasonal leads included, without `day` or
+        `probabilities`.
 
         ### Probabilities
 
@@ -2752,7 +2779,9 @@ paths:
         ### Caching
 
         Successful responses are cacheable for 5 minutes. SPC reissues
-        the day 1 outlook a handful of times a day.
+        the day 1 outlook a handful of times a day. Climate outlook
+        responses are cacheable for 5 minutes as well, although CPC
+        issues them at most daily.
 
         ### Auth
 
@@ -2786,6 +2815,7 @@ paths:
           required: false
           description: |
             Outlook day to describe, where 1 is today. Defaults to 1.
+            Ignored for `hazard=temperature|precipitation`.
           schema:
             type: integer
             minimum: 1
@@ -2798,13 +2828,27 @@ paths:
           description: |
             Hazard family. `severe` (default) is the SPC convective
             outlook; `fire` is the SPC fire-weather outlook; `rain` is
-            the WPC Excessive Rainfall Outlook. Matches the vocabulary
-            used by sw-mcp's `get_outlooks`.
+            the WPC Excessive Rainfall Outlook; `temperature` and
+            `precipitation` are the CPC 6-10 day, 8-14 day, week 3-4,
+            and monthly outlooks. Matches the vocabulary used by
+            sw-mcp's `get_outlooks`.
           schema:
             type: string
-            enum: [severe, fire, rain]
+            enum: [severe, fire, rain, temperature, precipitation]
             default: severe
           example: severe
+        - name: period
+          in: query
+          required: false
+          description: |
+            CPC outlook period for `hazard=temperature|precipitation`:
+            `610` (6-10 day), `814` (8-14 day), `wk34` (week 3-4), or
+            `monthly`. Defaults to all four. Ignored for the other
+            hazards.
+          schema:
+            type: string
+            enum: ['610', '814', wk34, monthly]
+          example: '814'
       responses:
         '200':
           description: Outlook detail for the requested day and location.
@@ -2819,6 +2863,195 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OutlookDetail'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+  /v1/outlooks/climate:
+    get:
+      operationId: getClimateOutlooks
+      summary: CPC climate outlooks at a location, from 6-10 day to seasonal.
+      description: |
+        Returns every Climate Prediction Center outlook covering a US
+        location: the 6-10 day, 8-14 day, week 3-4, monthly and seasonal
+        (three-month) temperature and precipitation outlooks. Each entry
+        gives the tercile CPC favors (`above`, `below`, `near`, or
+        `equal_chances`) and the probability bin it assigns to that
+        tercile (`probability_min`/`probability_max`, fractional, so
+        `0.4`/`0.5` is 40-50%). `equal_chances` means CPC favors no
+        tercile and carries no bin; it is not the same as `near`.
+
+        ### Periods
+
+        Entries are ordered by period (`610`, `814`, `wk34`, `monthly`,
+        `seasonal`), then by `valid_start`, then temperature before
+        precipitation. Each entry has its own `valid_start` and
+        `valid_end`; (`period`, `variable`, `valid_start`) identifies an
+        entry.
+
+        - `seasonal` has up to 13 entries per variable, one per
+          overlapping three-month lead (`lead` 1-13, lead 1 starting the
+          month after issuance), labelled by `valid_label`
+          (`NDJ 2026-2027`).
+        - `monthly` can appear twice per variable: this month, plus next
+          month from CPC's mid-month seasonal release (third Thursday)
+          until the month-end monthly update replaces it. The two differ
+          in `valid_start` and `valid_label` (`Oct 2026`, `Nov 2026`);
+          neither has a `lead`.
+
+        `variable` and `period` narrow the answer. A period (or lead)
+        with no outlook polygon at the location is omitted, an answer of
+        "no outlook here", not equal chances; locations outside the US
+        get an empty `periods` array.
+
+        ### Narrative
+
+        When a 6-10 or 8-14 day entry is present, `narrative` carries
+        CPC's prognostic discussion (`PMDMRD`) unless it is more than 72
+        hours old. The longer periods have no discussion.
+
+        ### Relation to /v1/outlooks
+
+        `GET /v1/outlooks?hazard=temperature|precipitation` returns the
+        6-10 day through monthly periods in the SPC-shaped
+        `OutlookDetail`, with a meaningless `day: 1` and an always-empty
+        `probabilities`. This endpoint is the period-based shape and the
+        only one that serves the seasonal outlooks.
+
+        ### Caching
+
+        Successful responses are cacheable for 5 minutes, although CPC
+        issues these outlooks at most daily.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Weather]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitude in decimal degrees.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 41.88
+        - name: lon
+          in: query
+          required: true
+          description: Longitude in decimal degrees.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -87.63
+        - name: variable
+          in: query
+          required: false
+          description: |
+            `temperature` or `precipitation`. Defaults to both.
+          schema:
+            type: string
+            enum: [temperature, precipitation]
+          example: temperature
+        - name: period
+          in: query
+          required: false
+          description: |
+            `610` (6-10 day), `814` (8-14 day), `wk34` (week 3-4),
+            `monthly` (up to two entries per variable: this month, plus
+            next month after CPC's mid-month seasonal release), or
+            `seasonal` (all three-month leads). Defaults to all periods.
+            Within a period, entries are unique by `variable` and
+            `valid_start`.
+          schema:
+            type: string
+            enum: ['610', '814', wk34, monthly, seasonal]
+          example: seasonal
+      responses:
+        '200':
+          description: CPC climate outlooks at the location.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimateOutlooks'
+              examples:
+                chicagoTemperature:
+                  summary: Chicago temperature after the mid-month seasonal release (two monthly entries, two seasonal leads shown)
+                  value:
+                    periods:
+                      - product_id: cpc_610_temp
+                        period: '610'
+                        variable: temperature
+                        category: above
+                        probability_min: 0.4
+                        probability_max: 0.5
+                        label: Above normal 40-50%
+                        valid_start: '2026-10-21T00:00:00Z'
+                        valid_end: '2026-10-26T00:00:00Z'
+                        issued_at: '2026-10-15T19:00:00Z'
+                      - product_id: cpc_monthly_temp
+                        period: monthly
+                        valid_label: Oct 2026
+                        variable: temperature
+                        category: equal_chances
+                        label: Equal chances
+                        valid_start: '2026-10-01T00:00:00Z'
+                        valid_end: '2026-11-01T00:00:00Z'
+                        issued_at: '2026-09-30T19:00:00Z'
+                      - product_id: cpc_seasonal_temp
+                        period: monthly
+                        valid_label: Nov 2026
+                        variable: temperature
+                        category: above
+                        probability_min: 0.33
+                        probability_max: 0.4
+                        label: Above normal 33-40%
+                        valid_start: '2026-11-01T00:00:00Z'
+                        valid_end: '2026-12-01T00:00:00Z'
+                        issued_at: '2026-10-15T12:30:00Z'
+                      - product_id: cpc_seasonal_temp
+                        period: seasonal
+                        lead: 1
+                        valid_label: NDJ 2026-2027
+                        variable: temperature
+                        category: below
+                        probability_min: 0.4
+                        probability_max: 0.5
+                        label: Below normal 40-50%
+                        valid_start: '2026-11-01T00:00:00Z'
+                        valid_end: '2027-02-01T00:00:00Z'
+                        issued_at: '2026-10-15T12:30:00Z'
+                      - product_id: cpc_seasonal_temp
+                        period: seasonal
+                        lead: 2
+                        valid_label: DJF 2026-2027
+                        variable: temperature
+                        category: below
+                        probability_min: 0.33
+                        probability_max: 0.4
+                        label: Below normal 33-40%
+                        valid_start: '2026-12-01T00:00:00Z'
+                        valid_end: '2027-03-01T00:00:00Z'
+                        issued_at: '2026-10-15T12:30:00Z'
+                    narrative:
+                      awips_id: PMDMRD
+                      issued_at: '2026-10-15T19:00:00Z'
+                      summary: Above-normal temperatures favored across the Great Lakes in the 6-10 day period.
         '400':
           $ref: '#/components/responses/Problem400'
         '502':
@@ -4870,10 +5103,12 @@ components:
       description: |
         Drill-down detail for one SPC convective outlook day at a
         location: the categorical risk band, each probabilistic hazard,
-        and the forecaster's written discussion.
+        and the forecaster's written discussion. For the CPC hazards
+        (`temperature`, `precipitation`) it carries `periods` instead.
 
-        Everything except `day` is optional. A point can sit inside a
-        categorical polygon with no probabilistic coverage, and the
+        Everything except `day` and `probabilities` is optional. A point
+        can sit inside
+        a categorical polygon with no probabilistic coverage, and the
         narrative is ingested separately from the polygons so it can lag
         a fresh issuance.
       required: [day, probabilities]
@@ -4882,7 +5117,11 @@ components:
           type: integer
           minimum: 1
           maximum: 8
-          description: The outlook day this detail describes (1 = today).
+          description: |
+            The outlook day this detail describes (1 = today). For the
+            CPC hazards (`temperature`, `precipitation`) it is always `1`
+            and carries no meaning; use each period's `valid_start` and
+            `valid_end`.
         categorical:
           $ref: '#/components/schemas/Outlook'
         dry_thunderstorm:
@@ -4910,8 +5149,126 @@ components:
             Categorical bands never appear here.
           items:
             $ref: '#/components/schemas/Outlook'
+        periods:
+          type: array
+          description: |
+            CPC climate outlooks at the location for
+            `hazard=temperature|precipitation`, one per period in the
+            order 6-10 day, 8-14 day, week 3-4, monthly. A period with no
+            outlook polygon at the location is omitted. Absent for the
+            other hazards.
+          items:
+            $ref: '#/components/schemas/ClimateOutlook'
         narrative:
           $ref: '#/components/schemas/OutlookNarrative'
+
+    ClimateOutlooks:
+      type: object
+      description: |
+        The CPC climate outlooks at a location, as returned by
+        `GET /v1/outlooks/climate`.
+      required: [periods]
+      properties:
+        periods:
+          type: array
+          description: |
+            One entry per (`period`, `variable`, `valid_start`) that has
+            an outlook polygon at the location: one per variable for
+            `610`, `814` and `wk34`, up to two for `monthly` (this month
+            and next), and one per lead for `seasonal`. Ordered by period
+            (`610`, `814`, `wk34`, `monthly`, `seasonal`), then
+            `valid_start`, then temperature before precipitation. Empty
+            outside the US.
+          items:
+            $ref: '#/components/schemas/ClimateOutlook'
+        narrative:
+          $ref: '#/components/schemas/OutlookNarrative'
+
+    ClimateOutlook:
+      type: object
+      description: |
+        One CPC temperature or precipitation outlook period at a
+        location: the tercile CPC favors and the probability bin it
+        assigns to it.
+      required: [product_id, period, variable, category, issued_at]
+      properties:
+        product_id:
+          type: string
+          description: Upstream product identifier.
+          example: "cpc_814_temp"
+        period:
+          type: string
+          enum: ['610', '814', wk34, monthly, seasonal]
+          description: |
+            `610` (6-10 day), `814` (8-14 day), `wk34` (week 3-4),
+            `monthly` (a calendar month), or `seasonal` (a three-month
+            season; see `lead`). `GET /v1/outlooks` returns only the
+            first four, one entry each. `GET /v1/outlooks/climate` can
+            return two `monthly` entries per variable: this month, plus
+            next month from CPC's mid-month seasonal release until the
+            month-end monthly update. Entries are unique by (`period`,
+            `variable`, `valid_start`).
+          example: "814"
+        lead:
+          type: integer
+          minimum: 1
+          maximum: 13
+          description: |
+            The seasonal lead, for `period: seasonal` only. CPC issues 13
+            overlapping three-month outlooks; lead 1 starts the month
+            after issuance and each later lead starts one month later.
+          example: 1
+        valid_label:
+          type: string
+          description: |
+            CPC's name for the outlook window, for `monthly` and
+            `seasonal` entries from `GET /v1/outlooks/climate`: a month
+            (`Oct 2026`) or a three-month season of month initials
+            (`NDJ 2026-2027`).
+          example: "NDJ 2026-2027"
+        variable:
+          type: string
+          enum: [temperature, precipitation]
+        category:
+          type: string
+          enum: [above, below, near, equal_chances]
+          description: |
+            The favored tercile. `near` means near normal is favored;
+            `equal_chances` means CPC favors no tercile.
+        probability_min:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: |
+            Lower edge of the favored category's probability bin,
+            fractional (`0.4` = 40%). Omitted for `equal_chances`.
+          example: 0.4
+        probability_max:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: |
+            Upper edge of the favored category's probability bin,
+            fractional. Omitted for `equal_chances`.
+          example: 0.5
+        label:
+          type: string
+          description: Human-readable category and bin.
+          example: "Above normal 40-50%"
+        valid_start:
+          type: string
+          format: date-time
+          description: Start of the outlook period.
+        valid_end:
+          type: string
+          format: date-time
+          description: End of the outlook period (exclusive).
+        issued_at:
+          type: string
+          format: date-time
+          description: When CPC issued the outlook.
 
     OutlookNarrative:
       type: object
@@ -4923,7 +5280,8 @@ components:
           type: string
           description: |
             AWIPS identifier of the source product — `SWODY1`, `SWODY2`,
-            `SWODY3` for the single-day outlooks, `SWOD48` for days 4-8.
+            `SWODY3` for the single-day outlooks, `SWOD48` for days 4-8,
+            `PMDMRD` for the CPC 6-10/8-14 day discussion.
           example: "SWODY1"
         issued_at:
           type: string
