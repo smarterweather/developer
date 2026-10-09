@@ -5832,7 +5832,7 @@ components:
         product, not the radar `nowcast` block. `guidance.hls` is the WFO
         Hurricane Local Statement for the office covering the point; omitted
         when none is live. `guidance.pmds` is the latest national Prognostic
-        Discussion per enabled desk (SPD/EPD/HMD/HI/CA); omitted when empty.
+        Discussion per enabled desk (SPD/EPD/HI/CA/MRD/THR/ENS); omitted when empty.
         Distinct from `guidance.mpds` (WPC precipitation discussions).
 
         **Experimental.** Field shapes may change during Phase 2 closed
@@ -5880,10 +5880,14 @@ components:
         pmds:
           type: array
           description: |
-            Latest national Prognostic Discussion per enabled desk
-            (`PMDSPD`, `PMDEPD`, `PMDHMD`, `PMDHI`, `PMDCA`). Omitted when
+            Latest national Prognostic Discussion per enabled desk: WPC
+            (`PMDSPD`, `PMDEPD`, `PMDHI`, `PMDCA`) and CPC
+            (`PMDMRD` 6-10/8-14 day, `PMDTHR` week-2 hazards, `PMDENS`
+            ENSO). Omitted when
             empty. Distinct from `mpds` (precipitation discussions).
-            Each desk is fetched by `awips_id` (limit 1).
+            Each desk is fetched by `awips_id` (limit 1) and dropped
+            when older than its cadence allows (3 days; `PMDCA` and
+            `PMDTHR` 7, `PMDENS` 45).
           items:
             $ref: '#/components/schemas/PMDGuidance'
         swo_day1_risk:
@@ -6054,7 +6058,7 @@ components:
           description: Full AWIPS identifier (e.g. PMDSPD).
         pmd_desk:
           type: string
-          description: Desk suffix after the PMD prefix (SPD, EPD, HMD, HI, CA).
+          description: Desk suffix after the PMD prefix (SPD, EPD, HI, CA, MRD, THR, ENS).
         issued_at:
           type: [string, "null"]
           format: date-time
