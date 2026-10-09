@@ -2869,9 +2869,6 @@ paths:
           $ref: '#/components/responses/Problem502'
         '504':
           $ref: '#/components/responses/Problem504'
-  # TODO(#17612): next month's outlook (CPC's mid-month
-  # 0.5-month-lead monthly) arrives as a second `monthly` entry with a later
-  # sw-api change; document it then.
   /v1/outlooks/climate:
     get:
       operationId: getClimateOutlooks
@@ -2891,14 +2888,18 @@ paths:
         Entries are ordered by period (`610`, `814`, `wk34`, `monthly`,
         `seasonal`), then by `valid_start`, then temperature before
         precipitation. Each entry has its own `valid_start` and
-        `valid_end`.
+        `valid_end`; (`period`, `variable`, `valid_start`) identifies an
+        entry.
 
         - `seasonal` has up to 13 entries per variable, one per
           overlapping three-month lead (`lead` 1-13, lead 1 starting the
           month after issuance), labelled by `valid_label`
           (`NDJ 2026-2027`).
-        - `monthly` is this month's outlook, labelled by `valid_label`
-          (`Oct 2026`).
+        - `monthly` can appear twice per variable: this month, plus next
+          month from CPC's mid-month seasonal release (third Thursday)
+          until the month-end monthly update replaces it. The two differ
+          in `valid_start` and `valid_label` (`Oct 2026`, `Nov 2026`);
+          neither has a `lead`.
 
         `variable` and `period` narrow the answer. A period (or lead)
         with no outlook polygon at the location is omitted, an answer of
@@ -2965,8 +2966,11 @@ paths:
           required: false
           description: |
             `610` (6-10 day), `814` (8-14 day), `wk34` (week 3-4),
-            `monthly`, or `seasonal` (all three-month leads). Defaults to
-            all periods.
+            `monthly` (up to two entries per variable: this month, plus
+            next month after CPC's mid-month seasonal release), or
+            `seasonal` (all three-month leads). Defaults to all periods.
+            Within a period, entries are unique by `variable` and
+            `valid_start`.
           schema:
             type: string
             enum: ['610', '814', wk34, monthly, seasonal]
@@ -2987,7 +2991,7 @@ paths:
                 $ref: '#/components/schemas/ClimateOutlooks'
               examples:
                 chicagoTemperature:
-                  summary: Chicago temperature, one entry per period (two seasonal leads shown)
+                  summary: Chicago temperature after the mid-month seasonal release (two monthly entries, two seasonal leads shown)
                   value:
                     periods:
                       - product_id: cpc_610_temp
@@ -3009,6 +3013,17 @@ paths:
                         valid_start: '2026-10-01T00:00:00Z'
                         valid_end: '2026-11-01T00:00:00Z'
                         issued_at: '2026-09-30T19:00:00Z'
+                      - product_id: cpc_seasonal_temp
+                        period: monthly
+                        valid_label: Nov 2026
+                        variable: temperature
+                        category: above
+                        probability_min: 0.33
+                        probability_max: 0.4
+                        label: Above normal 33-40%
+                        valid_start: '2026-11-01T00:00:00Z'
+                        valid_end: '2026-12-01T00:00:00Z'
+                        issued_at: '2026-10-15T12:30:00Z'
                       - product_id: cpc_seasonal_temp
                         period: seasonal
                         lead: 1
@@ -5157,10 +5172,13 @@ components:
         periods:
           type: array
           description: |
-            One entry per period, seasonal lead, and variable that has an
-            outlook polygon at the location, ordered by period (`610`,
-            `814`, `wk34`, `monthly`, `seasonal`), then `valid_start`,
-            then temperature before precipitation. Empty outside the US.
+            One entry per (`period`, `variable`, `valid_start`) that has
+            an outlook polygon at the location: one per variable for
+            `610`, `814` and `wk34`, up to two for `monthly` (this month
+            and next), and one per lead for `seasonal`. Ordered by period
+            (`610`, `814`, `wk34`, `monthly`, `seasonal`), then
+            `valid_start`, then temperature before precipitation. Empty
+            outside the US.
           items:
             $ref: '#/components/schemas/ClimateOutlook'
         narrative:
@@ -5185,7 +5203,11 @@ components:
             `610` (6-10 day), `814` (8-14 day), `wk34` (week 3-4),
             `monthly` (a calendar month), or `seasonal` (a three-month
             season; see `lead`). `GET /v1/outlooks` returns only the
-            first four, one entry each.
+            first four, one entry each. `GET /v1/outlooks/climate` can
+            return two `monthly` entries per variable: this month, plus
+            next month from CPC's mid-month seasonal release until the
+            month-end monthly update. Entries are unique by (`period`,
+            `variable`, `valid_start`).
           example: "814"
         lead:
           type: integer
