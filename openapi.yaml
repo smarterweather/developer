@@ -2936,11 +2936,33 @@ paths:
         "no outlook here", not equal chances; locations outside the US
         get an empty `periods` array.
 
-        ### Narrative
+        ### Narratives
 
-        When a 6-10 or 8-14 day entry is present, `narrative` carries
-        CPC's prognostic discussion (`PMDMRD`) unless it is more than 72
-        hours old. The longer periods have no discussion.
+        `narratives` carries CPC's written discussion for each period in
+        the answer that has one, in this order:
+
+        - `PMDMRD` (`610`, `814`): unless more than 72 hours old.
+        - `PMD34D` (`wk34`): the latest week 3-4 discussion issued
+          within a day of the week 3-4 outlook.
+        - `PMD30D` (`monthly`): one entry per month in the answer, with
+          that month's `valid_label`. Each is the latest 30-day discussion
+          issued in the month before (the mid-month or month-end
+          release), so from the mid-month release until the month-end
+          update this month and next each have their own.
+        - `PMD90D` (`seasonal`): the latest 90-day discussion issued in
+          the month before the first season's start.
+
+        A discussion that doesn't match its period is left out rather
+        than shown against the wrong week or month. `periods` lists the answer's
+        periods each entry discusses, so a `period` filter returns only
+        that period's discussion. `narratives` is omitted when no
+        discussion applies.
+
+        `narrative` mirrors the `PMDMRD` entry of `narratives` and is
+        kept for existing clients; it is present only when a 6-10 or
+        8-14 day entry is. The text is sent once: the `PMDMRD` entry of
+        `narratives` omits `body`, which `narrative.body` carries for the
+        same issuance.
 
         ### Relation to /v1/outlooks
 
@@ -5213,6 +5235,58 @@ components:
             $ref: '#/components/schemas/ClimateOutlook'
         narrative:
           $ref: '#/components/schemas/OutlookNarrative'
+        narratives:
+          type: array
+          description: |
+            CPC's discussion for each period in the answer that has one:
+            `PMDMRD` (6-10/8-14 day), `PMD34D` (week 3-4), `PMD30D` (one
+            per `monthly` month) and `PMD90D` (`seasonal`), in that order.
+            Omitted when none applies. `narrative` mirrors the `PMDMRD`
+            entry for compatibility and carries its `body`, which that
+            entry omits.
+          items:
+            $ref: '#/components/schemas/ClimateNarrative'
+
+    ClimateNarrative:
+      type: object
+      description: |
+        One CPC prognostic discussion and the outlook periods of the
+        answer it discusses.
+      required: [periods]
+      properties:
+        awips_id:
+          type: string
+          description: |
+            `PMDMRD` (6-10/8-14 day), `PMD34D` (week 3-4; CPC publishes
+            it on the web only, with no NWS identifier), `PMD30D`
+            (30-day) or `PMD90D` (90-day).
+          example: "PMD30D"
+        issued_at:
+          type: string
+          format: date-time
+        body:
+          type: string
+          description: |
+            Full discussion text as written by the forecaster. Omitted
+            for `PMDMRD`, whose text is in the response's `narrative.body`.
+        summary:
+          type: string
+          description: Short generated summary, when one is available.
+        periods:
+          type: array
+          description: |
+            The periods in this answer the discussion covers: a subset
+            of `610`/`814` for `PMDMRD`, `wk34`, `monthly` or `seasonal`.
+          items:
+            type: string
+            enum: ['610', '814', wk34, monthly, seasonal]
+          example: [monthly]
+        valid_label:
+          type: string
+          description: |
+            For `PMD30D`, the `valid_label` of the monthly outlook it
+            discusses (`Oct 2026`).
+          example: "Oct 2026"
 
     ClimateOutlook:
       type: object
