@@ -833,7 +833,11 @@ paths:
         ingested from MADIS. By default returns the latest observation per
         station within the last 2 hours. Optional `station`, `hours`, and
         bounding-box (`min_lon`, `min_lat`, `max_lon`, `max_lat`) filters
-        are forwarded to the reader.
+        are forwarded to the reader. A bounding box needs all four values as
+        finite numbers with `-180 <= min_lon <= max_lon <= 180` and
+        `-90 <= min_lat <= max_lat <= 90` (antimeridian-crossing boxes are not
+        supported); a partial, non-numeric, out-of-range or inverted box is a
+        `400`. Empty-valued bbox params count as absent.
       tags: [Observations]
       security:
         - bearerAuth: []
@@ -854,18 +858,26 @@ paths:
           in: query
           schema:
             type: number
+            minimum: -180
+            maximum: 180
         - name: min_lat
           in: query
           schema:
             type: number
+            minimum: -90
+            maximum: 90
         - name: max_lon
           in: query
           schema:
             type: number
+            minimum: -180
+            maximum: 180
         - name: max_lat
           in: query
           schema:
             type: number
+            minimum: -90
+            maximum: 90
       responses:
         '200':
           description: GeoJSON FeatureCollection of METAR observations.
@@ -873,6 +885,8 @@ paths:
             application/geo+json:
               schema:
                 type: object
+        '400':
+          $ref: '#/components/responses/Problem400'
         '502':
           $ref: '#/components/responses/Problem502'
 
@@ -1187,6 +1201,8 @@ paths:
           schema:
             type: number
             format: double
+            minimum: -90
+            maximum: 90
           example: 35.33
         - name: lon
           in: query
@@ -1197,6 +1213,8 @@ paths:
           schema:
             type: number
             format: double
+            minimum: -180
+            maximum: 180
           example: -97.28
       responses:
         '200':
@@ -1473,7 +1491,8 @@ paths:
           All four must be supplied together as numbers. The box must
           satisfy `-180 <= min_lon <= max_lon <= 180` and
           `-90 <= min_lat <= max_lat <= 90` (NaN rejected);
-          antimeridian-crossing boxes are not supported.
+          antimeridian-crossing boxes are not supported. Empty-valued
+          bbox params count as absent.
 
         ### Caching
 
@@ -1536,6 +1555,8 @@ paths:
           in: query
           schema:
             type: number
+            minimum: -180
+            maximum: 180
           description: |
             Western bbox edge. Required together with min_lat, max_lon,
             and max_lat. The box must satisfy
@@ -1544,6 +1565,8 @@ paths:
           in: query
           schema:
             type: number
+            minimum: -90
+            maximum: 90
           description: |
             Southern bbox edge. Required together with the other three
             bbox params. The box must satisfy
@@ -1552,11 +1575,15 @@ paths:
           in: query
           schema:
             type: number
+            minimum: -180
+            maximum: 180
           description: Eastern bbox edge.
         - name: max_lat
           in: query
           schema:
             type: number
+            minimum: -90
+            maximum: 90
           description: Northern bbox edge.
       responses:
         '200':
@@ -2648,7 +2675,10 @@ paths:
             for multiple points (Go query parsing rejects `;`), e.g.
             `points=41.9,-93.6&points=42.0,-93.4`. Presence of `points` (or
             `select`) switches the response to `PointBatchResponse`. Max 100
-            points; points × selectors ≤ 500.
+            points; points × selectors ≤ 500. A point outside lat [-90, 90] /
+            lon [-180, 180] (here or in the `lat` & `lon` fallback) is
+            reported as `out_of_domain` items; a non-numeric or non-finite
+            (`NaN`, `Inf`) point is a `400`.
           style: form
           explode: true
           schema:
@@ -6802,7 +6832,8 @@ components:
           description: |
             Per-item outcome. `ok` — resolved (a zone `"none"` is still `ok`).
             `not_allowlisted` — the selector is not curated. `out_of_domain` —
-            the point is outside the product's coverage. `unavailable` — no data
+            the point is outside the product's coverage (including a point
+            outside lat [-90, 90] / lon [-180, 180]). `unavailable` — no data
             at the point.
           enum: [ok, not_allowlisted, out_of_domain, unavailable]
           example: ok
