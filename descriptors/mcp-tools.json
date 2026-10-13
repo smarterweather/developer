@@ -391,6 +391,13 @@
           "daylight_only": {
             "type": "boolean"
           },
+          "daylight_filter": {
+            "type": "string",
+            "enum": [
+              "applied",
+              "unavailable"
+            ]
+          },
           "activity_duration_hours": {
             "type": "number"
           },
