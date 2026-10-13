@@ -134,7 +134,9 @@ tags:
   - name: Health
     description: Service health.
   - name: Meta
-    description: Cross-cutting platform endpoints (deprecations, etc.).
+    description: |
+      Cross-cutting platform endpoints: the data catalog, platform status,
+      deprecations.
   - name: Agriculture
     description: |
       Agriculture-derived indices (Growing Degree Units / GDD) computed on
@@ -214,6 +216,165 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+
+  /v1/catalog:
+    get:
+      operationId: listCatalog
+      summary: List the data catalog's products.
+      description: |
+        Lists every product the REST API serves, from the Smarter Weather
+        data catalog (ADR 074): its family, kind, cadence, coverage, horizon,
+        stability, cost class, entitlement and source attribution, sorted by
+        `id`. `GET /v1/catalog/{product_id}` adds a product's variables and
+        retrieval fields. Field names match the MCP `list_datasets` and
+        `describe_dataset` tools.
+
+        ### Completeness and paging
+
+        Without `limit` the list is complete: it is never truncated and
+        carries no cursor. When the catalog outgrows one response, paging
+        ships as an additive change using the house paging words (`limit`
+        and `truncated`, then `cursor` and `next_cursor`). Filters, when
+        added, are named after the field they filter (`kind`,
+        `product_type`, `domain`, `family`, and `var` for a variable).
+
+        ### Freshness
+
+        `include=freshness` adds each product's `freshness` (see
+        `CatalogFreshness`, **experimental**). Without it the response is a
+        static view of the catalog and does not depend on live data.
+
+        ### Caching
+
+        Without `include=freshness` the response carries a weak `ETag`
+        (`W/"..."`, a hash of the response body, so it changes whenever the
+        body does), `Vary: Accept-Encoding`, and
+        `Cache-Control: max-age=300, stale-while-revalidate=60`; send the
+        tag back in `If-None-Match` to get `304 Not Modified` with no body.
+        `Range` is ignored: the body is always the whole document.
+        With `include=freshness` there is no `ETag` and the budget is
+        `max-age=60, stale-while-revalidate=30`. `Cache-Control` is
+        `public` for first-party keys and `private` for partner keys.
+
+        ### Auth and cost
+
+        Standard sw-api Bearer auth and rate limits apply. Catalog calls
+        are free: they are not metered. Trial keys may call both catalog
+        routes without spending any of the trial's lifetime calls (an
+        ended trial still gets `402`); a trial key minted before the
+        catalog opened to trials gets `403 trial-route-not-allowed` and
+        should mint a new trial key.
+      tags: [Meta]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CatalogIncludeQuery'
+      responses:
+        '200':
+          description: Every product on the REST door.
+          headers:
+            ETag:
+              $ref: '#/components/headers/CatalogETag'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogList'
+        '304':
+          $ref: '#/components/responses/CatalogNotModified'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+
+  /v1/catalog/{product_id}:
+    get:
+      operationId: getCatalogProduct
+      summary: Describe one data catalog product.
+      description: |
+        Returns one product of the data catalog: the `GET /v1/catalog`
+        fields plus its `agent_description`, `aliases`, `question_shapes`,
+        `related` products and `variables` (names, standard names, units,
+        display units, valid range, thresholds, categories and bands).
+
+        `include=freshness` adds the product's `freshness`
+        (**experimental**), as on the list. Caching, auth and cost are as
+        on `GET /v1/catalog`, including the `ETag` and `304` without
+        `include=freshness`.
+
+        An id that is not in the catalog, or not served on the REST API,
+        returns `404`.
+      tags: [Meta]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          description: Catalog product id, e.g. `nbm_conus` or `mrms_qpe_24h_pass2_conus`.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+          example: nbm_conus
+        - $ref: '#/components/parameters/CatalogIncludeQuery'
+      responses:
+        '200':
+          description: The product.
+          headers:
+            ETag:
+              $ref: '#/components/headers/CatalogETag'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogProduct'
+        '304':
+          $ref: '#/components/responses/CatalogNotModified'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          description: No catalog product with this id is served on the REST API.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
 
   /v1/weather:
     get:
@@ -3204,7 +3365,9 @@ paths:
         This is the one curated wrapper over the internal point-query: it serves
         only the `(product, var)` pairs on a server-side **allowlist**, so the
         public surface stays safe and small while every widget/card is
-        onboarded by adding an allowlist entry — no new endpoint. Requesting a
+        onboarded by adding an allowlist entry — no new endpoint. The
+        allowlist is every variable with point metadata on a product of the
+        data catalog (`GET /v1/catalog`). Requesting a
         `(product, var)` that is not allowlisted returns `404` (single form) or
         a per-item `not_allowlisted` status (batch form).
 
@@ -3869,6 +4032,18 @@ components:
       schema:
         type: string
       example: "current,hourly,daily,alerts"
+    CatalogIncludeQuery:
+      name: include
+      in: query
+      description: |
+        Comma-separated optional sections. The only token is `freshness`,
+        which adds each product's `freshness` (**experimental**) and drops
+        the `ETag`. Tokens are case-insensitive; unknown tokens are
+        silently dropped.
+      required: false
+      schema:
+        type: string
+      example: freshness
     DaysQuery:
       name: days
       in: query
@@ -3966,6 +4141,17 @@ components:
       example: "hourly.temperature,hourly.precip_probability,daily.high,daily.low"
 
   headers:
+    CatalogETag:
+      description: |
+        Weak validator of a catalog response without
+        `include=freshness`: a hash of the response body, so the list and
+        each product have their own tag and it changes whenever the body
+        does. Weak because the body is served identity- or gzip-encoded
+        under one tag. Send it in `If-None-Match` to get `304 Not
+        Modified`. Absent with `include=freshness`.
+      schema:
+        type: string
+        example: 'W/"catalog-3f1c9a0b7d2e4c51"'
     WWWAuthenticate:
       description: |
         RFC 6750 Bearer challenge. `realm` is always
@@ -6238,6 +6424,336 @@ components:
             $ref: '#/components/schemas/GeoJSONReportsFeature'
       additionalProperties: true
 
+    CatalogList:
+      type: object
+      description: |
+        `GET /v1/catalog`: every product on the REST API, sorted by `id`.
+        Complete without `limit` (see the operation description).
+      required: [products]
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogProductSummary'
+
+    CatalogProductSummary:
+      type: object
+      description: A data catalog product, as listed by `GET /v1/catalog`.
+      required:
+        - id
+        - title
+        - family
+        - kind
+        - product_type
+        - domain
+        - coverage
+        - cadence
+        - horizon
+        - temporal_type
+        - grid_res_km
+        - stability
+        - cost_class
+        - entitlement
+        - source
+      properties:
+        id:
+          type: string
+          description: Product id, the `product` of `/v1/point` and the MCP `dataset_id`.
+          example: nbm_conus
+        title:
+          type: string
+          example: NBM CONUS Surface Variables
+        family:
+          type: string
+          description: Product family, e.g. `nbm`, `mrms`, `spc`.
+          example: nbm
+        kind:
+          type: string
+          description: |
+            Data shape: `grid` (a gridded field over time), `snapshot` (the
+            latest gridded analysis), `feature` (vector features such as
+            outlook polygons) or `text` (text products). New kinds may be
+            added.
+          example: grid
+        product_type:
+          type: [string, "null"]
+          description: |
+            `forecast`, `analysis` or `climatology`; `null` when the catalog
+            does not classify the product. New values may be added.
+          example: forecast
+        domain:
+          type: string
+          description: Coverage domain, e.g. `conus`, `alaska`, `hawaii`, `global`.
+          example: conus
+        coverage:
+          type: array
+          items:
+            type: string
+          description: Domains the product covers.
+          example: [conus]
+        cadence:
+          type: [string, "null"]
+          description: Nominal update cadence, an ISO 8601 duration.
+          example: PT1H
+        horizon:
+          type: [string, "null"]
+          description: Forecast horizon, an ISO 8601 duration; `null` for analyses.
+          example: PT264H
+        temporal_type:
+          type: [string, "null"]
+          description: |
+            How the product is stored in time: `now`, `hourly`, `daily` or
+            `climatology`. New values may be added.
+          example: hourly
+        grid_res_km:
+          type: [number, "null"]
+          format: double
+          description: Grid spacing in kilometres; `null` for non-gridded products.
+          example: 2.5
+        stability:
+          type: string
+          description: Catalog stability of the product, `stable`, `beta` or `experimental`.
+          example: stable
+        cost_class:
+          type: string
+          description: Cost class of the product's data calls (ADR 073).
+          example: data
+        entitlement:
+          type: [string, "null"]
+          description: Entitlement label the product requires; `null` when none.
+          example: null
+        source:
+          $ref: '#/components/schemas/CatalogSource'
+        freshness:
+          description: |
+            **Experimental** (`x-stability: experimental`). Present only with
+            `include=freshness`. `null` when the platform has neither a
+            freshness check nor a model run for the product, or when
+            freshness has been unavailable for more than 5 minutes (the
+            catalog still answers).
+          x-stability: experimental
+          oneOf:
+            - $ref: '#/components/schemas/CatalogFreshness'
+            - type: 'null'
+
+    CatalogSource:
+      type: object
+      description: The product's data source and attribution terms.
+      required: [id, name, provider_id, attribution, license, terms_url]
+      properties:
+        id:
+          type: string
+          example: nbm
+        name:
+          type: [string, "null"]
+          example: National Blend of Models
+        provider_id:
+          type: string
+          example: noaa
+        attribution:
+          type: string
+          description: Attribution text to display with the data.
+          example: Data provided by NOAA/NWS
+        license:
+          type: string
+          example: public_domain
+        terms_url:
+          type: [string, "null"]
+          example: https://www.weather.gov/disclaimer
+
+    CatalogProduct:
+      description: |
+        A data catalog product with its variables and retrieval fields
+        (`GET /v1/catalog/{product_id}`).
+      allOf:
+        - $ref: '#/components/schemas/CatalogProductSummary'
+        - type: object
+          required: [agent_description, aliases, question_shapes, related, variables]
+          properties:
+            agent_description:
+              type: [string, "null"]
+              description: Plain-language description of what the product answers.
+            aliases:
+              type: array
+              items:
+                type: string
+              description: Search phrases the product answers to.
+            question_shapes:
+              type: array
+              items:
+                type: string
+              description: Example questions the product answers.
+            related:
+              type: array
+              items:
+                type: string
+              description: Ids of related catalog products.
+            variables:
+              type: array
+              items:
+                $ref: '#/components/schemas/CatalogVariable'
+
+    CatalogVariable:
+      type: object
+      description: One variable of a catalog product.
+      required:
+        - name
+        - standard_name
+        - label
+        - description
+        - units
+        - display_units
+        - kind
+        - threshold
+        - period
+        - min
+        - max
+        - aliases
+        - categories
+        - bands
+      properties:
+        name:
+          type: string
+          description: Stored variable name, the `var` of `/v1/point`.
+          example: tmp2m
+        standard_name:
+          type: string
+          description: Standard variable name used across sources (MCP `query_dataset` `variables`).
+          example: temperature_2m
+        label:
+          type: [string, "null"]
+        description:
+          type: [string, "null"]
+        units:
+          type: [string, "null"]
+          description: Units of the stored values.
+          example: K
+        display_units:
+          type: object
+          required: [conversion, metric, imperial]
+          properties:
+            conversion:
+              type: string
+              description: |
+                `absolute` for a value, `delta` for a difference (converted
+                without an offset). New values may be added.
+            metric:
+              type: [string, "null"]
+            imperial:
+              type: [string, "null"]
+        kind:
+          type: string
+          description: |
+            `deterministic`, `probability`, `percentile`, `stddev` or
+            `category`. New values may be added.
+          example: deterministic
+        threshold:
+          description: The event a probability variable measures; `null` otherwise.
+          oneOf:
+            - type: object
+              required: [op, value, units]
+              properties:
+                op:
+                  type: string
+                  example: lt
+                value:
+                  type: number
+                  format: double
+                units:
+                  type: string
+            - type: 'null'
+        period:
+          type: [string, "null"]
+          description: Accumulation or aggregation period, an ISO 8601 duration.
+          example: PT1H
+        min:
+          type: [number, "null"]
+          format: double
+          description: Lower bound of valid values, in `units`.
+        max:
+          type: [number, "null"]
+          format: double
+          description: Upper bound of valid values, in `units`.
+        aliases:
+          type: array
+          items:
+            type: string
+        categories:
+          type: array
+          description: |
+            Value buckets in ascending `max` order; the last bucket has
+            `max: null` (the catch-all).
+          items:
+            type: object
+            required: [max, label]
+            properties:
+              max:
+                type: [number, "null"]
+                format: double
+              label:
+                type: string
+        bands:
+          type: array
+          description: Categorical codes and their public levels (outlook risk bands).
+          items:
+            type: object
+            required: [code, level, category, label]
+            properties:
+              code:
+                type: string
+                example: SLGT
+              level:
+                type: integer
+                example: 2
+              category:
+                type: string
+                example: slight
+              label:
+                type: string
+                example: Slight
+
+    CatalogFreshness:
+      type: object
+      x-stability: experimental
+      description: |
+        **Experimental** (`x-stability: experimental`). How current a
+        product's data is, as the MCP `list_datasets` tool reports it. The
+        shape is final; the values' sources are still being completed:
+        freshness checks cover a fixed set of products today, so some
+        products (for example untracked analyses) have `freshness: null`
+        and an untracked forecast has a `latest_run` but no
+        `freshness_status`. Values are refreshed at most once a minute;
+        while the freshness source is unavailable the last values are kept
+        for up to 5 minutes (`data_age_seconds` is computed when the response
+        is made, so it still shows how old the data is), then `freshness` is
+        `null`.
+      required: [data_age_seconds]
+      properties:
+        freshness_status:
+          type: string
+          enum: [fresh, stale, missing]
+          description: |
+            The platform's freshness check for the product: `fresh` within
+            its expected age, `stale` older, `missing` no data found. When
+            a product is checked in more than one store, the stalest
+            result. Absent when the product is not checked.
+        latest_time:
+          type: string
+          format: date-time
+          description: Valid time of the newest data the freshness check found.
+        latest_run:
+          type: string
+          format: date-time
+          description: Reference time of the latest model run served (forecasts only).
+        data_age_seconds:
+          type: [integer, "null"]
+          description: |
+            Age of the newest data in seconds: from `latest_run` for a
+            forecast, else from `latest_time`. `null` when unknown or when
+            the time is in the future (a forecast valid time says nothing
+            about age).
+          example: 3600
+
     Lightning:
       type: object
       x-stability: experimental
@@ -8137,6 +8653,13 @@ components:
             $ref: '#/components/schemas/ClimateNormalsDay'
 
   responses:
+    CatalogNotModified:
+      description: |
+        The `If-None-Match` tag matches the current catalog: no body. The
+        `ETag` and `Cache-Control` headers are repeated.
+      headers:
+        ETag:
+          $ref: '#/components/headers/CatalogETag'
     Problem400:
       description: Bad request.
       content:
