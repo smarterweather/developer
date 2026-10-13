@@ -100,6 +100,13 @@
                     "name": {
                       "type": "string"
                     },
+                    "matched_via": {
+                      "type": "string",
+                      "enum": [
+                        "autosuggest",
+                        "fuzzy"
+                      ]
+                    },
                     "label": {
                       "type": "string"
                     }
@@ -223,7 +230,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -329,6 +336,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -487,7 +501,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -540,6 +554,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -698,7 +719,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -770,6 +791,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "additionalProperties": false
@@ -1013,7 +1041,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1055,6 +1083,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -1191,7 +1226,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1254,6 +1289,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -1355,7 +1397,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1445,6 +1487,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -1493,7 +1542,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1558,6 +1607,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -1759,7 +1815,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1821,6 +1877,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -2513,7 +2576,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -2583,6 +2646,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -2684,7 +2754,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -2716,6 +2786,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -2774,7 +2851,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -2873,7 +2950,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -2924,6 +3001,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -2979,7 +3063,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -3052,6 +3136,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -3306,7 +3397,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -3373,6 +3464,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -3548,7 +3646,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -3643,6 +3741,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -3954,7 +4059,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -3993,6 +4098,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -4046,7 +4158,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4113,7 +4225,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4164,6 +4276,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -4226,7 +4345,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4269,6 +4388,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -4326,7 +4452,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4358,6 +4484,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -4562,7 +4695,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4599,6 +4732,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -4719,7 +4859,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4792,6 +4932,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -5134,7 +5281,7 @@
     {
       "name": "search_locations",
       "title": "Search locations",
-      "description": "Resolve a place to ranked candidates with lat/lon: city (\"Denver\"), \"city, ST\", ZIP (\"50219\"), or partial input with fuzzy=true (\"bost\" -> Boston); venues and addresses where enabled. Rows carry `type` place|zip|address|poi; pass a row's lat/lon to weather tools. `matched_via: \"autosuggest\"` marks rows found after the exact match missed; `partial` means a section timed out. Weather tools take `location` directly -- use this to disambiguate (\"which Springfield?\") or present choices.",
+      "description": "Resolve a place to ranked candidates with lat/lon: city (\"Denver\"), \"city, ST\", ZIP (\"50219\"), or partial input with fuzzy=true (\"bost\" -> Boston); venues and addresses where enabled. Rows carry `type` place|zip|address|poi; pass a row's lat/lon to weather tools. `matched_via: \"autosuggest\"` marks rows found after the exact match missed; `partial` means a section timed out. Weather tools take `location` directly, venues included -- use this to disambiguate (\"which Springfield?\") or present choices.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -5155,6 +5302,17 @@
             "maximum": 10,
             "default": 5,
             "description": "Maximum candidates to return (1-10). Default 5."
+          },
+          "near_lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Rank venues/addresses near this point; pair with near_lon."
+          },
+          "near_lon": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
           }
         },
         "required": [
