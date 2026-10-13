@@ -263,6 +263,69 @@ paths:
         empty or absent for international locations. Partial-coverage
         scenarios are reported via `meta.warnings[]` with a structured
         code so clients can respond programmatically.
+
+        ### Response density, sampling and sparse fieldsets
+
+        Three independent, opt-in controls shrink the `hourly` and `daily`
+        rows. Without them the response is exactly the `detailed` body.
+        They never add sections, never change `current`, `alerts`,
+        `outlooks`, `astro`, `location`, `meta` (beyond
+        `meta.hourly_sampling`) or `attribution`, and never change pricing.
+
+        **`view`** is a column preset: `detailed` (default) returns every
+        column; `concise` returns a documented subset and never drops rows.
+
+        - `concise` hourly columns: `time`, `temperature`, `feels_like`,
+          `humidity`, `wind_speed`, `wind_gust`, `wind_direction`,
+          `precip_probability`, `precip_amount`, `precip_type`,
+          `snow_amount`, `thunderstorm_probability`, `cape`,
+          `cloud_ceiling`, `snow_level`, `uv_index`, `conditions`, `icon`,
+          `severe`, `thunder_possible`.
+        - `concise` daily columns: `date`, `relative_day`,
+          `active_period`, `high`, `low`, `conditions`, `icon`, `severe`,
+          `precip_probability`, `precip_total`, `snow_total`, `ice_total`,
+          `wind_speed_max`, `wind_direction`, `humidity_avg`,
+          `uv_index_max`, `cape_max`, `thunder_possible`, `threats`,
+          `astro`, `day.precip_probability`, `night.precip_probability`.
+        - `include` wins over the preset: with `include=uncertainty`,
+          `hourly[].uncertainty` and `daily[].uncertainty` stay; with
+          `include=climate`, `daily[].climate` stays.
+        - The preset only grows. A column may be added to `concise`
+          (announced in the changelog); none is ever removed from it.
+
+        **`hourly_step`** and **`hourly_step_from`** thin hourly rows,
+        after `hourly_hours` sets the window and independently of `view`
+        and `fields`. Rows whose offset from `hourly[0].time` is below
+        `hourly_step_from` hours are all kept; from there on, only rows at
+        `hourly_step_from + k * hourly_step` hours are kept. A row's offset
+        is the whole hours between its `time` and `hourly[0].time`, both
+        floored to the hour, so a partial first hour (`14:30`, then
+        `15:00`, ...) is offset 0 and the full hours after it are 1, 2, ...
+        Offsets come from timestamps, not array indexes, so a gap in the
+        series does not shift the grid. `hourly_step=3&hourly_step_from=24`
+        keeps the first day at full resolution and every third hour after
+        it (48 hours become 32 rows, 72 become 40, 168 become 72). When
+        thinning drops at least one row, `meta.hourly_sampling` echoes the
+        effective parameters so a thinned series is distinguishable from a
+        short forecast.
+
+        **`fields`** selects exact members of hourly and daily rows, as
+        `section.name` paths (`hourly.temperature,daily.high`). It is exact
+        for every section it names and beats `view` there; a section it
+        does not name follows `view`. `hourly[].time` and `daily[].date`
+        are always returned. `fields` never implies `include`: a path whose
+        section, or `uncertainty` / `climate` object, is not in the
+        effective `include` is a `400`. Unknown names are a `400` that
+        lists the valid names, never a silent drop (unlike `include`,
+        which drops unknown tokens).
+
+        **Presence semantics.** A selected (or preset) field is present,
+        and `null` when its value is unavailable, exactly as in `detailed`.
+        A field the schema marks optional can be absent for its zero
+        value, exactly as in `detailed`. A field that was not selected is
+        absent. A field that does not exist is a `400` at request time, so
+        a `200` never hides an unknown name. Every shaped response is a
+        key-subset of the `detailed` response for the same request.
       tags: [Weather]
       security:
         - bearerAuth: []
@@ -275,6 +338,10 @@ paths:
         - $ref: '#/components/parameters/IncludeQuery'
         - $ref: '#/components/parameters/DaysQuery'
         - $ref: '#/components/parameters/HourlyHoursQuery'
+        - $ref: '#/components/parameters/ViewQuery'
+        - $ref: '#/components/parameters/HourlyStepQuery'
+        - $ref: '#/components/parameters/HourlyStepFromQuery'
+        - $ref: '#/components/parameters/FieldsQuery'
       responses:
         '200':
           description: Blended weather data for the requested location.
@@ -348,9 +415,13 @@ paths:
 
         ### Shared parameters
 
-        `include`, `units`, `days`, and `hourly_hours` are applied to
-        every location; per-location overrides are not supported. Defaults
-        match the `GET /v1/weather` defaults.
+        `include`, `units`, `days`, `hourly_hours`, `view`, `fields`,
+        `hourly_step`, and `hourly_step_from` are applied to every
+        location; per-location overrides are not supported. Defaults match
+        the `GET /v1/weather` defaults. An invalid shaping parameter
+        (`view`, `fields`, `hourly_step`, `hourly_step_from`) fails the
+        whole request with `400`, and shaping applies to every
+        `results[i].weather`, including rows served from the stale cache.
       tags: [Weather]
       security:
         - bearerAuth: []
@@ -3238,6 +3309,81 @@ components:
         minimum: 1
         maximum: 168
         default: 48
+    ViewQuery:
+      name: view
+      in: query
+      description: |
+        Column preset for `hourly` and `daily` rows. `detailed` (default)
+        returns every column; `concise` returns the documented subset
+        (20 hourly and 22 daily columns, listed in the `GET /v1/weather`
+        description) and never drops rows. `include` wins over the preset.
+        The enum and the `concise` preset only grow. Any other value is a
+        `400`.
+      required: false
+      schema:
+        type: string
+        enum: [concise, detailed]
+        default: detailed
+    HourlyStepQuery:
+      name: hourly_step
+      in: query
+      description: |
+        Keep one hourly row every `hourly_step` hours (by whole-hour offset from
+        `hourly[0].time`), from `hourly_step_from` on. `1` (default) keeps
+        every row. Out of range or non-integer is a `400`.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 24
+        default: 1
+      example: 3
+    HourlyStepFromQuery:
+      name: hourly_step_from
+      in: query
+      description: |
+        Offset in hours from `hourly[0].time` below which every hourly row
+        is kept; `hourly_step` applies from this offset on. `0` (default)
+        thins from the first row. A no-op when `hourly_step` is `1`. Out of
+        range is a `400`.
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 168
+        default: 0
+      example: 24
+    FieldsQuery:
+      name: fields
+      in: query
+      description: |
+        Sparse fieldset for `hourly` and `daily` rows: comma-separated
+        `section.name` paths, where `section` is `hourly` or `daily` and
+        `name` is the exact JSON member name (no aliases). Whitespace is
+        trimmed, paths are lowercased, duplicates collapse, and repeated
+        `fields` parameters are concatenated; at most 64 distinct paths.
+
+        A second segment is allowed only under the objects that are not
+        taken whole: `hourly.uncertainty`, `daily.day`, `daily.night`,
+        `daily.uncertainty`, `daily.climate` (e.g.
+        `daily.day.precip_probability`). Every other member, including
+        `daily.astro` and `daily.threats`, is selected whole.
+
+        `fields` is exact for each section it names and overrides `view`
+        there; `hourly[].time` and `daily[].date` are always returned.
+        `fields` never implies `include`.
+
+        Returns `400`, with the first bad path and the valid names in
+        `detail`, for: an empty value or empty path; an unknown section;
+        an unknown name; a second segment outside the five objects above;
+        a bare section (`fields=hourly`, use `include`); a section missing
+        from the effective `include`; an `uncertainty` path without
+        `include=uncertainty`; a `daily.climate` path without
+        `include=climate`.
+      required: false
+      schema:
+        type: string
+      example: "hourly.temperature,hourly.precip_probability,daily.high,daily.low"
 
   headers:
     WWWAuthenticate:
@@ -3757,9 +3903,14 @@ components:
       type: object
       description: |
         Composite blended weather payload returned by `GET /v1/weather`.
-        Section presence is controlled by the `include` query parameter;
-        every section that is present is the complete shape documented
-        below.
+        Section presence is controlled by the `include` query parameter.
+        With the default `view=detailed` and no `fields`, every section
+        that is present is the complete shape documented below. `view=concise`
+        and `fields` project the members of `hourly[]` and `daily[]` rows
+        (every other section stays complete), and `hourly_step` thins
+        `hourly[]` rows; see "Response density, sampling and sparse
+        fieldsets" on `GET /v1/weather`. A shaped body is always a
+        key-subset of the detailed body for the same request.
       required: [meta, attribution]
       properties:
         location:
@@ -6171,6 +6322,26 @@ components:
             human-readable `detail`.
           items:
             $ref: '#/components/schemas/MetaWarning'
+        hourly_sampling:
+          type: object
+          description: |
+            Present only when `hourly_step` dropped at least one hourly
+            row. Echoes the effective thinning so a thinned series is
+            distinguishable from a short forecast: every row is kept below
+            `from_hour` hours from `hourly[0].time`, then one row every
+            `step_hours` hours.
+          required: [step_hours, from_hour]
+          properties:
+            step_hours:
+              type: integer
+              minimum: 2
+              maximum: 24
+              description: Effective `hourly_step`.
+            from_hour:
+              type: integer
+              minimum: 0
+              maximum: 168
+              description: Effective `hourly_step_from`.
 
     MetaWarning:
       type: object
@@ -6582,6 +6753,31 @@ components:
           maximum: 168
           default: 48
           description: Same semantics as the `hourly_hours` query parameter on `GET /v1/weather`.
+        view:
+          type: string
+          enum: [concise, detailed]
+          default: detailed
+          description: Same semantics as the `view` query parameter on `GET /v1/weather`. Applied to every row.
+        fields:
+          type: string
+          description: |
+            Same semantics as the `fields` query parameter on
+            `GET /v1/weather`, as one comma-separated string. Validated once
+            against the batch `include`; an invalid path fails the whole
+            request with `400`.
+          example: "hourly.temperature,daily.high,daily.low"
+        hourly_step:
+          type: integer
+          minimum: 1
+          maximum: 24
+          default: 1
+          description: Same semantics as the `hourly_step` query parameter on `GET /v1/weather`.
+        hourly_step_from:
+          type: integer
+          minimum: 0
+          maximum: 168
+          default: 0
+          description: Same semantics as the `hourly_step_from` query parameter on `GET /v1/weather`.
 
     WeatherBatchLocation:
       type: object
