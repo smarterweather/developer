@@ -473,6 +473,187 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/alerts:
+    get:
+      operationId: searchAlerts
+      summary: Search NWS alerts at a point or in a bounding box.
+      description: |
+        Returns the NWS alerts in effect at a point or inside a bounding
+        box, now or at a past instant, optionally filtered to exact
+        event names. Items use the same `Alert` shape as
+        `GET /v1/weather?include=alerts`, field for field; fetch the
+        full detail (geometry, affected population) with
+        `GET /v1/alerts/{id}`.
+
+        ### Location
+
+        Exactly one of:
+
+        - `lat` + `lon` — alerts whose area contains the point. Every
+          match is returned, newest `effective` first.
+        - `min_lon`, `min_lat`, `max_lon`, `max_lat` — alerts whose
+          area intersects the box. The box must have a non-zero area.
+          Results are ordered by severity (`Extreme`, `Severe`,
+          `Moderate`, `Minor`, then any other value), then soonest
+          `expires`, and capped at 50. `truncated` is `true` when the
+          result reached the cap (50): more alerts may exist, and the
+          ones left out are the lower-priority ones.
+
+        There is no pagination.
+
+        ### Filters
+
+        - `event` — exact NWS event names (e.g. `Tornado Warning`),
+          comma-separated or repeated, at most 20.
+        - `at` — RFC 3339 instant in the past. Returns the alerts that
+          were in effect then. Omit it for alerts in effect now. An `at`
+          the alerts source rejects is a `400` naming the reason. Items
+          returned with `at` are historical snapshots, each as it stood
+          at that instant. `GET /v1/alerts/{id}` always returns the
+          alert's **current** version, so its detail may have changed
+          since (updated, extended or cancelled).
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: max-age=60`, or
+        `max-age=3600` with `at` (a past snapshot does not change).
+        The scope is `public` for first-party keys and `private` for
+        partner keys.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: false
+          description: Latitude. Requires `lon`; mutually exclusive with the bounding box.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 41.88
+        - name: lon
+          in: query
+          required: false
+          description: Longitude. Requires `lat`; mutually exclusive with the bounding box.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -87.63
+        - name: min_lon
+          in: query
+          required: false
+          description: Bounding-box west edge. All four box parameters are required together.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -91
+        - name: min_lat
+          in: query
+          required: false
+          description: Bounding-box south edge.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 36
+        - name: max_lon
+          in: query
+          required: false
+          description: Bounding-box east edge. Must be greater than `min_lon`.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -87
+        - name: max_lat
+          in: query
+          required: false
+          description: Bounding-box north edge. Must be greater than `min_lat`.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 42.5
+        - name: event
+          in: query
+          required: false
+          description: |
+            Exact NWS event names to keep, comma-separated or repeated
+            (at most 20 distinct names).
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 20
+            items:
+              type: string
+          example: ["Tornado Warning", "Severe Thunderstorm Warning"]
+        - name: at
+          in: query
+          required: false
+          description: |
+            RFC 3339 instant in the past. Returns the alerts in effect
+            at that instant, as historical snapshots. Omit for alerts in
+            effect now. `GET /v1/alerts/{id}` returns an alert's current
+            version, which may differ from the snapshot.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-05-07T21:00:00Z"
+      responses:
+        '200':
+          description: |
+            Matching alerts, in the order described above. `alerts` is an
+            empty array when nothing matches.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertsSearchResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/alerts/{id}:
     get:
       operationId: getAlertById
@@ -1000,6 +1181,98 @@ paths:
         '502':
           $ref: '#/components/responses/Problem502'
 
+  /v1/lightning:
+    get:
+      operationId: getLightning
+      x-stability: experimental
+      summary: Get recent lightning activity at a point.
+      description: |
+        Returns recent lightning near a point: the GOES GLM satellite
+        flash count within `glm.radius_km` over the last
+        `glm.window_minutes`, plus MRMS lightning density and
+        probability at the point when the grid has a value there.
+        Field names match the MCP `get_lightning_activity` tool. The
+        point is snapped to the 0.01° (~1 km) grid used by the other
+        point routes, and the response echoes the snapped `lat`/`lon`.
+
+        **Experimental** (`x-stability: experimental`): excluded from
+        the 90-day breaking-change commitment. Today a GLM query
+        failure upstream is reported as `flash_count: 0`, so a zero
+        count is not yet a guaranteed all-clear. The route becomes
+        stable once a failure is reported as `glm: null`.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: max-age=60,
+        stale-while-revalidate=30`, `public` for first-party keys and
+        `private` for partner keys.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Observations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitude.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 27.95
+        - name: lon
+          in: query
+          required: true
+          description: Longitude.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -82.46
+      responses:
+        '200':
+          description: Lightning activity at the point.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lightning'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/soundings:
     get:
       operationId: getSoundings
@@ -1438,6 +1711,158 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/text-products:
+    get:
+      operationId: listTextProducts
+      summary: List recent NWS text products of one type.
+      description: |
+        Returns the newest NWS text products of one type (for example
+        `AFD` area forecast discussions or `HWO` hazardous weather
+        outlooks), newest `issued_at` first, with the bulletin text in
+        `body`. For distilled fields from the same products, use
+        `GET /v1/weather?include=guidance`.
+
+        ### Scope
+
+        At most one of:
+
+        - `lat` + `lon` — products from the office that serves the
+          point, or whose area contains it.
+        - `wfo` — products from one NWS Weather Forecast Office.
+
+        With neither, the query is national (for example SPC or WPC
+        products, narrowed with `awips_id`).
+
+        ### Filters
+
+        - `awips_id` — exact AWIPS identifier (e.g. `AFDLOT`).
+        - `start` — RFC 3339 instant; only products issued after it.
+        - `limit` — 1 to 10, default 1. There is no pagination.
+        - `omit_body` — `true` returns metadata and `properties` with an
+          empty `body`.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: max-age=60,
+        stale-while-revalidate=60`, `public` for first-party keys and
+        `private` for partner keys.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Guidance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product_type
+          in: query
+          required: true
+          description: 3-character NWS product code (e.g. `AFD`, `HWO`, `NOW`). Upper-cased by the server.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9]{3}$'
+          example: AFD
+        - name: lat
+          in: query
+          required: false
+          description: Latitude. Requires `lon`; mutually exclusive with `wfo`.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 41.88
+        - name: lon
+          in: query
+          required: false
+          description: Longitude. Requires `lat`; mutually exclusive with `wfo`.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -87.63
+        - name: wfo
+          in: query
+          required: false
+          description: 3-letter NWS Weather Forecast Office identifier. Upper-cased by the server.
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{3}$'
+          example: LOT
+        - name: awips_id
+          in: query
+          required: false
+          description: Exact AWIPS product identifier (4-9 letters or digits). Upper-cased by the server.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9]{4,9}$'
+          example: AFDLOT
+        - name: start
+          in: query
+          required: false
+          description: RFC 3339 instant. Only products issued after it are returned.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-05-07T00:00:00Z"
+        - name: limit
+          in: query
+          required: false
+          description: Maximum products to return (1-10, default 1).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 1
+          example: 3
+        - name: omit_body
+          in: query
+          required: false
+          description: When `true`, `body` is empty and only metadata and `properties` are returned.
+          schema:
+            type: boolean
+            default: false
+          example: false
+      responses:
+        '200':
+          description: Matching products. `products` is an empty array when nothing matches.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextProductsResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/discussions/mesoscale:
     get:
       operationId: getDiscussionsMesoscale
@@ -1826,6 +2251,161 @@ paths:
           $ref: '#/components/responses/Problem400'
         '401':
           $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/climate-reports:
+    get:
+      operationId: getClimateReports
+      x-stability: experimental
+      summary: Get NWS daily climate reports as GeoJSON.
+      description: |
+        Returns a GeoJSON `FeatureCollection` of NWS daily climate
+        reports (CLI): observed high and low, precipitation and snowfall
+        per station, with departures from normal. Each feature's
+        `properties` bag carries at minimum `valid_time`; other keys
+        come from the reader pipeline and may be added without a
+        sw-api release.
+
+        **Experimental** (`x-stability: experimental`): excluded from
+        the 90-day breaking-change commitment. This route serves a
+        single product. When the generic feature route ships, it
+        becomes a stable alias of that route with the same shape, or
+        folds into it.
+
+        ### Time window
+
+        One selector is used, by precedence `date` > `start+end` >
+        `hours`:
+
+        1. `date=YYYY-MM-DD` — reports for one day. It must be a real
+           calendar day (`2026-02-30` is a `400`). When `date` is set,
+           `start`/`end` are not used, so the ordering and span rules
+           below do not apply to them.
+        2. `start=...&end=...` — RFC 3339 instants, both required.
+           Reports are matched by the UTC calendar date of `start` and
+           `end`, so both ends are inclusive days
+           (`2026-05-01T20:00:00-07:00` is 2026-05-02). `start` must not
+           be after `end`, and the span is at most 31 UTC calendar days.
+        3. `hours=N` — rolling lookback, 1 to 168 (7 days). Default 24.
+
+        ### Filters
+
+        - `wfo` — 3-letter CLI site code, the suffix of the report's
+          AWIPS id (`ORD` for `CLIORD`). It names the climate site, which
+          is not always the issuing office's identifier.
+        - `station` — case-insensitive substring of the station name:
+          1-64 letters, digits, spaces or `. , ' ( ) / & -`. Other
+          characters (including `%`, `_` and `\`) are a `400`.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: max-age=300,
+        stale-while-revalidate=300`, `public` for first-party keys and
+        `private` for partner keys.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Climate]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: hours
+          in: query
+          required: false
+          description: Rolling lookback in whole hours (1-168). Lowest-precedence selector.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 168
+            default: 24
+          example: 48
+        - name: date
+          in: query
+          required: false
+          description: ISO-8601 date (YYYY-MM-DD). Highest-precedence selector.
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          example: "2026-05-07"
+        - name: start
+          in: query
+          required: false
+          description: |
+            RFC 3339 window start. Requires `end`. Matched by its UTC
+            calendar date; must not be after `end`; at most 31 UTC days
+            before `end`'s date.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-05-01T00:00:00Z"
+        - name: end
+          in: query
+          required: false
+          description: RFC 3339 window end. Requires `start`. Matched by its UTC calendar date (inclusive).
+          schema:
+            type: string
+            format: date-time
+          example: "2026-05-07T00:00:00Z"
+        - name: wfo
+          in: query
+          required: false
+          description: |
+            3-letter CLI site code (the AWIPS id suffix, `ORD` for
+            `CLIORD`). Upper-cased by the server.
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{3}$'
+          example: ORD
+        - name: station
+          in: query
+          required: false
+          description: |
+            Case-insensitive substring of the station name. 1-64 letters,
+            digits, spaces or `. , ' ( ) / & -`.
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9 .,'()/&-]{1,64}$"
+          example: CHICAGO
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            reports match.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/ClimateReportsFeatureCollection'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
         '403':
           $ref: '#/components/responses/Problem403'
         '429':
@@ -5069,6 +5649,26 @@ components:
             Map of salient callouts extracted from the alert text
             (e.g., `{"hazard": "Strong winds", "impact": "Loose debris possible"}`).
 
+    AlertsSearchResponse:
+      type: object
+      description: |
+        `GET /v1/alerts` response. `alerts` is always an array, empty
+        when nothing matches.
+      required: [alerts, truncated]
+      properties:
+        alerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alert'
+        truncated:
+          type: boolean
+          description: |
+            `true` when the result reached the cap (50); more may exist.
+            Only a bounding-box search is capped, so this is always
+            `false` for a point search. A bounding-box result is ordered
+            by severity, then soonest `expires`, so the alerts left out
+            are the lower-priority ones.
+
     AlertDetail:
       type: object
       description: |
@@ -5617,6 +6217,136 @@ components:
           items:
             $ref: '#/components/schemas/GeoJSONReportsFeature'
       additionalProperties: true
+
+    ClimateReportsFeatureCollection:
+      type: object
+      x-stability: experimental
+      description: |
+        GeoJSON FeatureCollection of NWS daily climate reports (CLI).
+        Returned as `application/geo+json` from
+        `GET /v1/climate-reports`. Same forward-compat property-bag
+        contract as `RecordEventsFeatureCollection`.
+        **Experimental**; see the operation description.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONReportsFeature'
+      additionalProperties: true
+
+    Lightning:
+      type: object
+      x-stability: experimental
+      description: |
+        Recent lightning near a point (`GET /v1/lightning`).
+        **Experimental**; see the operation description.
+      required: [lat, lon, glm, summary]
+      properties:
+        lat:
+          type: number
+          format: double
+          description: The point the values describe, the request's `lat` snapped to the 0.01° (~1 km) grid.
+        lon:
+          type: number
+          format: double
+          description: The point the values describe, the request's `lon` snapped to the 0.01° (~1 km) grid.
+        glm:
+          description: |
+            GOES GLM satellite flash count near the point. `null` when
+            the count is unavailable.
+          oneOf:
+            - $ref: '#/components/schemas/LightningGLM'
+            - type: 'null'
+        mrms:
+          $ref: '#/components/schemas/LightningMRMS'
+        summary:
+          type: string
+          description: One-line plain-language summary of the activity.
+          example: "No lightning detected within 30 km in the last 10 minutes."
+
+    LightningGLM:
+      type: object
+      x-stability: experimental
+      description: GLM flash count within `radius_km` of the point over the last `window_minutes`.
+      required: [flash_count, radius_km, window_minutes]
+      properties:
+        flash_count:
+          type: integer
+          minimum: 0
+        radius_km:
+          type: integer
+          example: 30
+        window_minutes:
+          type: integer
+          example: 10
+
+    LightningMRMS:
+      type: object
+      x-stability: experimental
+      description: |
+        MRMS lightning at the point. Present only when the grid has a
+        value there; each field is omitted when it has none.
+      properties:
+        lightning_density:
+          type: number
+          format: double
+          description: MRMS lightning flash density at the point.
+        lightning_prob:
+          type: integer
+          description: MRMS probability of lightning in the next 30 minutes, percent.
+
+    TextProductsResponse:
+      type: object
+      description: |
+        `GET /v1/text-products` response. `products` is always an
+        array, newest `issued_at` first.
+      required: [products]
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/TextProduct'
+
+    TextProduct:
+      type: object
+      description: One NWS text product.
+      required: [id, product_type, wfo, issued_at, expires_at, awips_id, wmo_header, body, properties]
+      properties:
+        id:
+          type: integer
+          format: int64
+        product_type:
+          type: string
+          example: AFD
+        wfo:
+          type: [string, 'null']
+          description: Issuing office, or `null` for national-center products.
+          example: LOT
+        issued_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: [string, 'null']
+          format: date-time
+        awips_id:
+          type: [string, 'null']
+          example: AFDLOT
+        wmo_header:
+          type: [string, 'null']
+          example: FXUS63 KLOT
+        body:
+          type: string
+          description: Bulletin text. Empty when `omit_body=true`.
+        properties:
+          type: object
+          description: |
+            Structured fields parsed from the product. Opaque; keys vary
+            by product type and may be added without a sw-api release.
+          additionalProperties: true
 
     NexradFeaturesFeatureCollection:
       type: object
