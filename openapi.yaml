@@ -415,10 +415,17 @@ paths:
 
         ### Caching
 
-        Successful responses carry `Cache-Control: public, max-age=60`
-        to match the upstream cache policy. CDN edge cache is keyed
-        on the URL path so cache invalidation tracks alert
-        replacement / cancellation events naturally.
+        A successful response carries `Cache-Control: max-age=60`, so
+        an updated or cancelled alert can be served from a cache for
+        up to 60 seconds. Partner keys get `private, max-age=60`: your
+        own client may reuse the response for the full `max-age`, but
+        shared caches (CDNs, proxies) must not store it, since each
+        request on a partner key is metered and rate-limited
+        individually. First-party callers get `public, max-age=60`, except
+        iOS keys while App Attest is enforced, which get `private`.
+        Smarter Weather's own CloudFront distributions key any cached
+        response on the full URL plus the `Authorization` and `Origin`
+        headers.
 
         ### Geometry
 
