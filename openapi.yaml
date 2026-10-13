@@ -2691,9 +2691,12 @@ paths:
         metered and rate-limited individually. First-party callers get
         `public, max-age=30`.
 
-        A response that carries `meta` (incomplete results; see the
-        `200` response) is sent with `Cache-Control: no-store`, so no
-        cache replays a partial list after the upstream recovers.
+        A response with incomplete results (an `upstream_timeout` or
+        `partial_fetch` warning; see the `200` response) is sent with
+        `Cache-Control: no-store`, so no cache replays a partial list
+        after the upstream recovers. A `not_enabled` warning alone
+        keeps the headers above, except while the server cannot
+        confirm your key's access, when it is also `no-store`.
 
         ### Auth
 
@@ -2728,10 +2731,23 @@ paths:
         - name: include
           in: query
           required: false
+          x-stability: experimental
           description: |
+            **Experimental** (`x-stability: experimental`): excluded from
+            the 90-day breaking-change commitment.
+
             Comma-separated extra result classes to mix into the
             typeahead. Allowlisted tokens: `address`, `poi`. Omitted
             or empty keeps the legacy place+ZIP-only response.
+
+            Address and POI results are not yet available to every API
+            key. When they are not enabled for your key, the request
+            still succeeds with place and ZIP results only, and
+            `meta.warnings[]` carries one `not_enabled` warning per
+            requested section (`section` is `address` or `poi`), so you
+            can tell "not enabled" from "no match". `not_enabled` is a
+            stable state of your key, not an incomplete result: do not
+            retry. Unknown tokens still return `400`.
           schema:
             type: string
           example: "address,poi"
@@ -2774,10 +2790,17 @@ paths:
             `_request` (one warning covering any other incomplete part
             of the request, such as an unreadable upstream status).
             `detail` is human-readable text; branch on
-            `code` and `section`, not `detail`. Treat any warning as
-            incomplete results. `meta` is absent when the
-            results are complete, and a response with `meta` is sent
-            with `Cache-Control: no-store`.
+            `code` and `section`, not `detail`. Treat an
+            `upstream_timeout` or `partial_fetch` warning as incomplete
+            results; such a response is sent with
+            `Cache-Control: no-store`.
+
+            `not_enabled` (`section` `address` or `poi`) is different: the
+            section was requested through `include` but is not enabled
+            for your key. It is a stable state, not an incomplete result.
+            Do not retry. See Caching above for its `Cache-Control`.
+
+            `meta` is absent when there is nothing to report.
           headers:
             RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
@@ -7606,6 +7629,7 @@ components:
             - coverage_limited
             - geocode_ambiguous
             - stale_response
+            - not_enabled
           example: "partial_fetch"
         section:
           type: string
