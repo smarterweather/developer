@@ -5134,7 +5134,7 @@
     {
       "name": "search_locations",
       "title": "Search locations",
-      "description": "Resolve a place to ranked candidates with lat/lon: city (\"Denver\"), \"city, ST\", ZIP (\"50219\"), venue (\"Wrigley Field\"), street address, or partial input with fuzzy=true (\"bost\" -> Boston). Rows carry `type` place|zip|address|poi; pass a venue's lat/lon to weather tools. `matched_via: \"autosuggest\"` marks rows found after the exact match missed; `partial` means a section timed out. Weather tools take `location` directly -- use this to disambiguate (\"which Springfield?\") or present choices.",
+      "description": "Resolve a place to ranked candidates with lat/lon: city (\"Denver\"), \"city, ST\", ZIP (\"50219\"), or partial input with fuzzy=true (\"bost\" -> Boston); venues and addresses where enabled. Rows carry `type` place|zip|address|poi; pass a row's lat/lon to weather tools. `matched_via: \"autosuggest\"` marks rows found after the exact match missed; `partial` means a section timed out. Weather tools take `location` directly -- use this to disambiguate (\"which Springfield?\") or present choices.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -5142,7 +5142,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Place query: city, \"city, state\", ZIP, venue, address, or partial text."
+            "description": "Place query: city, \"city, state\", ZIP, partial text, or venue/address where enabled."
           },
           "fuzzy": {
             "type": "boolean",
