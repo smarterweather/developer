@@ -3574,6 +3574,270 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/series:
+    get:
+      operationId: getSeries
+      x-stability: experimental
+      summary: Time series of catalog grid and snapshot products at a point.
+      description: |
+        Returns the time series of one or more data catalog products at one
+        location: the public, catalog-governed door to stored model and
+        analysis data (ADR 074 slice 17). Any `grid` or `snapshot` product
+        that `GET /v1/catalog` lists qualifies, for example `hrrr_surface`,
+        `nbm_conus`, `gfs_surface`, `rtma_conus`, `mrms_qpe_01h_pass2_conus`
+        or `astro`. Variables are named by their catalog `standard_name`.
+
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment while the grammar settles. `units`
+        is required with no default while experimental.
+
+        ### Selection
+
+        `product` with `var` (repeatable; omit `var` for every variable of
+        the product), or `select=product:var` (repeatable or comma-joined,
+        at most 25) to read several products. An unknown product or
+        variable is a `404`. A catalog product that is public but not
+        served by this route (an MCP-only product, or a REST product that
+        is not a grid or snapshot) is a `404` when it is the only
+        selection, and a `not_public` element beside a servable one.
+
+        ### Time
+
+        At most one time word, and it is optional:
+
+        - `hours` (1-384) takes its direction from the product's catalog
+          `product_type`: forward from now for a `forecast`, backward from
+          now for an `analysis`. With `run`, it counts from the run's
+          initialization time. Rolling windows are rounded out so the
+          frame covering now is included: a forecast starts at now floored
+          to its frame step (the UTC day for a daily product such as
+          `nbm_daily_temps`, else the hour), an analysis at now less
+          `hours` rounded down to 5 minutes, and both end rounded up to 5
+          minutes.
+        - `start` and `end` (RFC 3339, at most 16 days apart), applied
+          exactly as given: a daily row stamped at 00:00Z is outside a
+          window that starts later that day.
+        - Neither: an analysis returns its latest frame and a forecast the
+          next 24 h (24 h from the run's initialization time with `run`).
+
+        A product with no `product_type`, or a `climatology` such as
+        `climate_normals_conus`, requires `start` and `end`. `run` (RFC
+        3339) pins a forecast model cycle and composes with either time
+        word; it is a `400` on a product that is not a `forecast`.
+        `step`, `stats`, `view`, `fields` and `format` are reserved and
+        return `400` for now; `at` is not a word of this route (use
+        `GET /v1/point` for the latest value).
+
+        `astro` is an `analysis` whose rows run through about 14 days
+        ahead, so with no time word it returns the newest row and `hours`
+        looks back from now; pass `start` and `end` for specific days.
+
+        ### Units and raw values
+
+        `units` is `si`, `metric` or `imperial`. `si` serves stored values
+        (K, m/s, mm, Pa, percent, and the stored SI unit for anything
+        else). The chosen system is echoed at the top level and each
+        element's `units` names every variable's unit; a percentage is
+        always labelled `percent`. Values without a
+        display unit are served raw, as stored, with no decode: `astro`
+        sun and moon times are seconds after the row's UTC midnight (they
+        can be negative or above 86400), moon values are x1000, and
+        `day_length` -1 means no event. `GET /v1/catalog/{product_id}`
+        describes each variable's encoding.
+
+        ### Envelope
+
+        `series[]` holds one element per (product, location), in request
+        order and column-oriented: `times[]` (RFC 3339 UTC), `values` per
+        variable aligned with `times[]`, and `run` when every frame shares
+        one model run, else `runs[]` aligned with `times[]`. Each element
+        has a `status`: `ok`; `unavailable` for an empty window;
+        `out_of_domain` outside the product's catalog `coverage[]`, with
+        `related` naming a sibling product that covers the point when one
+        exists (there is no automatic switch); `not_public`. `partial` and
+        `entitlement_required` are reserved. `data_age_seconds` and
+        `freshness_status` match `GET /v1/catalog?include=freshness`; with
+        `run`, both describe the pinned run (its age, and `fresh` or
+        `stale` against the product's freshness budget; a product tracked
+        in several stores uses the strictest). `meta.timezone` is the
+        location's IANA zone (null when it cannot be resolved in time, or
+        when no selected product covers the location).
+        `meta.sources[]` carries each source's attribution and license;
+        show the attribution where the license requires it (ECMWF AIFS is
+        CC BY 4.0).
+
+        ### Density
+
+        `limit` caps frames per element (default 168, max 744). When it
+        cuts any element, `truncated` is `true` and `next_cursor` resumes
+        every element where it stopped: send it back as `cursor` with the
+        same parameters (a cursor sent with other parameters is a `400`).
+        The cursor keeps the window page 1 resolved, so a rolling window
+        does not move while paging. Each element pages independently; one
+        that has finished returns no frames on later pages and keeps the
+        status it had.
+
+        ### Caching
+
+        `Cache-Control: max-age=N, stale-while-revalidate=N` with N the
+        smallest selected product cadence clamped to 60-3600 s, `public`
+        for first-party keys and `private` for partner keys.
+
+        ### Auth and cost
+
+        Standard sw-api Bearer auth and rate limits apply. Cost class
+        `data`, weight 1 per request: products, variables, hours and
+        `limit` never change it.
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SeriesProductQuery'
+        - $ref: '#/components/parameters/SeriesVarQuery'
+        - $ref: '#/components/parameters/SeriesSelectQuery'
+        - name: lat
+          in: query
+          required: true
+          description: |
+            Latitude. A finite value outside [-90, 90] is an `out_of_domain`
+            element; a non-numeric or non-finite value is a `400`.
+          schema:
+            type: number
+            format: double
+          example: 41.88
+        - name: lon
+          in: query
+          required: true
+          description: |
+            Longitude. A finite value outside [-180, 180] is an
+            `out_of_domain` element; a non-numeric or non-finite value is a
+            `400`.
+          schema:
+            type: number
+            format: double
+          example: -87.63
+        - $ref: '#/components/parameters/SeriesUnitsQuery'
+        - $ref: '#/components/parameters/SeriesHoursQuery'
+        - $ref: '#/components/parameters/SeriesStartQuery'
+        - $ref: '#/components/parameters/SeriesEndQuery'
+        - $ref: '#/components/parameters/SeriesRunQuery'
+        - $ref: '#/components/parameters/SeriesLimitQuery'
+        - $ref: '#/components/parameters/SeriesCursorQuery'
+      responses:
+        '200':
+          description: One series element per selected product.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/series/batch:
+    post:
+      operationId: postSeriesBatch
+      x-stability: experimental
+      summary: Time series of catalog products at up to 25 locations.
+      description: |
+        Multi-location form of `GET /v1/series`: the same grammar as JSON
+        fields, with `locations[]` of `{lat, lon, label?}` (at most 25) in
+        place of `lat` and `lon`. Products x locations is at most 100.
+        Elements come back location-major in request order, each echoing
+        its location's `label`. Every rule of `GET /v1/series` applies;
+        `points`, top-level `lat`/`lon` and `at` are not words of this
+        route, and an unknown field is a `400`.
+
+        **Experimental** (`x-stability: experimental`), as
+        `GET /v1/series`.
+
+        ### Caching
+
+        `Cache-Control: private, no-store`.
+
+        ### Auth and cost
+
+        Standard sw-api Bearer auth and rate limits apply. Cost class
+        `data`, weight 1 per location (`len(locations)`), whatever each
+        element's status; products, variables, hours and `limit` never
+        change it.
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeriesBatchRequest'
+            examples:
+              threeLocations:
+                value:
+                  product: hrrr_surface
+                  var: [temperature_2m, wind_gusts_10m]
+                  hours: 12
+                  units: imperial
+                  locations:
+                    - {lat: 41.88, lon: -87.63, label: chicago}
+                    - {lat: 39.74, lon: -104.99, label: denver}
+                    - {lat: 61.22, lon: -149.90, label: anchorage}
+      responses:
+        '200':
+          description: One series element per (location, product).
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '413':
+          $ref: '#/components/responses/Problem413'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/outlooks:
     get:
       operationId: getOutlookDetail
@@ -3994,6 +4258,129 @@ components:
         [developers.smarterweather.com/dashboard/api-keys](https://developers.smarterweather.com/dashboard/api-keys).
 
   parameters:
+    SeriesProductQuery:
+      name: product
+      in: query
+      required: false
+      description: |
+        Catalog product id (`GET /v1/catalog`), e.g. `hrrr_surface`. Pair
+        with `var`, or use `select` instead.
+      schema:
+        type: string
+        pattern: '^[a-z0-9_]+$'
+        minLength: 1
+        maxLength: 128
+      example: hrrr_surface
+    SeriesVarQuery:
+      name: var
+      in: query
+      required: false
+      description: |
+        Variable `standard_name` of `product`, repeatable (at most 25).
+        Omit it for every variable of the product.
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 25
+        items:
+          type: string
+          pattern: '^[a-z0-9_]+$'
+          minLength: 1
+          maxLength: 128
+      example: [temperature_2m]
+    SeriesSelectQuery:
+      name: select
+      in: query
+      required: false
+      description: |
+        One or more `product:var` selectors (variable `standard_name`s),
+        repeated or comma-joined, at most 25 in all. Not with `product` or
+        `var`.
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 25
+        items:
+          type: string
+          minLength: 3
+          maxLength: 1024
+      example: [hrrr_surface:temperature_2m, rtma_conus:temperature_2m]
+    SeriesUnitsQuery:
+      name: units
+      in: query
+      required: true
+      description: |
+        Units system, required on this route while experimental. `si`
+        serves stored values; `metric` and `imperial` convert to each
+        variable's catalog display unit.
+      schema:
+        type: string
+        enum: [si, metric, imperial]
+      example: imperial
+    SeriesHoursQuery:
+      name: hours
+      in: query
+      required: false
+      description: |
+        Rolling window in hours: forward for a `forecast`, backward for an
+        `analysis`, from the run's initialization time with `run`. Not with
+        `start`/`end`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 384
+      example: 12
+    SeriesStartQuery:
+      name: start
+      in: query
+      required: false
+      description: Window start (RFC 3339), with `end`; at most 16 days before `end`.
+      schema:
+        type: string
+        format: date-time
+      example: '2026-10-14T00:00:00Z'
+    SeriesEndQuery:
+      name: end
+      in: query
+      required: false
+      description: Window end (RFC 3339, inclusive), with `start`.
+      schema:
+        type: string
+        format: date-time
+      example: '2026-10-15T00:00:00Z'
+    SeriesRunQuery:
+      name: run
+      in: query
+      required: false
+      description: |
+        Model cycle: the RFC 3339 initialization time of the run to read
+        (forecast products only). Absent means the latest run per frame.
+      schema:
+        type: string
+        format: date-time
+      example: '2026-10-14T12:00:00Z'
+    SeriesLimitQuery:
+      name: limit
+      in: query
+      required: false
+      description: Frames per series element (default 168, max 744).
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 744
+        default: 168
+      example: 168
+    SeriesCursorQuery:
+      name: cursor
+      in: query
+      required: false
+      description: An opaque `next_cursor` from a truncated response, sent with the same parameters.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 8192
     LatQuery:
       name: lat
       in: query
@@ -8733,6 +9120,202 @@ components:
           items:
             $ref: '#/components/schemas/ClimateNormalsDay'
 
+    SeriesResponse:
+      x-stability: experimental
+      type: object
+      description: The `GET /v1/series` and `POST /v1/series/batch` envelope.
+      required: [units, truncated, next_cursor, meta, series]
+      properties:
+        units:
+          type: string
+          enum: [si, metric, imperial]
+          description: The requested units system.
+        truncated:
+          type: boolean
+          description: True when `limit` cut the series; `next_cursor` resumes them.
+        next_cursor:
+          type: [string, "null"]
+          description: Opaque cursor for the next page, null when not truncated.
+        meta:
+          type: object
+          required: [step, sources]
+          properties:
+            step:
+              type: ["null"]
+              description: The output step; reserved, always null for now (native frames).
+            sources:
+              type: array
+              description: The catalog sources behind the response, with their attribution terms.
+              items:
+                $ref: '#/components/schemas/SeriesSource'
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeriesElement'
+    SeriesSource:
+      type: object
+      required: [id, name, attribution, license, terms_url]
+      properties:
+        id:
+          type: string
+          example: hrrr
+        name:
+          type: [string, "null"]
+        attribution:
+          type: string
+          example: Data provided by NOAA/NWS
+        license:
+          type: string
+          example: public_domain
+        terms_url:
+          type: [string, "null"]
+    SeriesElement:
+      type: object
+      description: |
+        One (product, location) series, column-oriented: every `values`
+        array and `runs` are aligned with `times`.
+      required: [product, lat, lon, status, times, values, units, data_age_seconds, freshness_status, meta]
+      properties:
+        product:
+          type: string
+          example: hrrr_surface
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        label:
+          type: string
+          description: The batch location's `label`, when it had one.
+        status:
+          type: string
+          enum: [ok, partial, unavailable, out_of_domain, not_public, entitlement_required]
+          description: |
+            `ok`; `unavailable` (no frames in the window); `out_of_domain`
+            (outside the product's coverage); `not_public` (public on
+            another door, not served on this route). `partial` and
+            `entitlement_required` are reserved.
+        related:
+          type: string
+          description: With `out_of_domain`, a related product that covers the point.
+          example: hrrr_alaska_surface
+        times:
+          type: array
+          description: Frame valid times, RFC 3339 UTC, ascending.
+          items:
+            type: string
+            format: date-time
+        values:
+          type: object
+          description: Values per variable `standard_name`, aligned with `times`; null where missing.
+          additionalProperties:
+            type: array
+            items:
+              type: [number, "null"]
+        units:
+          type: object
+          description: Unit per variable `standard_name`; null for a raw value with no stored unit.
+          additionalProperties:
+            type: [string, "null"]
+        run:
+          type: string
+          format: date-time
+          description: The model run behind every frame, when they share one.
+        runs:
+          type: array
+          description: Per-frame model runs aligned with `times`, when frames mix runs.
+          items:
+            type: [string, "null"]
+            format: date-time
+        data_age_seconds:
+          type: [integer, "null"]
+          description: Age of the product's latest data (or of the pinned `run`), null when unknown.
+        freshness_status:
+          type: [string, "null"]
+          enum: [fresh, stale, missing, null]
+          description: |
+            The product's freshness, as on the catalog; with `run`, the
+            pinned run's age against the product's freshness budget (the
+            strictest of its stores). Null when unknown.
+        meta:
+          type: object
+          required: [timezone]
+          properties:
+            timezone:
+              type: [string, "null"]
+              description: IANA timezone of the location, null when it cannot be resolved.
+              example: America/Chicago
+    SeriesBatchRequest:
+      x-stability: experimental
+      type: object
+      additionalProperties: false
+      required: [locations, units]
+      description: |
+        The `GET /v1/series` grammar as JSON, with `locations[]` in place
+        of `lat` and `lon`.
+      properties:
+        locations:
+          type: array
+          minItems: 1
+          maxItems: 25
+          items:
+            $ref: '#/components/schemas/SeriesBatchLocation'
+        product:
+          type: string
+          example: hrrr_surface
+        var:
+          type: array
+          maxItems: 25
+          items:
+            type: string
+          example: [temperature_2m]
+        select:
+          type: array
+          maxItems: 25
+          items:
+            type: string
+          example: [hrrr_surface:temperature_2m]
+        units:
+          type: string
+          enum: [si, metric, imperial]
+        hours:
+          type: integer
+          minimum: 1
+          maximum: 384
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        run:
+          type: string
+          format: date-time
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 744
+          default: 168
+        cursor:
+          type: string
+    SeriesBatchLocation:
+      type: object
+      additionalProperties: false
+      required: [lat, lon]
+      properties:
+        lat:
+          type: number
+          format: double
+          example: 41.88
+        lon:
+          type: number
+          format: double
+          example: -87.63
+        label:
+          type: string
+          maxLength: 128
+          example: chicago
   responses:
     CatalogNotModified:
       description: |
