@@ -66,6 +66,9 @@ ends, the response is `402` with `next_steps.recommended = claim` (see
 per-key claim href uses a claim ticket in the URL fragment
 (`https://developers.smarterweather.com/claim#ticket=<ticket>`).
 Pre-ticket rows still use leftover `#key=<bearer>` until they TTL.
+The raw trial mint (`POST /developer/keys/trial`) also carries
+`next_steps` on its `400` (`recommended = trial`, the exact mint recipe),
+`429` and `503` (`recommended = device_flow`).
 ```http
 HTTP/1.1 401 Unauthorized
 Content-Type: application/problem+json
@@ -119,6 +122,9 @@ human does open it.
 | `type` (URI suffix)     | HTTP | When                                                                                                     | Client reaction                                                                       |
 | ----------------------- | ---- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | <a id="bad-request"></a>`bad-request` | 400  | Malformed query string, missing required parameter, invalid lat/lon.                                     | Fix the request. Do not retry.                                                        |
+| <a id="invalid-request"></a>`invalid-request` | 400 | A key-API request body is malformed: not JSON, not an object, or a field is missing or has the wrong shape. `field` names the offending field (for example `client.name`) when there is one. | Fix the body. On the trial mint, start from the challenge's `request_example` (set `accept_terms` to `true` once you accept the terms). Do not retry as-is. |
+| <a id="trial-challenge-invalid"></a>`trial-challenge-invalid` | 400 | Trial mint: the challenge token is invalid, expired, or bound to another IP, or the proof-of-work solution is wrong. | GET a fresh challenge, solve it, and mint again. |
+| <a id="terms-not-accepted"></a>`terms-not-accepted` | 400 | Trial mint or claim: `accept_terms` is not `true`. | Read the terms (the challenge's `terms_url`) and send `"accept_terms": true`. |
 | <a id="unauthorized"></a>`unauthorized` | 401  | `Authorization: Bearer` header missing or malformed, or the key is unrecognized, revoked, or expired.     | Follow `next_steps.recommended` (get a key at the dashboard, or one of the agent paths). Do not retry. Read `detail` for which case it was. |
 | <a id="trial-ended"></a>`trial-ended` | 402  | A trial key's free value ended (lifetime call cap spent or key clock expired) while the claim window is still open. Body carries `reason` (`exhausted` \| `expired`), `claim_expires_at`, and `next_steps.recommended = claim`. | Follow `next_steps.claim` (portal page with the key in the URL fragment). Do not treat as a rate limit; a wait will not restore free value. |
 | <a id="forbidden"></a>`forbidden` | 403  | The key authenticates but its scopes or tier do not grant access to the requested resource.               | Surface with an upgrade CTA; `next_steps` carries the links. |
@@ -126,12 +132,14 @@ human does open it.
 | <a id="not-found"></a>`not-found` | 404  | The resource does not exist.                                                                             | Treat as permanent.                                                                   |
 | <a id="too-many-requests"></a>`too-many-requests` | 429 | Generic per-minute or per-day quota exhaustion on surfaces that are not key-scoped. | Honor `Retry-After`; exponential backoff on subsequent hits. |
 | <a id="rate-limit-exceeded"></a>`rate-limit-exceeded` | 429 | Your API key exceeded its per-minute or per-day limit. `RateLimit-*` headers say which; `next_steps` says how to lift it. | Honor `Retry-After` / `RateLimit-Reset`; follow `next_steps.upgrade` to raise the limit. |
+| <a id="trial-mint-rate-limited"></a>`trial-mint-rate-limited` | 429 | Trial mint: this IP reached its daily trial-mint cap. `Retry-After` counts down to UTC midnight. | Reuse the trial key you already minted, or follow `next_steps.recommended` (`device_flow`) to get a regular key. |
 | <a id="payload-too-large"></a>`payload-too-large` | 413 | The request body exceeded the endpoint's cap (1 MiB on `POST /v1/pois/exposure`). | Split the request. Do not retry as-is. |
 | <a id="conflict"></a>`conflict` | 409 | The write conflicts with current state (for example an App Attest key already registered). | Re-read state and retry once if the conflict is stale. |
 | <a id="flag-disabled"></a>`flag-disabled` | 404 | The endpoint exists but is behind a feature flag that is off for your account or tier. | Treat as not available; check `/pricing` for tier gating. |
 | <a id="internal"></a>`internal` | 500  | Unhandled server error. Logged with a request id we can look up.                                         | Retry with exponential backoff (max 3); on persistent failure, open a support ticket.  |
 | <a id="upstream"></a>`upstream` | 502  | A backing data source returned an error or an undecodable response.                                      | Retry with exponential backoff. Usually transient.                                    |
 | <a id="service-unavailable"></a>`service-unavailable` | 503  | A dependency needed to authorize or serve the request is temporarily unreachable.                        | Retry with exponential backoff. Never treat as an auth failure.                        |
+| <a id="trial-mint-unavailable"></a>`trial-mint-unavailable` | 503 | Trial mint: the global daily trial-mint cap is reached. `Retry-After: 3600`. | Follow `next_steps.recommended` (`device_flow`) for a regular key, or retry after `Retry-After`. |
 | <a id="timeout"></a>`timeout` | 504  | The handler deadline elapsed before a downstream response arrived.                                       | Retry with exponential backoff. Usually transient.                                    |
 
 Note that **401 is a single type**. The API deliberately does not
@@ -145,7 +153,10 @@ control flow.
 | Error class                                                       | Retry? |
 | ----------------------------------------------------------------- | ------ |
 | `bad-request`, `unauthorized`, `forbidden`, `trial-ended`, `trial-route-not-allowed`, `not-found` | No |
-| `too-many-requests`, `rate-limit-exceeded` | After `Retry-After` (or the `RateLimit-Reset` window). |
+| `invalid-request`, `terms-not-accepted` | No; fix the body first. |
+| `trial-challenge-invalid` | Once, with a fresh challenge. |
+| `too-many-requests`, `rate-limit-exceeded`, `trial-mint-rate-limited` | After `Retry-After` (or the `RateLimit-Reset` window). |
+| `trial-mint-unavailable` | After `Retry-After`. |
 | `payload-too-large`, `flag-disabled` | No |
 | `conflict` | Once, after re-reading state. |
 | `internal`, `upstream`, `service-unavailable`, `timeout`            | Exponential backoff, max 3 retries. |

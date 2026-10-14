@@ -4200,17 +4200,21 @@ components:
         type: string
         example: Bearer realm="api.smarterweather.com", error="invalid_token", error_description="API key is not recognised.", error_uri="https://developers.smarterweather.com/errors"
     RateLimitLimit:
-      description: The request-rate limit for this API key in the current window.
+      description: |
+        Burst capacity of this API key's token bucket: the most requests it
+        can make at once. `RateLimit-Policy: <limit>;w=<seconds>` gives the
+        time a full bucket takes to refill, so the sustained rate in requests
+        per minute is `Limit × 60 / w`.
       schema:
         type: integer
         minimum: 0
     RateLimitRemaining:
-      description: The number of requests remaining in the current window.
+      description: Requests available now (tokens left in the bucket).
       schema:
         type: integer
         minimum: 0
     RateLimitReset:
-      description: Unix epoch seconds at which the current window resets.
+      description: Seconds until the bucket is full again (0 when full).
       schema:
         type: integer
         minimum: 0
@@ -4223,7 +4227,6 @@ components:
       description: |
         Portal claim URL for this trial key
         (`https://developers.smarterweather.com/claim#ticket=<claim ticket>`).
-        Pre-ticket trial rows still use leftover `#key=<raw bearer>` until they TTL.
         Present on every served trial response while the claim window is open.
       schema:
         type: string
@@ -4234,7 +4237,7 @@ components:
         type: string
         format: date-time
     XTrialCallsRemaining:
-      description: Remaining lifetime calls on this trial key after this request.
+      description: Remaining lifetime calls on this trial key after this request. Only 2xx responses count; a request answered 4xx/5xx is refunded before the response is sent, and this header reflects the refund once it is applied.
       schema:
         type: integer
         minimum: 0
@@ -4558,6 +4561,12 @@ components:
             Trial mint URL (trial only). No UTM. Returns the bearer in the
             response body's `api_key` field — write only that field to
             `.env` as `SMARTERWEATHER_API_KEY=`; never print it.
+        endpoint:
+          type: string
+          format: uri
+          description: |
+            onboarding_mcp only; Streamable HTTP MCP URL, POST-only (its
+            `href` is the setup guide). No UTM.
 
     PlatformStatus:
       type: object
@@ -8759,7 +8768,7 @@ components:
               recommended: device_flow
               device_flow:
                 href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api#device-flow
-                description: "Human present: run command. It shows the human a verification URL and code, writes SMARTERWEATHER_API_KEY to ./.env (0600, gitignored), and prints only a key prefix. Without Node: device grant at the endpoints below, then POST api_keys_endpoint and write only the response's key field to .env as a SMARTERWEATHER_API_KEY= line (e.g. pipe through jq -r .key). Never print the key or access token."
+                description: "Human present: run the `command` below. It shows the human a verification URL and code, writes SMARTERWEATHER_API_KEY to ./.env (0600, gitignored), and prints only a key prefix. Without Node: device grant at the endpoints below, then POST api_keys_endpoint and write only the response's key field to .env as a SMARTERWEATHER_API_KEY= line (e.g. pipe through jq -r .key). Never print the key or access token."
                 command: "npx -y @smarterweather/mcp-onboarding@latest login"
                 client_id: k2h05BUoTP393zcD
                 device_authorization_endpoint: https://clerk.smarterweather.com/oauth/device_authorization
@@ -8775,8 +8784,9 @@ components:
                 href: https://developers.smarterweather.com/llms.txt?utm_campaign=401&utm_medium=problem-json&utm_source=api
                 description: "Agents: start here. The full agent path, key handling, and the machine-readable contracts."
               onboarding_mcp:
-                href: https://mcp.developers.smarterweather.com?utm_campaign=401&utm_medium=problem-json&utm_source=api
-                description: Anonymous Streamable HTTP MCP that can sign you up, mint a key, and configure the weather MCP in your client.
+                href: https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api
+                description: "Anonymous Streamable HTTP MCP that can sign you up, mint a key, and configure the weather MCP in your client. Connect your MCP client to endpoint (POST-only); href is the setup guide."
+                endpoint: https://mcp.developers.smarterweather.com
               keyless_x402:
                 href: https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#x402
                 description: Agents with a wallet can pay per call (USDC on Base via x402) on the weather MCP with no account.
