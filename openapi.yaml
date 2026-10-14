@@ -3278,8 +3278,10 @@ paths:
           required: false
           description: |
             When true (the default), hours outside sunrise–sunset are
-            excluded when sun times are available. If sun times cannot
-            be loaded, the daylight filter is skipped.
+            excluded when sun times are available. In polar night no hour
+            is daylight, so `windows` is empty; under midnight sun every
+            hour is. If sun times cannot be loaded, the daylight filter is
+            skipped.
           schema:
             type: boolean
             default: true
@@ -4324,6 +4326,7 @@ components:
           moon_phase: 0.15
           moon_phase_name: "Waxing Crescent"
           moon_illumination: 0.22
+          polar: null
         units:
           temperature: "F"
           wind_speed: "mph"
@@ -4902,7 +4905,9 @@ components:
           maximum: 24
         sun_times:
           type: array
-          description: Present when daylight filtering used sunrise and sunset.
+          description: >-
+            Present when daylight filtering used sunrise and sunset. Polar
+            dates (midnight sun, polar night) have neither and are left out.
           items:
             type: object
             required: [sunrise, sunset]
@@ -7342,26 +7347,35 @@ components:
         civil_dawn:
           type: [string, "null"]
           format: date-time
+          description: Null when civil twilight does not begin or end on this date.
         sunrise:
           type: [string, "null"]
           format: date-time
+          description: Null on polar day and night (see `polar`).
         solar_noon:
           type: [string, "null"]
           format: date-time
         sunset:
           type: [string, "null"]
           format: date-time
+          description: Null on polar day and night (see `polar`).
         civil_dusk:
           type: [string, "null"]
           format: date-time
+          description: Null when civil twilight does not begin or end on this date.
         day_length:
           type: integer
           minimum: 0
-          description: Seconds from sunrise to sunset.
+          description: >-
+            Seconds from sunrise to sunset; 86400 under midnight sun, 0 in
+            polar night.
         daylight_length:
           type: integer
           minimum: 0
-          description: Seconds from civil dawn to civil dusk.
+          description: >-
+            Seconds from civil dawn to civil dusk; 86400 when civil twilight
+            never ends (white nights, midnight sun). 0 when there is no civil
+            daylight or it is unknown; see civil_dawn, civil_dusk and polar.
         moonrise:
           type: [string, "null"]
           format: date-time
@@ -7392,6 +7406,14 @@ components:
           format: double
           minimum: 0
           maximum: 1
+        polar:
+          type: [string, "null"]
+          enum: [midnight_sun, polar_night, null]
+          description: >-
+            Set when the sun neither rises nor sets on this date: midnight_sun
+            (above the horizon all day; day_length is 86400) or polar_night
+            (below it all day; day_length is 0). sunrise and sunset are then
+            null. Null when the sun rises and sets.
 
     # -----------------------------------------------------------------------
     # GIS (scoped down), units, attribution, meta
