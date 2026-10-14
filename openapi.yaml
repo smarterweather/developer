@@ -1257,13 +1257,19 @@ paths:
         finite numbers with `-180 <= min_lon <= max_lon <= 180` and
         `-90 <= min_lat <= max_lat <= 90` (antimeridian-crossing boxes are not
         supported); a partial, non-numeric, out-of-range or inverted box is a
-        `400`. Empty-valued bbox params count as absent.
+        `400`. Empty-valued bbox params count as absent. A box filters only
+        the latest report per station, so combining it with `hours` or
+        `station` is a `400`. A non-integer `hours`, or one outside 1-24, is
+        a `400`, as is repeating `hours`, `station` or a bbox key.
+
+        Point parameters (`lat`, `lon`, `lng`, `latitude`, `longitude`,
+        `zip`, `location`, `n`, `radius`) are not accepted here and return
+        `400`; for the stations nearest a point use
+        `GET /v1/observations/nearest`.
       tags: [Observations]
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/LatQuery'
-        - $ref: '#/components/parameters/LonQuery'
         - name: station
           in: query
           schema:
@@ -1309,6 +1315,10 @@ paths:
           $ref: '#/components/responses/Problem400'
         '502':
           $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
 
   /v1/observations/nearest:
     get:
