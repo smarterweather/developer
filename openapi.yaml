@@ -4731,12 +4731,28 @@ components:
             $ref: '#/components/schemas/Daily'
         alerts:
           type: array
-          description: Active NWS alerts for the location.
+          description: >-
+            Active NWS alerts for the location, present whenever the section
+            is included and its fetch succeeded. `[]` means no alerts were in
+            effect in the latest alerts snapshot, which can trail
+            `meta.generated_at` by up to about 30 seconds. Absent when the
+            section is not included, or when its fetch failed (a
+            `meta.warnings` entry with `section: alerts` says so). A stale
+            replay (`X-SW-Stale: 1` header, or a `stale_response` warning on
+            a batch row) repeats the alerts as of its own
+            `meta.generated_at`, not the current set.
           items:
             $ref: '#/components/schemas/Alert'
         outlooks:
           type: array
-          description: SPC convective outlooks active for the location.
+          description: >-
+            SPC convective outlooks active for the location, present whenever
+            the section is included and its fetch succeeded. `[]` means no
+            outlook was in effect in the latest outlooks snapshot, which can
+            trail `meta.generated_at` by up to about 30 seconds. Absent when
+            the section is not included, or when its fetch failed (a
+            `meta.warnings` entry with `section: outlooks` says so). A stale
+            replay repeats the outlooks as of its own `meta.generated_at`.
           items:
             $ref: '#/components/schemas/Outlook'
         astro:
