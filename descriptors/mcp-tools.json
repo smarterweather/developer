@@ -1262,14 +1262,21 @@
             "default": "current,daily,alerts,outlooks",
             "description": "Comma-separated sections: current, daily, hourly, alerts, outlooks. Default \"current,daily,alerts,outlooks\". Use get_hourly_forecast for hourly detail."
           },
+          "view": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "description": "concise (default; REST's is detailed), ~5-10KB: daily has day_precip_probability / night_precip_probability (precip_probability is their max). detailed, ~12-20KB: adds CAPE, UV, full day/night periods, extra hourly fields."
+          },
           "detail_level": {
             "type": "string",
             "enum": [
               "standard",
               "detailed"
             ],
-            "default": "standard",
-            "description": "standard: compact response (~5-10KB); daily includes day_precip_probability / night_precip_probability when available (precip_probability is max of day/night). detailed: also preserves CAPE, UV, full day/night period objects, extra hourly fields (~12-20KB)."
+            "description": "Deprecated alias of view."
           }
         },
         "additionalProperties": false,
@@ -2619,14 +2626,21 @@
             "default": "imperial",
             "description": "Unit system for all values in the request and response: imperial (°F, mph, inches), metric (°C, km/h, mm), or si (K, m/s, mm). Defaults to imperial."
           },
+          "view": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "description": "concise (default) samples past 24h; detailed adds CAPE, ceiling, UV, gust and thunderstorm probability for 48h."
+          },
           "detail_level": {
             "type": "string",
             "enum": [
               "standard",
               "detailed"
             ],
-            "default": "standard",
-            "description": "standard: compact hourly data (sampled past 24h). detailed: preserves CAPE, ceiling, UV, gust, thunderstorm probability for the first 48h."
+            "description": "Deprecated alias of view."
           }
         },
         "additionalProperties": false,
@@ -4020,6 +4034,9 @@
                   "type": "string"
                 },
                 "error": {
+                  "type": "string"
+                },
+                "error_type": {
                   "type": "string"
                 }
               },

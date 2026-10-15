@@ -127,6 +127,7 @@ human does open it.
 | <a id="terms-not-accepted"></a>`terms-not-accepted` | 400 | Trial mint or claim: `accept_terms` is not `true`. | Read the terms (the challenge's `terms_url`) and send `"accept_terms": true`. |
 | <a id="unauthorized"></a>`unauthorized` | 401  | `Authorization: Bearer` header missing or malformed, or the key is unrecognized, revoked, or expired.     | Follow `next_steps.recommended` (get a key at the dashboard, or one of the agent paths). Do not retry. Read `detail` for which case it was. |
 | <a id="trial-ended"></a>`trial-ended` | 402  | A trial key's free value ended (lifetime call cap spent or key clock expired) while the claim window is still open. Body carries `reason` (`exhausted` \| `expired`), `claim_expires_at`, and `next_steps.recommended = claim`. | Follow `next_steps.claim` (portal page with the key in the URL fragment). Do not treat as a rate limit; a wait will not restore free value. |
+| <a id="payment-required"></a>`payment-required` | 402 | MCP only: a keyless call to a paid tool carried no valid [x402](https://www.x402.org/) payment. The text block also carries the x402 `PaymentRequired` members (`x402Version`, `accepts`, `resource`), and `structuredContent` is the bare `PaymentRequired`; a payment proof the server cannot use gets the same, re-quoted, with the reason in `detail`. `next_steps` names the free-key paths. | Pay one of `accepts` and retry with the payment, or follow `next_steps` for a key. Do not retry as-is. |
 | <a id="forbidden"></a>`forbidden` | 403  | The key authenticates but its scopes or tier do not grant access to the requested resource.               | Surface with an upgrade CTA; `next_steps` carries the links. |
 | <a id="trial-route-not-allowed"></a>`trial-route-not-allowed` | 403  | A trial key authenticated but is not allowed to call this route. `next_steps.recommended = claim`. | Claim the key for full API access, or call a trial-allowed route (`/v1/weather`, `/v1/geocode`, `/v1/alerts`, and `/v1/catalog`, which spends no trial call). A trial key minted before `/v1/catalog` opened to trials gets this error on `/v1/catalog`: mint a new trial key. |
 | <a id="not-found"></a>`not-found` | 404  | The resource does not exist.                                                                             | Treat as permanent.                                                                   |
@@ -154,6 +155,7 @@ control flow.
 | Error class                                                       | Retry? |
 | ----------------------------------------------------------------- | ------ |
 | `bad-request`, `unauthorized`, `forbidden`, `trial-ended`, `trial-route-not-allowed`, `not-found` | No |
+| `payment-required` | Once, with a payment for one of `accepts`. |
 | `invalid-request`, `terms-not-accepted` | No; fix the body first. |
 | `trial-challenge-invalid` | Once, with a fresh challenge. |
 | `too-many-requests`, `rate-limit-exceeded`, `trial-mint-rate-limited` | After `Retry-After` (or the `RateLimit-Reset` window). |
@@ -165,6 +167,36 @@ control flow.
 Retries SHOULD use at least 250ms of initial backoff and double each
 attempt (up to ~2s cap) to avoid thundering-herd restarts after a
 transient upstream outage.
+
+## On MCP
+
+<a id="mcp"></a>The Smarter Weather MCP server (`mcp.smarterweather.com`) uses
+this same model. A failed `tools/call` is a result with `isError: true`
+whose first text block is one of these `Problem` objects, serialized as
+JSON, with the same `type` URIs. It carries no `structuredContent`, with one
+exception: on `payment-required` the text block also carries the x402
+`PaymentRequired` members and `structuredContent` is the bare
+`PaymentRequired`, the two places x402 clients read it. There is no HTTP
+status per tool call, so key on `type`, then `status`.
+
+- Argument errors (a value that fails the tool's input schema, or a
+  precondition such as an ambiguous place name) are `bad-request` with the
+  reason in `detail`; an unknown tool is `not-found`.
+- A `400` or `404` problem from the API behind a tool reaches you as the
+  API sent it, `next_steps` included (for example `outside-coverage`).
+- Every `5xx` carries a fixed, generic `detail`.
+- `next_steps` appears on `401`, `402` (`trial-ended`, `payment-required`),
+  `403` (trial keys), `429` (`rate-limit-exceeded`) and on the `503` a
+  keyless x402 call gets while the payment rail is unavailable.
+- `rate-limit-exceeded` covers a key over its limit and a keyless x402
+  wallet over its per-minute limit; it carries `retry_after_seconds` in
+  place of the `Retry-After` header and no `PaymentRequired`, so x402
+  clients do not treat it as payable.
+- When one of several sources inside a successful result fails, that entry
+  carries `error` (the problem's `detail`) and `error_type` (its `type`)
+  instead of failing the call.
+
+Retry by the table above.
 
 ## Including errors in support tickets
 
