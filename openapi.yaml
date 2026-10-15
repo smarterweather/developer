@@ -3636,15 +3636,18 @@ paths:
           now for an `analysis`. With `run`, it counts from the run's
           initialization time. Rolling windows are rounded out so the
           frame covering now is included: a forecast starts at now floored
-          to its frame step (the UTC day for a daily product such as
-          `nbm_daily_temps`, else the hour), an analysis at now less
-          `hours` rounded down to 5 minutes, and both end rounded up to 5
-          minutes.
+          to the product's catalog `step` (the UTC day for a daily product
+          such as `nbm_daily_temps`, the last 00/06/12/18Z for a 6-hourly
+          model such as `aifs_single_surface`, the last 5-minute mark for
+          the `PT5M` nowcast, the hour for an hourly model), an analysis
+          at now less `hours` rounded down to 5 minutes, and both end
+          rounded up to 5 minutes.
         - `start` and `end` (RFC 3339, at most 16 days apart), applied
           exactly as given: a daily row stamped at 00:00Z is outside a
           window that starts later that day.
         - Neither: an analysis returns its latest frame and a forecast the
-          next 24 h (24 h from the run's initialization time with `run`).
+          next 24 h, rounded out as above (24 h from the run's
+          initialization time with `run`).
 
         A product with no `product_type`, or a `climatology` such as
         `climate_normals_conus`, requires `start` and `end`. `run` (RFC
@@ -6939,6 +6942,7 @@ components:
         - coverage
         - cadence
         - horizon
+        - step
         - temporal_type
         - grid_res_km
         - stability
@@ -6989,6 +6993,18 @@ components:
           type: [string, "null"]
           description: Forecast horizon, an ISO 8601 duration; `null` for analyses.
           example: PT264H
+        step:
+          type: [string, "null"]
+          description: |
+            Native frame spacing, an ISO 8601 duration: how far apart the
+            product's frames are (`PT6H` for a 6-hourly model, `PT2M` for an
+            MRMS mosaic, `P1D` for a daily product). Set on every `grid` and
+            `snapshot` product; `null` for `feature` and `text` products,
+            which have no frames. A sub-day step divides 24 h and a longer
+            one is whole days. A rolling `/v1/series` forecast window starts
+            at now floored to it from 00:00Z (a step of a day or more floors
+            to UTC midnight), so the frame covering now is in.
+          example: PT1H
         temporal_type:
           type: [string, "null"]
           description: |
