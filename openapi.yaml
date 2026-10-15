@@ -1042,6 +1042,7 @@ paths:
   /v1/pois/exposure:
     post:
       operationId: postPoisExposure
+      x-stability: experimental
       summary: Civic POIs inside a bounded polygon.
       description: |
         Returns civic POI counts and a 50-row feature sample for a caller-supplied
@@ -1054,6 +1055,12 @@ paths:
 
         Optional `classes` filters to the civic allowlist (school, hospital,
         airport, …). Omit it for every civic class.
+
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment. Not yet enabled for every API
+        key; a key without access gets `403` with problem type
+        `flag-disabled`. If access cannot be checked, the API returns
+        `503` `service-unavailable`; retry with backoff.
       tags: [Alerts]
       security:
         - bearerAuth: []
