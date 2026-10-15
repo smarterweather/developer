@@ -128,6 +128,17 @@ returns current conditions, hourly and daily forecasts, active alerts,
 and radar metadata in one response. Prefer it over fanning out to
 multiple endpoints.
 
+To keep that response small, shape it instead of trimming it client-side:
+`view=concise` keeps a documented core set of hourly and daily columns
+(rows are never dropped), `hourly_step=3&hourly_step_from=24` keeps the
+first day hourly and every third hour after it, and `fields` selects exact
+row members, e.g. `fields=hourly.temperature,hourly.precip_probability,daily.high,daily.low`.
+An unknown `fields` name is a `400` that lists the valid names; `fields`
+never adds sections, so keep the matching `include`. When thinning dropped
+rows, `meta.hourly_sampling` (`{"step_hours":3,"from_hour":24}`) says so;
+read it before treating the series as complete. The same parameters apply
+to every row of `POST /v1/weather/batch`.
+
 ### Errors
 
 Errors are RFC 7807 `application/problem+json` documents with a stable

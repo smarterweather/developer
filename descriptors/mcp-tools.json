@@ -100,6 +100,13 @@
                     "name": {
                       "type": "string"
                     },
+                    "matched_via": {
+                      "type": "string",
+                      "enum": [
+                        "autosuggest",
+                        "fuzzy"
+                      ]
+                    },
                     "label": {
                       "type": "string"
                     }
@@ -134,6 +141,37 @@
               ],
               "additionalProperties": false
             }
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "error": {
+                  "type": "string"
+                },
+                "error_type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "index",
+                "error",
+                "error_type"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Locations left out of comparisons, by input index: outside coverage."
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values."
           }
         },
         "required": [
@@ -184,6 +222,10 @@
           "detail": {
             "type": "object",
             "additionalProperties": {}
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values."
           }
         },
         "required": [
@@ -215,7 +257,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -321,6 +363,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -382,6 +431,13 @@
           },
           "daylight_only": {
             "type": "boolean"
+          },
+          "daylight_filter": {
+            "type": "string",
+            "enum": [
+              "applied",
+              "unavailable"
+            ]
           },
           "activity_duration_hours": {
             "type": "number"
@@ -472,7 +528,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -525,6 +581,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -683,7 +746,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -755,6 +818,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "additionalProperties": false
@@ -998,7 +1068,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1040,6 +1110,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -1176,7 +1253,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1212,14 +1289,21 @@
             "default": "current,daily,alerts,outlooks",
             "description": "Comma-separated sections: current, daily, hourly, alerts, outlooks. Default \"current,daily,alerts,outlooks\". Use get_hourly_forecast for hourly detail."
           },
+          "view": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "description": "concise (default; REST's is detailed), ~5-10KB: daily has day_precip_probability / night_precip_probability (precip_probability is their max). detailed, ~12-20KB: adds CAPE, UV, full day/night periods, extra hourly fields."
+          },
           "detail_level": {
             "type": "string",
             "enum": [
               "standard",
               "detailed"
             ],
-            "default": "standard",
-            "description": "standard: compact response (~5-10KB); daily includes day_precip_probability / night_precip_probability when available (precip_probability is max of day/night). detailed: also preserves CAPE, UV, full day/night period objects, extra hourly fields (~12-20KB)."
+            "description": "Deprecated alias of view."
           }
         },
         "additionalProperties": false,
@@ -1239,6 +1323,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -1340,7 +1431,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1389,7 +1480,7 @@
             "type": "string",
             "minLength": 3,
             "maxLength": 12,
-            "description": "AWIPS id (e.g. TCDAT1, PMDSPD; CPC: PMDMRD 6-10/8-14d, PMDTHR hazards, PMDENS ENSO). Exact source_ref; beats type+location."
+            "description": "AWIPS id (e.g. TCDAT1, PMDSPD; CPC: PMDMRD 6-10/8-14d, PMD34D wk3-4, PMD30D 30d, PMD90D 90d, PMDTHR hazards, PMDENS ENSO). Exact source_ref; beats type+location."
           },
           "wfo": {
             "type": "string",
@@ -1430,6 +1521,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -1470,7 +1568,7 @@
     {
       "name": "get_forecast_distribution",
       "title": "Get forecast distribution",
-      "description": "NBM probabilistic guidance for one weather aspect: percentiles (p10-p90), exceedance probabilities and ensemble spread. Use this for any question about odds, ranges, potential or confidence (\"how much could we get\", \"range of possible highs\", \"how sure is this\") -- a deterministic forecast value cannot answer one. Reading the percentiles: p50 is the most likely outcome, p90 is the reasonable worst case when the risk is the high end (snow totals, wind, rainfall), and p10 when the risk is the low end (cold, visibility, ceiling). A single percentile is not the forecast -- report the likely value with the tail that matters, and label which is which. Aspects: precip (PoP, QPF + percentiles), snow (accumulation percentiles, >1/2/4in probabilities, snow level, snow-type probability), ice (ice accretion, freezing-rain / ice-pellet probabilities), temperature (`daily` high/low p10/p50/p90: the NBM value -/+ 1.28 stddev; hourly temp + stddev), wind (speed/gust percentiles), severe (thunderstorm probability plus NBM CWASP, a severe-environment index, both in percent: severe_weather_prob_p50 is the median CWASP value and severe_weather_prob_above_75 the probability CWASP exceeds 75; NBM has no tornado, hail or damaging-wind probabilities, so use get_outlooks hazard=severe for SPC's), aviation (LIFR/IFR/MVFR visibility + ceiling odds), confidence (ensemble stddev; low = settled, high = details still in play). Labels in unit_labels. Example: {\"location\": \"Denver\", \"aspect\": \"snow\", \"hours\": 72}.",
+      "description": "NBM probabilistic guidance for one weather aspect: percentiles (p10-p90), exceedance probabilities and ensemble spread. Use this for any question about odds, ranges, potential or confidence (\"how much could we get\", \"range of possible highs\", \"how sure is this\") -- a deterministic forecast value cannot answer one. Reading the percentiles: p50 is the most likely outcome, p90 is the reasonable worst case when the risk is the high end (snow totals, wind, rainfall), and p10 when the risk is the low end (cold, visibility, ceiling). A single percentile is not the forecast -- report the likely value with the tail that matters, and label which is which. Aspects: precip (PoP, QPF + percentiles), snow (accumulation percentiles, >1/2/4in probabilities, snow level, snow-type probability), ice (ice accretion, freezing-rain / ice-pellet probabilities), temperature (`daily` high/low p10/p50/p90: the NBM value -/+ 1.28 stddev; hourly temp + stddev), wind (speed/gust percentiles), severe (thunderstorm probability plus NBM CWASP, a severe-environment index, both in percent: severe_weather_prob_p50 is the median CWASP value and severe_weather_prob_above_75 the probability CWASP exceeds 75; NBM has no tornado, hail or damaging-wind odds; SPC's: get_outlooks (guidance) hazard=severe), aviation (LIFR/IFR/MVFR visibility + ceiling odds), confidence (ensemble stddev; low = settled, high = details still in play). Labels in unit_labels. Example: {\"location\": \"Denver\", \"aspect\": \"snow\", \"hours\": 72}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1478,7 +1576,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1543,6 +1641,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -1744,7 +1849,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1806,6 +1911,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -2498,7 +2610,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -2541,14 +2653,21 @@
             "default": "imperial",
             "description": "Unit system for all values in the request and response: imperial (°F, mph, inches), metric (°C, km/h, mm), or si (K, m/s, mm). Defaults to imperial."
           },
+          "view": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "description": "concise (default) samples past 24h; detailed adds CAPE, ceiling, UV, gust and thunderstorm probability for 48h."
+          },
           "detail_level": {
             "type": "string",
             "enum": [
               "standard",
               "detailed"
             ],
-            "default": "standard",
-            "description": "standard: compact hourly data (sampled past 24h). detailed: preserves CAPE, ceiling, UV, gust, thunderstorm probability for the first 48h."
+            "description": "Deprecated alias of view."
           }
         },
         "additionalProperties": false,
@@ -2568,6 +2687,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -2669,7 +2795,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -2701,6 +2827,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -2759,7 +2892,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -2858,7 +2991,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -2909,6 +3042,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -2956,7 +3096,7 @@
     {
       "name": "get_observed_precipitation",
       "title": "Observed precipitation",
-      "description": "How much rain fell: observed precipitation totals at a location. Use for \"did it rain\", \"how much rain fell\", \"rain in the last 24 hours / since yesterday\". Source: MRMS MultiSensor QPE Pass2 (radar bias-corrected to rain gauges) over 1/3/6/24/48/72 h windows (CONUS; 1 h only in Alaska and Hawaii). Values have about 2 mm (0.08 in) resolution, so 0 means under about 1 mm; data runs about an hour behind real time. Pass `at` (within 33 h) for totals ending at a past time (newest frame up to 3 h before it). With include_nowcast (default) it also returns a next-hour radar nowcast (CONUS): peak intensity (light/moderate/heavy), type and start time, not an amount. For forecast totals beyond the next hour use get_period_totals; for station reports use get_observations.",
+      "description": "How much rain fell: observed precipitation totals at a location. Use for \"did it rain\", \"how much rain fell\", \"rain in the last 24 hours / since yesterday\". Source: MRMS MultiSensor QPE Pass2 (radar bias-corrected to rain gauges) over 1/3/6/24/48/72 h windows (CONUS; 1 h only in Alaska and Hawaii). Values have about 2 mm (0.08 in) resolution, so 0 means under about 1 mm; data runs about an hour behind real time. Pass `at` (within 33 h) for totals ending at a past time (newest frame up to 3 h before it). With include_nowcast (default) it also returns a next-hour radar nowcast (CONUS): peak intensity (light/moderate/heavy), type and start time, not an amount. Forecast totals past the next hour: get_period_totals (planning); station reports: get_observations (observed).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2964,7 +3104,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -3037,6 +3177,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -3283,7 +3430,7 @@
     {
       "name": "get_outlooks",
       "title": "Get hazard outlooks",
-      "description": "Hazard outlooks affecting a location. hazard=severe returns SPC convective outlooks (Day 1-8 categorical risk + tornado/wind/hail probabilities); hazard=fire returns SPC fire weather outlooks; hazard=rain returns WPC Excessive Rainfall Outlook polygons (days 1-3); hazard=heat returns the NWS HeatRisk index at the point (0 none .. 4 extreme, days 1-3). include_narrative=true adds the forecaster discussion for severe (SWO), fire (FWD), or rain (QPF/QPFERD; one PIL for all days). An empty result means no outlook covers the point -- not a failure. Examples: {\"location\": \"Moore, OK\", \"hazard\": \"severe\", \"include_narrative\": true} or {\"location\": \"Phoenix\", \"hazard\": \"heat\"}.",
+      "description": "Hazard outlooks affecting a location. severe: SPC convective (day 1-8 categorical + tornado/wind/hail probabilities); fire: SPC fire weather; rain: WPC Excessive Rainfall (days 1-3); heat: NWS HeatRisk index (0-4, days 1-3); temperature/precipitation: CPC 6-10 day, 8-14 day, week 3-4 and monthly outlooks (favored category + probability bin; period=seasonal: 3-month leads). include_narrative=true adds the forecaster discussion (SWO, FWD, QPFERD, or the period's CPC PMD). Empty means no outlook covers the point, not a failure. Examples: {\"location\": \"Moore, OK\", \"hazard\": \"severe\", \"include_narrative\": true} or {\"location\": \"Denver\", \"hazard\": \"temperature\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3291,7 +3438,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -3311,10 +3458,11 @@
               "severe",
               "fire",
               "rain",
-              "heat"
+              "heat",
+              "temperature",
+              "precipitation"
             ],
-            "default": "severe",
-            "description": "Hazard family: severe = SPC convective, fire = SPC fire weather, rain = WPC excessive rainfall, heat = NWS HeatRisk index. (Winter/WSSI is a planned expansion.)"
+            "description": "Hazard family (see description). Default severe; with period, both CPC hazards."
           },
           "day": {
             "type": "integer",
@@ -3326,7 +3474,18 @@
           "include_narrative": {
             "type": "boolean",
             "default": false,
-            "description": "Include the forecaster narrative for the requested day (severe, fire, and rain)."
+            "description": "Include the forecaster narrative (all hazards but heat)."
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "610",
+              "814",
+              "wk34",
+              "monthly",
+              "seasonal"
+            ],
+            "description": "Temperature/precipitation only. Default: all but seasonal."
           }
         },
         "additionalProperties": false,
@@ -3346,6 +3505,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -3513,7 +3679,7 @@
     {
       "name": "get_period_totals",
       "title": "Get period totals",
-      "description": "Aggregate a weather variable over one or more time periods. Returns server-computed totals, maxima, minima, or averages per period. Period start/end times should use the user's local timezone boundaries (not UTC midnight). Response includes the converted value and unit per period. Ideal for questions like \"total rainfall today and tomorrow\" or \"peak wind speed this weekend\". For rain that already fell, use get_observed_precipitation. Accepts a place name directly. Example: {\"location\": \"Portland, OR\", \"variable\": \"precipitation\", \"aggregation\": \"sum\", \"periods\": [{\"start\": \"2026-07-08T07:00:00Z\", \"end\": \"2026-07-09T07:00:00Z\", \"label\": \"Today\"}]}.",
+      "description": "Aggregate a weather variable over one or more time periods. Returns server-computed totals, maxima, minima, or averages per period. Period start/end times should use the user's local timezone boundaries (not UTC midnight). Response includes the converted value and unit per period. Period-ending totals (1 h rain/snow, 6 h buckets, MRMS QPE) sum windows ending in (start, end]. period_total variables need periods on their bucket grid (UTC-aligned for 3 h/6 h buckets such as precipitation_6h; hourly totals fit any hour); off-grid periods error naming the grid. Past the data: partial: true, frames_used/frames_expected, covered_start/covered_end. Ideal for questions like \"total rainfall today and tomorrow\" or \"peak wind speed this weekend\". For rain that already fell, use get_observed_precipitation. Accepts a place name directly. Example: {\"location\": \"Portland, OR\", \"variable\": \"precipitation\", \"aggregation\": \"sum\", \"periods\": [{\"start\": \"2026-07-08T07:00:00Z\", \"end\": \"2026-07-09T07:00:00Z\", \"label\": \"Today\"}]}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3521,7 +3687,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -3616,6 +3782,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -3652,6 +3825,21 @@
                 },
                 "hours_included": {
                   "type": "number"
+                },
+                "frames_used": {
+                  "type": "number"
+                },
+                "frames_expected": {
+                  "type": "number"
+                },
+                "partial": {
+                  "type": "boolean"
+                },
+                "covered_start": {
+                  "type": "string"
+                },
+                "covered_end": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -3666,6 +3854,10 @@
           },
           "message": {
             "type": "string"
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values."
           }
         },
         "required": [
@@ -3885,6 +4077,9 @@
                 },
                 "error": {
                   "type": "string"
+                },
+                "error_type": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -3923,7 +4118,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -3962,6 +4157,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -4015,7 +4217,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4082,7 +4284,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4133,6 +4335,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -4195,7 +4404,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4238,6 +4447,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -4295,7 +4511,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4327,6 +4543,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -4523,7 +4746,7 @@
     {
       "name": "list_datasets",
       "title": "List datasets",
-      "description": "Discover the datasets (model grids, analyses, observations) available at a location, keyed by dataset_id, with per-dataset freshness where tracked (latest model run as latest_run, latest_time, data_age_seconds, freshness_status). Only datasets covering the point are listed: its domain (CONUS/Alaska/Hawaii/Caribbean) plus global grids and the GOES full disks that see it. Use this to find dataset_id values for query_dataset, or to check whether data is current. Variables, units and standard names come from describe_dataset. Example: {\"location\": \"Anchorage, AK\"}.",
+      "description": "Discover the datasets (model grids, analyses, observations) available at a location, keyed by dataset_id, with per-dataset freshness where tracked (latest model run as latest_run, latest_time, data_age_seconds, freshness_status). Only datasets covering the point are listed: its domain (CONUS/Alaska/Hawaii) plus global grids and the GOES full disks that see it. Use this to find dataset_id values for query_dataset, or to check whether data is current. Variables, units and standard names come from describe_dataset. Example: {\"location\": \"Anchorage, AK\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -4531,7 +4754,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4568,6 +4791,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -4688,7 +4918,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP (\"50219\"), or \"lat,lon\" (\"39.74,-104.99\"). Provide either this OR explicit lat+lon, not both."
+            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4761,6 +4991,13 @@
               },
               "name": {
                 "type": "string"
+              },
+              "matched_via": {
+                "type": "string",
+                "enum": [
+                  "autosuggest",
+                  "fuzzy"
+                ]
               }
             },
             "required": [
@@ -4814,6 +5051,10 @@
               ],
               "additionalProperties": false
             }
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values."
           }
         },
         "required": [
@@ -5054,15 +5295,22 @@
                     "arguments"
                   ],
                   "additionalProperties": false,
-                  "description": "The exact call that answers from this dataset."
+                  "description": "The exact call that answers from this dataset. Absent when that tool is not on this connection; see `connect`."
+                },
+                "toolset": {
+                  "type": "string",
+                  "description": "With no `call`: the toolset whose tool answers this dataset."
+                },
+                "connect": {
+                  "type": "string",
+                  "description": "With no `call`: the path that serves this connection's toolsets plus that one, e.g. /x/core,catalog,guidance."
                 }
               },
               "required": [
                 "dataset_id",
                 "title",
                 "kind",
-                "why",
-                "call"
+                "why"
               ],
               "additionalProperties": false
             }
@@ -5099,7 +5347,7 @@
     {
       "name": "search_locations",
       "title": "Search locations",
-      "description": "Resolve a place query to candidate locations with coordinates. Accepts city names (\"Denver\"), city+state (\"Portland, OR\" via query), ZIP codes (\"50219\"), or partial input with fuzzy=true for autosuggest-style matching (\"bost\" -> Boston). Returns ranked candidates with lat/lon. Most weather tools accept a `location` string directly and geocode internally -- use this tool only to disambiguate (\"which Springfield?\") or to present location choices to the user. Example: {\"query\": \"Springfield\"} returns all major Springfields ranked by place importance.",
+      "description": "Resolve a place to ranked candidates with lat/lon: city (\"Denver\"), \"city, ST\", ZIP (\"50219\"), or partial input with fuzzy=true (\"bost\" -> Boston); venues and addresses where enabled. Rows carry `type` place|zip|address|poi; pass a row's lat/lon to weather tools. `matched_via: \"autosuggest\"` marks rows found after the exact match missed; `partial` means a section timed out. Weather tools take `location` directly, venues included -- use this to disambiguate (\"which Springfield?\") or present choices.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -5107,7 +5355,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Place query: city, \"city, state\", ZIP, or partial text with fuzzy=true."
+            "description": "Place query: city, \"city, state\", ZIP, partial text, or venue/address where enabled."
           },
           "fuzzy": {
             "type": "boolean",
@@ -5120,6 +5368,17 @@
             "maximum": 10,
             "default": 5,
             "description": "Maximum candidates to return (1-10). Default 5."
+          },
+          "near_lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Rank venues/addresses near this point; pair with near_lon."
+          },
+          "near_lon": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
           }
         },
         "required": [
@@ -5140,10 +5399,16 @@
               "type": "object",
               "properties": {
                 "name": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "state": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "zip": {
                   "type": "string"
@@ -5168,10 +5433,31 @@
                 },
                 "place_id": {
                   "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "subtitle": {
+                  "type": "string"
+                },
+                "matched_via": {
+                  "type": "string",
+                  "const": "autosuggest",
+                  "description": "Set on exact-search rows found by the venue/address fallback."
                 }
               },
               "additionalProperties": true
             }
+          },
+          "partial": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Sections that did not finish, e.g. {\"poi\": \"timeout\"}; the list may be incomplete."
           }
         },
         "required": [

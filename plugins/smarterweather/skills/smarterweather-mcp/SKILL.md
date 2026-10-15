@@ -26,7 +26,7 @@ are not left in a long-lived session.
 
 | Server | Endpoint | Auth | Purpose |
 | --- | --- | --- | --- |
-| Weather MCP | `https://mcp.smarterweather.com` | API key Bearer, OAuth 2.1 + PKCE, or keyless x402 | Hosted weather tools: forecasts, alerts, outlooks, raw dataset queries, rendered radar/satellite/sounding imagery |
+| Weather MCP | `https://mcp.smarterweather.com` | API key Bearer or keyless x402 | Hosted weather tools. The root URL serves the `core` and `catalog` toolsets: forecasts, current conditions, alerts, observed rain, probabilities, catalog search and raw dataset queries. Outlooks and forecaster text (`guidance`), rendered radar/satellite/sounding imagery (`visual`) and the other toolsets are at `/x/all`, or `/x/<toolset>[,<toolset>]` (also `X-SW-Toolsets`). |
 | Onboarding MCP | `https://mcp.developers.smarterweather.com` | Anonymous for discovery; OAuth for account tools | One-time onboarding: `get_plans`, `get_documentation`, `sign_up`, then `create_api_key`, `configure_mcp`, usage + billing |
 
 Tool descriptors for the weather MCP:
@@ -44,8 +44,8 @@ Tool descriptors for the weather MCP:
 3. Point `@smarterweather/mcp-weather` at the project `.env`
    (`envFile` or cwd fallback). Remove the onboarding server afterwards.
 
-Anonymous connections to the onboarding MCP list only the three
-discovery tools; the account-scoped tools appear after OAuth. This is by
+Anonymous connections to the onboarding MCP list only the discovery
+tools; the account-scoped tools appear after OAuth. This is by
 design, not a failure.
 
 ## stdio bridge install (local clients)
@@ -55,21 +55,25 @@ flow is unreliable), use the npm stdio bridges. Do **not** append
 `@preview` — `latest` is the GA bridge.
 
 ```jsonc
-// ~/.cursor/mcp.json (or the client's equivalent)
+// .cursor/mcp.json (project)
 {
   "mcpServers": {
     "smarterweather": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather"],
-      "env": { "SMARTERWEATHER_API_KEY": "<from shell, not pasted here>" }
+      "args": ["-y", "@smarterweather/mcp-weather@latest"],
+      "envFile": "${workspaceFolder}/.env"
     }
   }
 }
 ```
 
-- Set `SMARTERWEATHER_API_KEY` in the shell profile and let the client
-  inherit it — pasting the key into the JSON file stores it on disk in
-  cleartext.
+- `envFile` loads `SMARTERWEATHER_API_KEY` from the project `.env`
+  (written by `login` / `trial`), so the key never goes in the JSON.
+  VS Code's `.vscode/mcp.json` takes the same entry under `servers`.
+- Claude Desktop has no project folder: set
+  `"env": { "SMARTERWEATHER_ENV_FILE": "/absolute/path/to/project/.env" }`
+  (a path, never the key).
 - For the onboarding bridge, use `@smarterweather/mcp-onboarding` with
   no env; set `SMARTERWEATHER_ONBOARDING_AUTH=required` to force OAuth
   up front for account-scoped tools.

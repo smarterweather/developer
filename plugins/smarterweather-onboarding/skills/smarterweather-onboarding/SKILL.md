@@ -37,14 +37,14 @@ Both write `.env` and print only a key prefix. Otherwise:
 3. Reconnect this MCP with OAuth when the host prompts. The stdio bridge
    (`npx -y @smarterweather/mcp-onboarding`) uses a loopback callback on
    port `3334` — keep that port free. Cursor's native `cursor://` OAuth
-   against Clerk is broken ([#7184](https://github.com/smarterweather/SmarterWeather/issues/7184));
-   prefer the stdio bridge for gated tools.
+   against Clerk is broken; prefer the stdio bridge for gated tools.
 4. Call `create_api_key` (idempotent). Via the stdio bridge the key is
    written to `.env` and not returned. Prefer CLI `login` when a human
    can approve a device code.
 5. Call `configure_mcp`. Cursor gets `envFile: ${workspaceFolder}/.env`;
-   Claude Desktop keeps an env slot a human fills locally. Never paste
-   `sw_live_` / `sw_test_` into committed JSON.
+   Claude Desktop gets `SMARTERWEATHER_ENV_FILE` pointing at the project
+   `.env` (a path, never the key). Never paste `sw_live_` / `sw_test_`
+   into committed JSON.
 6. Install the weather plugin or `@smarterweather/mcp-weather`, then
    remove this onboarding server.
 

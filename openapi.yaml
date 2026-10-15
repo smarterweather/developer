@@ -29,7 +29,10 @@ info:
     extension member: a machine-readable map of where to go next
     (`recommended` names the link to take first), so a client -- or a
     coding agent acting for one -- can recover from "no key", "wrong
-    scope", or "over quota" without leaving the response. Trial keys
+    scope", or "over quota" without leaving the response. A `404` for a
+    point outside coverage (type `outside-coverage`) or a place that
+    matches no US location carries `next_steps.recommended = coverage`.
+    Coverage is the 50 US states and DC, for every caller. Trial keys
     whose free value has ended receive `402` with
     `next_steps.recommended = claim`. `401` and `403` also carry an
     RFC 6750 `WWW-Authenticate: Bearer` challenge. Every `type` URI
@@ -130,11 +133,15 @@ tags:
   - name: Geocode
     description: |
       Forward, reverse, and typeahead geocoding for locations within
-      the supported NWS coverage domain (CONUS, AK, HI, PR, GU/MP).
+      the 50 US states and DC. Forward and typeahead results omit places
+      outside it (Puerto Rico, Guam and the other territories); reverse
+      geocoding returns 404 `outside-coverage` for other points.
   - name: Health
     description: Service health.
   - name: Meta
-    description: Cross-cutting platform endpoints (deprecations, etc.).
+    description: |
+      Cross-cutting platform endpoints: the data catalog, platform status,
+      deprecations.
   - name: Agriculture
     description: |
       Agriculture-derived indices (Growing Degree Units / GDD) computed on
@@ -215,6 +222,165 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 
+  /v1/catalog:
+    get:
+      operationId: listCatalog
+      summary: List the data catalog's products.
+      description: |
+        Lists every product the REST API serves, from the Smarter Weather
+        data catalog (ADR 074): its family, kind, cadence, coverage, horizon,
+        stability, cost class, entitlement and source attribution, sorted by
+        `id`. `GET /v1/catalog/{product_id}` adds a product's variables and
+        retrieval fields. Field names match the MCP `list_datasets` and
+        `describe_dataset` tools.
+
+        ### Completeness and paging
+
+        Without `limit` the list is complete: it is never truncated and
+        carries no cursor. When the catalog outgrows one response, paging
+        ships as an additive change using the house paging words (`limit`
+        and `truncated`, then `cursor` and `next_cursor`). Filters, when
+        added, are named after the field they filter (`kind`,
+        `product_type`, `domain`, `family`, and `var` for a variable).
+
+        ### Freshness
+
+        `include=freshness` adds each product's `freshness` (see
+        `CatalogFreshness`, **experimental**). Without it the response is a
+        static view of the catalog and does not depend on live data.
+
+        ### Caching
+
+        Without `include=freshness` the response carries a weak `ETag`
+        (`W/"..."`, a hash of the response body, so it changes whenever the
+        body does), `Vary: Accept-Encoding`, and
+        `Cache-Control: max-age=300, stale-while-revalidate=60`; send the
+        tag back in `If-None-Match` to get `304 Not Modified` with no body.
+        `Range` is ignored: the body is always the whole document.
+        With `include=freshness` there is no `ETag` and the budget is
+        `max-age=60, stale-while-revalidate=30`. `Cache-Control` is
+        `public` for first-party keys and `private` for partner keys.
+
+        ### Auth and cost
+
+        Standard sw-api Bearer auth and rate limits apply. Catalog calls
+        are free: they are not metered. Trial keys may call both catalog
+        routes without spending any of the trial's lifetime calls (an
+        ended trial still gets `402`); a trial key minted before the
+        catalog opened to trials gets `403 trial-route-not-allowed` and
+        should mint a new trial key.
+      tags: [Meta]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CatalogIncludeQuery'
+      responses:
+        '200':
+          description: Every product on the REST door.
+          headers:
+            ETag:
+              $ref: '#/components/headers/CatalogETag'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogList'
+        '304':
+          $ref: '#/components/responses/CatalogNotModified'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+
+  /v1/catalog/{product_id}:
+    get:
+      operationId: getCatalogProduct
+      summary: Describe one data catalog product.
+      description: |
+        Returns one product of the data catalog: the `GET /v1/catalog`
+        fields plus its `agent_description`, `aliases`, `question_shapes`,
+        `related` products and `variables` (names, standard names, units,
+        display units, valid range, thresholds, categories and bands).
+
+        `include=freshness` adds the product's `freshness`
+        (**experimental**), as on the list. Caching, auth and cost are as
+        on `GET /v1/catalog`, including the `ETag` and `304` without
+        `include=freshness`.
+
+        An id that is not in the catalog, or not served on the REST API,
+        returns `404`.
+      tags: [Meta]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          description: Catalog product id, e.g. `nbm_conus` or `mrms_qpe_24h_pass2_conus`.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+          example: nbm_conus
+        - $ref: '#/components/parameters/CatalogIncludeQuery'
+      responses:
+        '200':
+          description: The product.
+          headers:
+            ETag:
+              $ref: '#/components/headers/CatalogETag'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogProduct'
+        '304':
+          $ref: '#/components/responses/CatalogNotModified'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          description: No catalog product with this id is served on the REST API.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+
   /v1/weather:
     get:
       operationId: getWeather
@@ -234,7 +400,7 @@ paths:
         - `lat` **and** `lon` — latitude/longitude pair.
         - `zip` — 5-digit US ZIP code.
         - `location` — free-text location name (e.g., `"Boston, MA"`,
-          `"94043"`, `"Kyiv"`). Resolved by the same upstream geocoder
+          `"94043"`, `"Denver"`). Resolved by the same upstream geocoder
           that powers the dedicated `/v1/geocode/{search,autosuggest,reverse}`
           endpoints; clients that need geocoding without a weather
           fetch should call those directly.
@@ -258,11 +424,83 @@ paths:
 
         ### Coverage
 
-        Sections that depend on US-only datasets (e.g., `alerts`, some
-        `outlooks`, radar-adjacent `gis.nearest_radar` fields) may be
-        empty or absent for international locations. Partial-coverage
-        scenarios are reported via `meta.warnings[]` with a structured
+        Coverage is the 50 US states and DC, for every caller. A location
+        outside it (another country, Puerto Rico, Guam and the other
+        territories, or open water beyond about 3 nm offshore) returns
+        `404` with type `https://smarterweather.com/errors/outside-coverage`
+        and `next_steps` (`recommended = coverage`); in
+        `POST /v1/weather/batch` that row's `error.code` is
+        `outside_coverage`. Do not retry the same point. A `zip` or
+        `location` resolves to its first match inside coverage (so
+        `Carolina` is Carolina, RI, not Carolina, PR); one whose every
+        match is outside coverage returns `outside-coverage`, and one that
+        matches no US place returns `404` `not-found`, both with
+        `next_steps`. Partial-coverage scenarios inside
+        coverage are reported via `meta.warnings[]` with a structured
         code so clients can respond programmatically.
+
+        ### Response density, sampling and sparse fieldsets
+
+        Three independent, opt-in controls shrink the `hourly` and `daily`
+        rows. Without them the response is exactly the `detailed` body.
+        They never add sections, never change `current`, `alerts`,
+        `outlooks`, `astro`, `location`, `meta` (beyond
+        `meta.hourly_sampling`) or `attribution`, and never change pricing.
+
+        **`view`** is a column preset: `detailed` (default) returns every
+        column; `concise` returns a documented subset and never drops rows.
+
+        - `concise` hourly columns: `time`, `temperature`, `feels_like`,
+          `humidity`, `wind_speed`, `wind_gust`, `wind_direction`,
+          `precip_probability`, `precip_amount`, `precip_type`,
+          `snow_amount`, `thunderstorm_probability`, `cape`,
+          `cloud_ceiling`, `snow_level`, `uv_index`, `conditions`, `icon`,
+          `severe`, `thunder_possible`.
+        - `concise` daily columns: `date`, `relative_day`,
+          `active_period`, `high`, `low`, `conditions`, `icon`, `severe`,
+          `precip_probability`, `precip_total`, `snow_total`, `ice_total`,
+          `wind_speed_max`, `wind_direction`, `humidity_avg`,
+          `uv_index_max`, `cape_max`, `thunder_possible`, `threats`,
+          `astro`, `day.precip_probability`, `night.precip_probability`.
+        - `include` wins over the preset: with `include=uncertainty`,
+          `hourly[].uncertainty` and `daily[].uncertainty` stay; with
+          `include=climate`, `daily[].climate` stays.
+        - The preset only grows. A column may be added to `concise`
+          (announced in the changelog); none is ever removed from it.
+
+        **`hourly_step`** and **`hourly_step_from`** thin hourly rows,
+        after `hourly_hours` sets the window and independently of `view`
+        and `fields`. Rows whose offset from `hourly[0].time` is below
+        `hourly_step_from` hours are all kept; from there on, only rows at
+        `hourly_step_from + k * hourly_step` hours are kept. A row's offset
+        is the whole hours between its `time` and `hourly[0].time`, both
+        floored to the hour, so a partial first hour (`14:30`, then
+        `15:00`, ...) is offset 0 and the full hours after it are 1, 2, ...
+        Offsets come from timestamps, not array indexes, so a gap in the
+        series does not shift the grid. `hourly_step=3&hourly_step_from=24`
+        keeps the first day at full resolution and every third hour after
+        it (48 hours become 32 rows, 72 become 40, 168 become 72). When
+        thinning drops at least one row, `meta.hourly_sampling` echoes the
+        effective parameters so a thinned series is distinguishable from a
+        short forecast.
+
+        **`fields`** selects exact members of hourly and daily rows, as
+        `section.name` paths (`hourly.temperature,daily.high`). It is exact
+        for every section it names and beats `view` there; a section it
+        does not name follows `view`. `hourly[].time` and `daily[].date`
+        are always returned. `fields` never implies `include`: a path whose
+        section, or `uncertainty` / `climate` object, is not in the
+        effective `include` is a `400`. Unknown names are a `400` that
+        lists the valid names, never a silent drop (unlike `include`,
+        which drops unknown tokens).
+
+        **Presence semantics.** A selected (or preset) field is present,
+        and `null` when its value is unavailable, exactly as in `detailed`.
+        A field the schema marks optional can be absent for its zero
+        value, exactly as in `detailed`. A field that was not selected is
+        absent. A field that does not exist is a `400` at request time, so
+        a `200` never hides an unknown name. Every shaped response is a
+        key-subset of the `detailed` response for the same request.
       tags: [Weather]
       security:
         - bearerAuth: []
@@ -275,6 +513,10 @@ paths:
         - $ref: '#/components/parameters/IncludeQuery'
         - $ref: '#/components/parameters/DaysQuery'
         - $ref: '#/components/parameters/HourlyHoursQuery'
+        - $ref: '#/components/parameters/ViewQuery'
+        - $ref: '#/components/parameters/HourlyStepQuery'
+        - $ref: '#/components/parameters/HourlyStepFromQuery'
+        - $ref: '#/components/parameters/FieldsQuery'
       responses:
         '200':
           description: Blended weather data for the requested location.
@@ -348,9 +590,13 @@ paths:
 
         ### Shared parameters
 
-        `include`, `units`, `days`, and `hourly_hours` are applied to
-        every location; per-location overrides are not supported. Defaults
-        match the `GET /v1/weather` defaults.
+        `include`, `units`, `days`, `hourly_hours`, `view`, `fields`,
+        `hourly_step`, and `hourly_step_from` are applied to every
+        location; per-location overrides are not supported. Defaults match
+        the `GET /v1/weather` defaults. An invalid shaping parameter
+        (`view`, `fields`, `hourly_step`, `hourly_step_from`) fails the
+        whole request with `400`, and shaping applies to every
+        `results[i].weather`, including rows served from the stale cache.
       tags: [Weather]
       security:
         - bearerAuth: []
@@ -402,6 +648,187 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/alerts:
+    get:
+      operationId: searchAlerts
+      summary: Search NWS alerts at a point or in a bounding box.
+      description: |
+        Returns the NWS alerts in effect at a point or inside a bounding
+        box, now or at a past instant, optionally filtered to exact
+        event names. Items use the same `Alert` shape as
+        `GET /v1/weather?include=alerts`, field for field; fetch the
+        full detail (geometry, affected population) with
+        `GET /v1/alerts/{id}`.
+
+        ### Location
+
+        Exactly one of:
+
+        - `lat` + `lon` — alerts whose area contains the point. Every
+          match is returned, newest `effective` first.
+        - `min_lon`, `min_lat`, `max_lon`, `max_lat` — alerts whose
+          area intersects the box. The box must have a non-zero area.
+          Results are ordered by severity (`Extreme`, `Severe`,
+          `Moderate`, `Minor`, then any other value), then soonest
+          `expires`, and capped at 50. `truncated` is `true` when the
+          result reached the cap (50): more alerts may exist, and the
+          ones left out are the lower-priority ones.
+
+        There is no pagination.
+
+        ### Filters
+
+        - `event` — exact NWS event names (e.g. `Tornado Warning`),
+          comma-separated or repeated, at most 20.
+        - `at` — RFC 3339 instant in the past. Returns the alerts that
+          were in effect then. Omit it for alerts in effect now. An `at`
+          the alerts source rejects is a `400` naming the reason. Items
+          returned with `at` are historical snapshots, each as it stood
+          at that instant. `GET /v1/alerts/{id}` always returns the
+          alert's **current** version, so its detail may have changed
+          since (updated, extended or cancelled).
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: max-age=60`, or
+        `max-age=3600` with `at` (a past snapshot does not change).
+        The scope is `public` for first-party keys and `private` for
+        partner keys.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: false
+          description: Latitude. Requires `lon`; mutually exclusive with the bounding box.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 41.88
+        - name: lon
+          in: query
+          required: false
+          description: Longitude. Requires `lat`; mutually exclusive with the bounding box.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -87.63
+        - name: min_lon
+          in: query
+          required: false
+          description: Bounding-box west edge. All four box parameters are required together.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -91
+        - name: min_lat
+          in: query
+          required: false
+          description: Bounding-box south edge.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 36
+        - name: max_lon
+          in: query
+          required: false
+          description: Bounding-box east edge. Must be greater than `min_lon`.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -87
+        - name: max_lat
+          in: query
+          required: false
+          description: Bounding-box north edge. Must be greater than `min_lat`.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 42.5
+        - name: event
+          in: query
+          required: false
+          description: |
+            Exact NWS event names to keep, comma-separated or repeated
+            (at most 20 distinct names).
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 20
+            items:
+              type: string
+          example: ["Tornado Warning", "Severe Thunderstorm Warning"]
+        - name: at
+          in: query
+          required: false
+          description: |
+            RFC 3339 instant in the past. Returns the alerts in effect
+            at that instant, as historical snapshots. Omit for alerts in
+            effect now. `GET /v1/alerts/{id}` returns an alert's current
+            version, which may differ from the snapshot.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-05-07T21:00:00Z"
+      responses:
+        '200':
+          description: |
+            Matching alerts, in the order described above. `alerts` is an
+            empty array when nothing matches.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertsSearchResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/alerts/{id}:
     get:
       operationId: getAlertById
@@ -415,10 +842,17 @@ paths:
 
         ### Caching
 
-        Successful responses carry `Cache-Control: public, max-age=60`
-        to match the upstream cache policy. CDN edge cache is keyed
-        on the URL path so cache invalidation tracks alert
-        replacement / cancellation events naturally.
+        A successful response carries `Cache-Control: max-age=60`, so
+        an updated or cancelled alert can be served from a cache for
+        up to 60 seconds. Partner keys get `private, max-age=60`: your
+        own client may reuse the response for the full `max-age`, but
+        shared caches (CDNs, proxies) must not store it, since each
+        request on a partner key is metered and rate-limited
+        individually. First-party callers get `public, max-age=60`, except
+        iOS keys while App Attest is enforced, which get `private`.
+        Smarter Weather's own CloudFront distributions key any cached
+        response on the full URL plus the `Authorization` and `Origin`
+        headers.
 
         ### Geometry
 
@@ -622,6 +1056,7 @@ paths:
   /v1/pois/exposure:
     post:
       operationId: postPoisExposure
+      x-stability: experimental
       summary: Civic POIs inside a bounded polygon.
       description: |
         Returns civic POI counts and a 50-row feature sample for a caller-supplied
@@ -634,6 +1069,12 @@ paths:
 
         Optional `classes` filters to the civic allowlist (school, hospital,
         airport, …). Omit it for every civic class.
+
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment. Not yet enabled for every API
+        key; a key without access gets `403` with problem type
+        `flag-disabled`. If access cannot be checked, the API returns
+        `503` `service-unavailable`; retry with backoff.
       tags: [Alerts]
       security:
         - bearerAuth: []
@@ -833,13 +1274,23 @@ paths:
         ingested from MADIS. By default returns the latest observation per
         station within the last 2 hours. Optional `station`, `hours`, and
         bounding-box (`min_lon`, `min_lat`, `max_lon`, `max_lat`) filters
-        are forwarded to the reader.
+        are forwarded to the reader. A bounding box needs all four values as
+        finite numbers with `-180 <= min_lon <= max_lon <= 180` and
+        `-90 <= min_lat <= max_lat <= 90` (antimeridian-crossing boxes are not
+        supported); a partial, non-numeric, out-of-range or inverted box is a
+        `400`. Empty-valued bbox params count as absent. A box filters only
+        the latest report per station, so combining it with `hours` or
+        `station` is a `400`. A non-integer `hours`, or one outside 1-24, is
+        a `400`, as is repeating `hours`, `station` or a bbox key.
+
+        Point parameters (`lat`, `lon`, `lng`, `latitude`, `longitude`,
+        `zip`, `location`, `n`, `radius`) are not accepted here and return
+        `400`; for the stations nearest a point use
+        `GET /v1/observations/nearest`.
       tags: [Observations]
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/LatQuery'
-        - $ref: '#/components/parameters/LonQuery'
         - name: station
           in: query
           schema:
@@ -854,18 +1305,26 @@ paths:
           in: query
           schema:
             type: number
+            minimum: -180
+            maximum: 180
         - name: min_lat
           in: query
           schema:
             type: number
+            minimum: -90
+            maximum: 90
         - name: max_lon
           in: query
           schema:
             type: number
+            minimum: -180
+            maximum: 180
         - name: max_lat
           in: query
           schema:
             type: number
+            minimum: -90
+            maximum: 90
       responses:
         '200':
           description: GeoJSON FeatureCollection of METAR observations.
@@ -873,8 +1332,14 @@ paths:
             application/geo+json:
               schema:
                 type: object
+        '400':
+          $ref: '#/components/responses/Problem400'
         '502':
           $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
 
   /v1/observations/nearest:
     get:
@@ -907,6 +1372,98 @@ paths:
           $ref: '#/components/responses/Problem400'
         '502':
           $ref: '#/components/responses/Problem502'
+
+  /v1/lightning:
+    get:
+      operationId: getLightning
+      x-stability: experimental
+      summary: Get recent lightning activity at a point.
+      description: |
+        Returns recent lightning near a point: the GOES GLM satellite
+        flash count within `glm.radius_km` over the last
+        `glm.window_minutes`, plus MRMS lightning density and
+        probability at the point when the grid has a value there.
+        Field names match the MCP `get_lightning_activity` tool. The
+        point is snapped to the 0.01° (~1 km) grid used by the other
+        point routes, and the response echoes the snapped `lat`/`lon`.
+
+        **Experimental** (`x-stability: experimental`): excluded from
+        the 90-day breaking-change commitment. Today a GLM query
+        failure upstream is reported as `flash_count: 0`, so a zero
+        count is not yet a guaranteed all-clear. The route becomes
+        stable once a failure is reported as `glm: null`.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: max-age=60,
+        stale-while-revalidate=30`, `public` for first-party keys and
+        `private` for partner keys.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Observations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitude.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 27.95
+        - name: lon
+          in: query
+          required: true
+          description: Longitude.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -82.46
+      responses:
+        '200':
+          description: Lightning activity at the point.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lightning'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
 
   /v1/soundings:
     get:
@@ -1187,6 +1744,8 @@ paths:
           schema:
             type: number
             format: double
+            minimum: -90
+            maximum: 90
           example: 35.33
         - name: lon
           in: query
@@ -1197,6 +1756,8 @@ paths:
           schema:
             type: number
             format: double
+            minimum: -180
+            maximum: 180
           example: -97.28
       responses:
         '200':
@@ -1342,6 +1903,158 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/text-products:
+    get:
+      operationId: listTextProducts
+      summary: List recent NWS text products of one type.
+      description: |
+        Returns the newest NWS text products of one type (for example
+        `AFD` area forecast discussions or `HWO` hazardous weather
+        outlooks), newest `issued_at` first, with the bulletin text in
+        `body`. For distilled fields from the same products, use
+        `GET /v1/weather?include=guidance`.
+
+        ### Scope
+
+        At most one of:
+
+        - `lat` + `lon` — products from the office that serves the
+          point, or whose area contains it.
+        - `wfo` — products from one NWS Weather Forecast Office.
+
+        With neither, the query is national (for example SPC or WPC
+        products, narrowed with `awips_id`).
+
+        ### Filters
+
+        - `awips_id` — exact AWIPS identifier (e.g. `AFDLOT`).
+        - `start` — RFC 3339 instant; only products issued after it.
+        - `limit` — 1 to 10, default 1. There is no pagination.
+        - `omit_body` — `true` returns metadata and `properties` with an
+          empty `body`.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: max-age=60,
+        stale-while-revalidate=60`, `public` for first-party keys and
+        `private` for partner keys.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Guidance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product_type
+          in: query
+          required: true
+          description: 3-character NWS product code (e.g. `AFD`, `HWO`, `NOW`). Upper-cased by the server.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9]{3}$'
+          example: AFD
+        - name: lat
+          in: query
+          required: false
+          description: Latitude. Requires `lon`; mutually exclusive with `wfo`.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 41.88
+        - name: lon
+          in: query
+          required: false
+          description: Longitude. Requires `lat`; mutually exclusive with `wfo`.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -87.63
+        - name: wfo
+          in: query
+          required: false
+          description: 3-letter NWS Weather Forecast Office identifier. Upper-cased by the server.
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{3}$'
+          example: LOT
+        - name: awips_id
+          in: query
+          required: false
+          description: Exact AWIPS product identifier (4-9 letters or digits). Upper-cased by the server.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9]{4,9}$'
+          example: AFDLOT
+        - name: start
+          in: query
+          required: false
+          description: RFC 3339 instant. Only products issued after it are returned.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-05-07T00:00:00Z"
+        - name: limit
+          in: query
+          required: false
+          description: Maximum products to return (1-10, default 1).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 1
+          example: 3
+        - name: omit_body
+          in: query
+          required: false
+          description: When `true`, `body` is empty and only metadata and `properties` are returned.
+          schema:
+            type: boolean
+            default: false
+          example: false
+      responses:
+        '200':
+          description: Matching products. `products` is an empty array when nothing matches.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextProductsResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/discussions/mesoscale:
     get:
       operationId: getDiscussionsMesoscale
@@ -1473,7 +2186,8 @@ paths:
           All four must be supplied together as numbers. The box must
           satisfy `-180 <= min_lon <= max_lon <= 180` and
           `-90 <= min_lat <= max_lat <= 90` (NaN rejected);
-          antimeridian-crossing boxes are not supported.
+          antimeridian-crossing boxes are not supported. Empty-valued
+          bbox params count as absent.
 
         ### Caching
 
@@ -1536,6 +2250,8 @@ paths:
           in: query
           schema:
             type: number
+            minimum: -180
+            maximum: 180
           description: |
             Western bbox edge. Required together with min_lat, max_lon,
             and max_lat. The box must satisfy
@@ -1544,6 +2260,8 @@ paths:
           in: query
           schema:
             type: number
+            minimum: -90
+            maximum: 90
           description: |
             Southern bbox edge. Required together with the other three
             bbox params. The box must satisfy
@@ -1552,11 +2270,15 @@ paths:
           in: query
           schema:
             type: number
+            minimum: -180
+            maximum: 180
           description: Eastern bbox edge.
         - name: max_lat
           in: query
           schema:
             type: number
+            minimum: -90
+            maximum: 90
           description: Northern bbox edge.
       responses:
         '200':
@@ -1734,15 +2456,170 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/climate-reports:
+    get:
+      operationId: getClimateReports
+      x-stability: experimental
+      summary: Get NWS daily climate reports as GeoJSON.
+      description: |
+        Returns a GeoJSON `FeatureCollection` of NWS daily climate
+        reports (CLI): observed high and low, precipitation and snowfall
+        per station, with departures from normal. Each feature's
+        `properties` bag carries at minimum `valid_time`; other keys
+        come from the reader pipeline and may be added without a
+        sw-api release.
+
+        **Experimental** (`x-stability: experimental`): excluded from
+        the 90-day breaking-change commitment. This route serves a
+        single product. When the generic feature route ships, it
+        becomes a stable alias of that route with the same shape, or
+        folds into it.
+
+        ### Time window
+
+        One selector is used, by precedence `date` > `start+end` >
+        `hours`:
+
+        1. `date=YYYY-MM-DD` — reports for one day. It must be a real
+           calendar day (`2026-02-30` is a `400`). When `date` is set,
+           `start`/`end` are not used, so the ordering and span rules
+           below do not apply to them.
+        2. `start=...&end=...` — RFC 3339 instants, both required.
+           Reports are matched by the UTC calendar date of `start` and
+           `end`, so both ends are inclusive days
+           (`2026-05-01T20:00:00-07:00` is 2026-05-02). `start` must not
+           be after `end`, and the span is at most 31 UTC calendar days.
+        3. `hours=N` — rolling lookback, 1 to 168 (7 days). Default 24.
+
+        ### Filters
+
+        - `wfo` — 3-letter CLI site code, the suffix of the report's
+          AWIPS id (`ORD` for `CLIORD`). It names the climate site, which
+          is not always the issuing office's identifier.
+        - `station` — case-insensitive substring of the station name:
+          1-64 letters, digits, spaces or `. , ' ( ) / & -`. Other
+          characters (including `%`, `_` and `\`) are a `400`.
+
+        ### Caching
+
+        Successful responses carry `Cache-Control: max-age=300,
+        stale-while-revalidate=300`, `public` for first-party keys and
+        `private` for partner keys.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Climate]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: hours
+          in: query
+          required: false
+          description: Rolling lookback in whole hours (1-168). Lowest-precedence selector.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 168
+            default: 24
+          example: 48
+        - name: date
+          in: query
+          required: false
+          description: ISO-8601 date (YYYY-MM-DD). Highest-precedence selector.
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          example: "2026-05-07"
+        - name: start
+          in: query
+          required: false
+          description: |
+            RFC 3339 window start. Requires `end`. Matched by its UTC
+            calendar date; must not be after `end`; at most 31 UTC days
+            before `end`'s date.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-05-01T00:00:00Z"
+        - name: end
+          in: query
+          required: false
+          description: RFC 3339 window end. Requires `start`. Matched by its UTC calendar date (inclusive).
+          schema:
+            type: string
+            format: date-time
+          example: "2026-05-07T00:00:00Z"
+        - name: wfo
+          in: query
+          required: false
+          description: |
+            3-letter CLI site code (the AWIPS id suffix, `ORD` for
+            `CLIORD`). Upper-cased by the server.
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{3}$'
+          example: ORD
+        - name: station
+          in: query
+          required: false
+          description: |
+            Case-insensitive substring of the station name. 1-64 letters,
+            digits, spaces or `. , ' ( ) / & -`.
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9 .,'()/&-]{1,64}$"
+          example: CHICAGO
+      responses:
+        '200':
+          description: |
+            GeoJSON FeatureCollection. Empty `features` array when no
+            reports match.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            X-Trial-Claim-Url:
+              $ref: '#/components/headers/XTrialClaimUrl'
+            X-Trial-Expires-At:
+              $ref: '#/components/headers/XTrialExpiresAt'
+            X-Trial-Calls-Remaining:
+              $ref: '#/components/headers/XTrialCallsRemaining'
+          content:
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/ClimateReportsFeatureCollection'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '402':
+          $ref: '#/components/responses/TrialEnded'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/geocode/reverse:
     get:
       operationId: getGeocodeReverse
       summary: Reverse-geocode a coordinate to a location.
       description: |
         Resolves a `(lat, lon)` coordinate into a city / nearest-city /
-        state / county / IANA timezone tuple. Coverage is the supported
-        NWS domain (CONUS, AK, HI, PR, GU/MP); coordinates outside the
-        domain return a 404 Problem.
+        state / county / IANA timezone tuple. Coverage is the 50 US
+        states and DC; other points return 404 `outside-coverage` with
+        `next_steps`.
 
         ### Caching
 
@@ -1845,9 +2722,12 @@ paths:
         metered and rate-limited individually. First-party callers get
         `public, max-age=30`.
 
-        A response that carries `meta` (incomplete results; see the
-        `200` response) is sent with `Cache-Control: no-store`, so no
-        cache replays a partial list after the upstream recovers.
+        A response with incomplete results (an `upstream_timeout` or
+        `partial_fetch` warning; see the `200` response) is sent with
+        `Cache-Control: no-store`, so no cache replays a partial list
+        after the upstream recovers. A `not_enabled` warning alone
+        keeps the headers above, except while the server cannot
+        confirm your key's access, when it is also `no-store`.
 
         ### Auth
 
@@ -1882,10 +2762,23 @@ paths:
         - name: include
           in: query
           required: false
+          x-stability: experimental
           description: |
+            **Experimental** (`x-stability: experimental`): excluded from
+            the 90-day breaking-change commitment.
+
             Comma-separated extra result classes to mix into the
             typeahead. Allowlisted tokens: `address`, `poi`. Omitted
             or empty keeps the legacy place+ZIP-only response.
+
+            Address and POI results are not yet available to every API
+            key. When they are not enabled for your key, the request
+            still succeeds with place and ZIP results only, and
+            `meta.warnings[]` carries one `not_enabled` warning per
+            requested section (`section` is `address` or `poi`), so you
+            can tell "not enabled" from "no match". `not_enabled` is a
+            stable state of your key, not an incomplete result: do not
+            retry. Unknown tokens still return `400`.
           schema:
             type: string
           example: "address,poi"
@@ -1928,10 +2821,17 @@ paths:
             `_request` (one warning covering any other incomplete part
             of the request, such as an unreadable upstream status).
             `detail` is human-readable text; branch on
-            `code` and `section`, not `detail`. Treat any warning as
-            incomplete results. `meta` is absent when the
-            results are complete, and a response with `meta` is sent
-            with `Cache-Control: no-store`.
+            `code` and `section`, not `detail`. Treat an
+            `upstream_timeout` or `partial_fetch` warning as incomplete
+            results; such a response is sent with
+            `Cache-Control: no-store`.
+
+            `not_enabled` (`section` `address` or `poi`) is different: the
+            section was requested through `include` but is not enabled
+            for your key. It is a stable state, not an incomplete result.
+            Do not retry. See Caching above for its `Cache-Control`.
+
+            `meta` is absent when there is nothing to report.
           headers:
             RateLimit-Limit:
               $ref: '#/components/headers/RateLimitLimit'
@@ -2371,10 +3271,10 @@ paths:
         Location selectors match `GET /v1/weather`: exactly one of
         `lat`+`lon`, `zip`, or `location`.
 
-        Outside CONUS, Alaska, and Hawaii the response is `200` with
-        `windows: []` and `message` explaining that window search uses
-        NBM. An empty scan inside coverage may also return `windows: []`
-        with `message` when no forecast series is available.
+        A location outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`, as on `GET /v1/weather`.
+        An empty scan inside coverage may return `windows: []` with
+        `message` when no forecast series is available.
 
         `activity` does not change the metered weight of the call.
       tags: [Weather]
@@ -2409,8 +3309,10 @@ paths:
           required: false
           description: |
             When true (the default), hours outside sunrise–sunset are
-            excluded when sun times are available. If sun times cannot
-            be loaded, the daylight filter is skipped.
+            excluded when sun times are available. In polar night no hour
+            is daylight, so `windows` is empty; under midnight sun every
+            hour is. If sun times cannot be loaded, the daylight filter is
+            skipped.
           schema:
             type: boolean
             default: true
@@ -2519,7 +3421,9 @@ paths:
         This is the one curated wrapper over the internal point-query: it serves
         only the `(product, var)` pairs on a server-side **allowlist**, so the
         public surface stays safe and small while every widget/card is
-        onboarded by adding an allowlist entry — no new endpoint. Requesting a
+        onboarded by adding an allowlist entry — no new endpoint. The
+        allowlist is every variable with point metadata on a product of the
+        data catalog (`GET /v1/catalog`). Requesting a
         `(product, var)` that is not allowlisted returns `404` (single form) or
         a per-item `not_allowlisted` status (batch form).
 
@@ -2548,7 +3452,9 @@ paths:
 
         Each allowlisted entry carries a coverage domain; a point outside it
         returns `404` (single) or an `out_of_domain` item (batch) without an
-        upstream call. Scalar values are sampled from the nearest grid cell
+        upstream call. A single point outside the 50 US states and DC gets
+        the `404` `outside-coverage` problem with `next_steps`; in a batch
+        such a point is `out_of_domain` for every selector. Scalar values are sampled from the nearest grid cell
         (products are snapped to a ~1 km grid), so nearby requests share cache
         entries.
 
@@ -2575,7 +3481,7 @@ paths:
           in: query
           required: false
           description: |
-            Allowlisted stored product identifier (lowercase, digits,
+            Allowlisted catalog product id (lowercase, digits,
             underscores), e.g. `sport_rsm_0_2m_pct_conus`,
             `mrms_qpe_24h_pass2_conus`, or the outlook `spc_day1_categorical`.
             Single form: pair with `var` + `lat` + `lon`. Ignored when `select`
@@ -2590,15 +3496,17 @@ paths:
           in: query
           required: false
           description: |
-            Variable identifier within the product, e.g. `rsm_0_2m_pct`,
-            `qpe_24h`, or `risk` for zone outlooks. Ignored when `select` is
-            provided.
+            Variable `standard_name` within the product, e.g.
+            `soil_moisture_percentile_0_200cm`, `multisensor_qpe_24h_pass2`,
+            or `convective_outlook_risk` for zone outlooks. The variable's
+            stored `name` is also accepted, as an alias; the response echoes
+            `var` as sent. Ignored when `select` is provided.
           schema:
             type: string
             pattern: '^[a-z0-9_]+$'
             minLength: 1
             maxLength: 128
-          example: rsm_0_2m_pct
+          example: soil_moisture_percentile_0_200cm
         - name: lat
           in: query
           required: false
@@ -2624,9 +3532,10 @@ paths:
           required: false
           description: |
             Batch form. One or more `product:var` selectors (each individually
-            allowlisted). Repeat the parameter or comma-join within a single
-            value, e.g.
-            `select=sport_rsm_0_2m_pct_conus:rsm_0_2m_pct&select=spc_day1_categorical:risk`.
+            allowlisted; `var` is the variable `standard_name`, or the stored
+            `name` as an alias, and each item echoes its selector as sent).
+            Repeat the parameter or comma-join within a single value, e.g.
+            `select=sport_rsm_0_2m_pct_conus:soil_moisture_percentile_0_200cm&select=spc_day1_categorical:convective_outlook_risk`.
             Presence of `select` (or `points`) switches the response to
             `PointBatchResponse`. Max 25 selectors; points × selectors ≤ 500.
           style: form
@@ -2639,7 +3548,7 @@ paths:
               pattern: '^[a-z0-9_]+:[a-z0-9_]+(,[a-z0-9_]+:[a-z0-9_]+)*$'
               minLength: 3
               maxLength: 1024
-          example: [sport_rsm_0_2m_pct_conus:rsm_0_2m_pct, spc_day1_categorical:risk]
+          example: [sport_rsm_0_2m_pct_conus:soil_moisture_percentile_0_200cm, spc_day1_categorical:convective_outlook_risk]
         - name: points
           in: query
           required: false
@@ -2648,7 +3557,10 @@ paths:
             for multiple points (Go query parsing rejects `;`), e.g.
             `points=41.9,-93.6&points=42.0,-93.4`. Presence of `points` (or
             `select`) switches the response to `PointBatchResponse`. Max 100
-            points; points × selectors ≤ 500.
+            points; points × selectors ≤ 500. A point outside lat [-90, 90] /
+            lon [-180, 180] (here or in the `lat` & `lon` fallback) is
+            reported as `out_of_domain` items; a non-numeric or non-finite
+            (`NaN`, `Inf`) point is a `400`.
           style: form
           explode: true
           schema:
@@ -2688,16 +3600,295 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/series:
+    get:
+      operationId: getSeries
+      x-stability: experimental
+      summary: Time series of catalog grid and snapshot products at a point.
+      description: |
+        Returns the time series of one or more data catalog products at one
+        location: the public, catalog-governed door to stored model and
+        analysis data (ADR 074 slice 17). Any `grid` or `snapshot` product
+        that `GET /v1/catalog` lists qualifies, for example `hrrr_surface`,
+        `nbm_conus`, `gfs_surface`, `rtma_conus`, `mrms_qpe_01h_pass2_conus`
+        or `astro`. Variables are named by their catalog `standard_name`.
+
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment while the grammar settles. `units`
+        is required with no default while experimental.
+
+        ### Selection
+
+        `product` with `var` (repeatable; omit `var` for every variable of
+        the product), or `select=product:var` (repeatable or comma-joined,
+        at most 25) to read several products. An unknown product or
+        variable is a `404`. A catalog product that is public but not
+        served by this route (an MCP-only product, or a REST product that
+        is not a grid or snapshot) is a `404` when it is the only
+        selection, and a `not_public` element beside a servable one.
+
+        ### Time
+
+        At most one time word, and it is optional:
+
+        - `hours` (1-384) takes its direction from the product's catalog
+          `product_type`: forward from now for a `forecast`, backward from
+          now for an `analysis`. With `run`, it counts from the run's
+          initialization time. Rolling windows are rounded out so the
+          frame covering now is included: a forecast starts at now floored
+          to the product's catalog `step` (the UTC day for a daily product
+          such as `nbm_daily_temps`, the last 00/06/12/18Z for a 6-hourly
+          model such as `aifs_single_surface`, the last 5-minute mark for
+          the `PT5M` nowcast, the hour for an hourly model), an analysis
+          at now less `hours` rounded down to 5 minutes, and both end
+          rounded up to 5 minutes.
+        - `start` and `end` (RFC 3339, at most 16 days apart), applied
+          exactly as given: a daily row stamped at 00:00Z is outside a
+          window that starts later that day.
+        - Neither: an analysis returns its latest frame and a forecast the
+          next 24 h, rounded out as above (24 h from the run's
+          initialization time with `run`).
+
+        A product with no `product_type`, or a `climatology` such as
+        `climate_normals_conus`, requires `start` and `end`. `run` (RFC
+        3339) pins a forecast model cycle and composes with either time
+        word; it is a `400` on a product that is not a `forecast`.
+        `step`, `stats`, `view`, `fields` and `format` are reserved and
+        return `400` for now; `at` is not a word of this route (use
+        `GET /v1/point` for the latest value).
+
+        `astro` is an `analysis` whose rows run through about 14 days
+        ahead, so with no time word it returns the newest row and `hours`
+        looks back from now; pass `start` and `end` for specific days.
+
+        ### Units and raw values
+
+        `units` is `si`, `metric` or `imperial`. `si` serves stored values
+        (K, m/s, mm, Pa, percent, and the stored SI unit for anything
+        else). The chosen system is echoed at the top level and each
+        element's `units` names every variable's unit; a percentage is
+        always labelled `percent`. Values without a
+        display unit are served raw, as stored, with no decode: `astro`
+        sun and moon times are seconds after the row's UTC midnight (they
+        can be negative or above 86400), moon values are x1000, and
+        `day_length` -1 means no event. `GET /v1/catalog/{product_id}`
+        describes each variable's encoding.
+
+        ### Coverage
+
+        Coverage is the 50 US states and DC. On `GET /v1/series` an
+        in-range point outside it returns `404` `outside-coverage` with
+        `next_steps`, as `GET /v1/point` does; `global` products (GFS,
+        AIFS, `astro`, `uv_index`, ...) are not served there either. In
+        `POST /v1/series/batch` such a location is an `out_of_domain`
+        element.
+
+        ### Envelope
+
+        `series[]` holds one element per (product, location), in request
+        order and column-oriented: `times[]` (RFC 3339 UTC), `values` per
+        variable aligned with `times[]`, and `run` when every frame shares
+        one model run, else `runs[]` aligned with `times[]`. Each element
+        has a `status`: `ok`; `unavailable` for an empty window;
+        `out_of_domain` outside the product's catalog `coverage[]` or
+        outside the 50 US states and DC (`global` products included), with
+        `related` naming a sibling product that covers the point when one
+        exists (there is no automatic switch); `not_public`. `partial` and
+        `entitlement_required` are reserved. `data_age_seconds` and
+        `freshness_status` match `GET /v1/catalog?include=freshness`; with
+        `run`, both describe the pinned run (its age, and `fresh` or
+        `stale` against the product's freshness budget; a product tracked
+        in several stores uses the strictest). `meta.timezone` is the
+        location's IANA zone (null when it cannot be resolved in time, or
+        when no selected product covers the location).
+        `meta.sources[]` carries each source's attribution and license;
+        show the attribution where the license requires it (ECMWF AIFS is
+        CC BY 4.0).
+
+        ### Density
+
+        `limit` caps frames per element (default 168, max 744). When it
+        cuts any element, `truncated` is `true` and `next_cursor` resumes
+        every element where it stopped: send it back as `cursor` with the
+        same parameters (a cursor sent with other parameters is a `400`).
+        The cursor keeps the window page 1 resolved, so a rolling window
+        does not move while paging. Each element pages independently; one
+        that has finished returns no frames on later pages and keeps the
+        status it had.
+
+        ### Caching
+
+        `Cache-Control: max-age=N, stale-while-revalidate=N` with N the
+        smallest selected product cadence clamped to 60-3600 s, `public`
+        for first-party keys and `private` for partner keys.
+
+        ### Auth and cost
+
+        Standard sw-api Bearer auth and rate limits apply. Cost class
+        `data`, weight 1 per request: products, variables, hours and
+        `limit` never change it.
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SeriesProductQuery'
+        - $ref: '#/components/parameters/SeriesVarQuery'
+        - $ref: '#/components/parameters/SeriesSelectQuery'
+        - name: lat
+          in: query
+          required: true
+          description: |
+            Latitude. A finite value outside [-90, 90] is an `out_of_domain`
+            element; a non-numeric or non-finite value is a `400`.
+          schema:
+            type: number
+            format: double
+          example: 41.88
+        - name: lon
+          in: query
+          required: true
+          description: |
+            Longitude. A finite value outside [-180, 180] is an
+            `out_of_domain` element; a non-numeric or non-finite value is a
+            `400`.
+          schema:
+            type: number
+            format: double
+          example: -87.63
+        - $ref: '#/components/parameters/SeriesUnitsQuery'
+        - $ref: '#/components/parameters/SeriesHoursQuery'
+        - $ref: '#/components/parameters/SeriesStartQuery'
+        - $ref: '#/components/parameters/SeriesEndQuery'
+        - $ref: '#/components/parameters/SeriesRunQuery'
+        - $ref: '#/components/parameters/SeriesLimitQuery'
+        - $ref: '#/components/parameters/SeriesCursorQuery'
+      responses:
+        '200':
+          description: One series element per selected product.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/series/batch:
+    post:
+      operationId: postSeriesBatch
+      x-stability: experimental
+      summary: Time series of catalog products at up to 25 locations.
+      description: |
+        Multi-location form of `GET /v1/series`: the same grammar as JSON
+        fields, with `locations[]` of `{lat, lon, label?}` (at most 25) in
+        place of `lat` and `lon`. Products x locations is at most 100.
+        Elements come back location-major in request order, each echoing
+        its location's `label`. Every rule of `GET /v1/series` applies;
+        `points`, top-level `lat`/`lon` and `at` are not words of this
+        route, and an unknown field is a `400`.
+
+        **Experimental** (`x-stability: experimental`), as
+        `GET /v1/series`.
+
+        ### Caching
+
+        `Cache-Control: private, no-store`.
+
+        ### Auth and cost
+
+        Standard sw-api Bearer auth and rate limits apply. Cost class
+        `data`, weight 1 per location (`len(locations)`), whatever each
+        element's status; products, variables, hours and `limit` never
+        change it.
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeriesBatchRequest'
+            examples:
+              threeLocations:
+                value:
+                  product: hrrr_surface
+                  var: [temperature_2m, wind_gusts_10m]
+                  hours: 12
+                  units: imperial
+                  locations:
+                    - {lat: 41.88, lon: -87.63, label: chicago}
+                    - {lat: 39.74, lon: -104.99, label: denver}
+                    - {lat: 61.22, lon: -149.90, label: anchorage}
+      responses:
+        '200':
+          description: One series element per (location, product).
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '413':
+          $ref: '#/components/responses/Problem413'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/outlooks:
     get:
       operationId: getOutlookDetail
-      summary: SPC outlook detail for a location, day, and hazard family.
+      summary: Outlook detail for a location and hazard family (SPC, WPC, CPC).
       description: |
         Returns everything the Storm Prediction Center says about one
         outlook day at a point for a hazard family: the risk band, any
         probabilistic hazards (severe only), whether the location falls
         in a hatched significant-severe area, and the forecaster's full
-        written discussion.
+        written discussion. For `hazard=temperature|precipitation` it
+        instead returns the Climate Prediction Center's extended-range
+        outlooks at the point (see "Climate outlooks" below).
 
         This is the drill-down behind a risk area on a map. `GET
         /v1/weather?include=outlooks` already reports the single
@@ -2720,6 +3911,31 @@ paths:
         Rainfall Outlook band (`MRGL`/`SLGT`/`MDT`/`HIGH`) for days 1-3
         and the QPFERD discussion (one PIL; day is selected from
         `properties.outlook_day`).
+
+        ### Climate outlooks
+
+        `hazard=temperature` and `hazard=precipitation` return the CPC
+        outlooks for the 6-10 day, 8-14 day, week 3-4, and monthly
+        periods in `periods`, one entry per period, in that order. Each
+        entry gives the tercile CPC favors (`above`, `below`, `near`, or
+        `equal_chances`) and the probability bin it assigns to that
+        tercile (`probability_min`/`probability_max`, fractional, so
+        `0.4`/`0.5` is 40-50%). `equal_chances` means CPC favors no
+        tercile and carries no bin; it is not the same as `near`.
+
+        `period` (`610`, `814`, `wk34`, or `monthly`) narrows the answer
+        to one period. `day` does not apply and is ignored. A period
+        with no outlook polygon at the location is omitted (an answer of
+        "no outlook here", not equal chances); locations outside the US
+        get an empty `periods` array. `probabilities` is always empty; `day` is always `1` and
+        carries no meaning (each period has its own `valid_start` and
+        `valid_end`). When a 6-10 or 8-14 day
+        period is present, `narrative` carries CPC's prognostic
+        discussion (`PMDMRD`) unless it is more than 72 hours old.
+        This answer keeps one entry per period and leaves out the
+        seasonal (3-month) outlooks; `GET /v1/outlooks/climate` serves
+        every CPC outlook, seasonal leads included, without `day` or
+        `probabilities`.
 
         ### Probabilities
 
@@ -2752,7 +3968,9 @@ paths:
         ### Caching
 
         Successful responses are cacheable for 5 minutes. SPC reissues
-        the day 1 outlook a handful of times a day.
+        the day 1 outlook a handful of times a day. Climate outlook
+        responses are cacheable for 5 minutes as well, although CPC
+        issues them at most daily.
 
         ### Auth
 
@@ -2786,6 +4004,7 @@ paths:
           required: false
           description: |
             Outlook day to describe, where 1 is today. Defaults to 1.
+            Ignored for `hazard=temperature|precipitation`.
           schema:
             type: integer
             minimum: 1
@@ -2798,13 +4017,27 @@ paths:
           description: |
             Hazard family. `severe` (default) is the SPC convective
             outlook; `fire` is the SPC fire-weather outlook; `rain` is
-            the WPC Excessive Rainfall Outlook. Matches the vocabulary
-            used by sw-mcp's `get_outlooks`.
+            the WPC Excessive Rainfall Outlook; `temperature` and
+            `precipitation` are the CPC 6-10 day, 8-14 day, week 3-4,
+            and monthly outlooks. Matches the vocabulary used by
+            sw-mcp's `get_outlooks`.
           schema:
             type: string
-            enum: [severe, fire, rain]
+            enum: [severe, fire, rain, temperature, precipitation]
             default: severe
           example: severe
+        - name: period
+          in: query
+          required: false
+          description: |
+            CPC outlook period for `hazard=temperature|precipitation`:
+            `610` (6-10 day), `814` (8-14 day), `wk34` (week 3-4), or
+            `monthly`. Defaults to all four. Ignored for the other
+            hazards.
+          schema:
+            type: string
+            enum: ['610', '814', wk34, monthly]
+          example: '814'
       responses:
         '200':
           description: Outlook detail for the requested day and location.
@@ -2819,6 +4052,217 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OutlookDetail'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '504':
+          $ref: '#/components/responses/Problem504'
+  /v1/outlooks/climate:
+    get:
+      operationId: getClimateOutlooks
+      summary: CPC climate outlooks at a location, from 6-10 day to seasonal.
+      description: |
+        Returns every Climate Prediction Center outlook covering a US
+        location: the 6-10 day, 8-14 day, week 3-4, monthly and seasonal
+        (three-month) temperature and precipitation outlooks. Each entry
+        gives the tercile CPC favors (`above`, `below`, `near`, or
+        `equal_chances`) and the probability bin it assigns to that
+        tercile (`probability_min`/`probability_max`, fractional, so
+        `0.4`/`0.5` is 40-50%). `equal_chances` means CPC favors no
+        tercile and carries no bin; it is not the same as `near`.
+
+        ### Periods
+
+        Entries are ordered by period (`610`, `814`, `wk34`, `monthly`,
+        `seasonal`), then by `valid_start`, then temperature before
+        precipitation. Each entry has its own `valid_start` and
+        `valid_end`; (`period`, `variable`, `valid_start`) identifies an
+        entry.
+
+        - `seasonal` has up to 13 entries per variable, one per
+          overlapping three-month lead (`lead` 1-13, lead 1 starting the
+          month after issuance), labelled by `valid_label`
+          (`NDJ 2026-2027`).
+        - `monthly` can appear twice per variable: this month, plus next
+          month from CPC's mid-month seasonal release (third Thursday)
+          until the month-end monthly update replaces it. The two differ
+          in `valid_start` and `valid_label` (`Oct 2026`, `Nov 2026`);
+          neither has a `lead`.
+
+        `variable` and `period` narrow the answer. A period (or lead)
+        with no outlook polygon at the location is omitted, an answer of
+        "no outlook here", not equal chances; locations outside the US
+        get an empty `periods` array.
+
+        ### Narratives
+
+        `narratives` carries CPC's written discussion for each period in
+        the answer that has one, in this order:
+
+        - `PMDMRD` (`610`, `814`): unless more than 72 hours old.
+        - `PMD34D` (`wk34`): the latest week 3-4 discussion issued
+          within a day of the week 3-4 outlook.
+        - `PMD30D` (`monthly`): one entry per month in the answer, with
+          that month's `valid_label`. Each is the latest 30-day discussion
+          issued in the month before (the mid-month or month-end
+          release), so from the mid-month release until the month-end
+          update this month and next each have their own.
+        - `PMD90D` (`seasonal`): the latest 90-day discussion issued in
+          the month before the first season's start.
+
+        A discussion that doesn't match its period is left out rather
+        than shown against the wrong week or month. `periods` lists the answer's
+        periods each entry discusses, so a `period` filter returns only
+        that period's discussion. `narratives` is omitted when no
+        discussion applies.
+
+        `narrative` mirrors the `PMDMRD` entry of `narratives` and is
+        kept for existing clients; it is present only when a 6-10 or
+        8-14 day entry is. The text is sent once: the `PMDMRD` entry of
+        `narratives` omits `body`, which `narrative.body` carries for the
+        same issuance.
+
+        ### Relation to /v1/outlooks
+
+        `GET /v1/outlooks?hazard=temperature|precipitation` returns the
+        6-10 day through monthly periods in the SPC-shaped
+        `OutlookDetail`, with a meaningless `day: 1` and an always-empty
+        `probabilities`. This endpoint is the period-based shape and the
+        only one that serves the seasonal outlooks.
+
+        ### Caching
+
+        Successful responses are cacheable for 5 minutes, although CPC
+        issues these outlooks at most daily.
+
+        ### Auth
+
+        Standard sw-api Bearer auth applies.
+      tags: [Weather]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: Latitude in decimal degrees.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 41.88
+        - name: lon
+          in: query
+          required: true
+          description: Longitude in decimal degrees.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -87.63
+        - name: variable
+          in: query
+          required: false
+          description: |
+            `temperature` or `precipitation`. Defaults to both.
+          schema:
+            type: string
+            enum: [temperature, precipitation]
+          example: temperature
+        - name: period
+          in: query
+          required: false
+          description: |
+            `610` (6-10 day), `814` (8-14 day), `wk34` (week 3-4),
+            `monthly` (up to two entries per variable: this month, plus
+            next month after CPC's mid-month seasonal release), or
+            `seasonal` (all three-month leads). Defaults to all periods.
+            Within a period, entries are unique by `variable` and
+            `valid_start`.
+          schema:
+            type: string
+            enum: ['610', '814', wk34, monthly, seasonal]
+          example: seasonal
+      responses:
+        '200':
+          description: CPC climate outlooks at the location.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClimateOutlooks'
+              examples:
+                chicagoTemperature:
+                  summary: Chicago temperature after the mid-month seasonal release (two monthly entries, two seasonal leads shown)
+                  value:
+                    periods:
+                      - product_id: cpc_610_temp
+                        period: '610'
+                        variable: temperature
+                        category: above
+                        probability_min: 0.4
+                        probability_max: 0.5
+                        label: Above normal 40-50%
+                        valid_start: '2026-10-21T00:00:00Z'
+                        valid_end: '2026-10-26T00:00:00Z'
+                        issued_at: '2026-10-15T19:00:00Z'
+                      - product_id: cpc_monthly_temp
+                        period: monthly
+                        valid_label: Oct 2026
+                        variable: temperature
+                        category: equal_chances
+                        label: Equal chances
+                        valid_start: '2026-10-01T00:00:00Z'
+                        valid_end: '2026-11-01T00:00:00Z'
+                        issued_at: '2026-09-30T19:00:00Z'
+                      - product_id: cpc_seasonal_temp
+                        period: monthly
+                        valid_label: Nov 2026
+                        variable: temperature
+                        category: above
+                        probability_min: 0.33
+                        probability_max: 0.4
+                        label: Above normal 33-40%
+                        valid_start: '2026-11-01T00:00:00Z'
+                        valid_end: '2026-12-01T00:00:00Z'
+                        issued_at: '2026-10-15T12:30:00Z'
+                      - product_id: cpc_seasonal_temp
+                        period: seasonal
+                        lead: 1
+                        valid_label: NDJ 2026-2027
+                        variable: temperature
+                        category: below
+                        probability_min: 0.4
+                        probability_max: 0.5
+                        label: Below normal 40-50%
+                        valid_start: '2026-11-01T00:00:00Z'
+                        valid_end: '2027-02-01T00:00:00Z'
+                        issued_at: '2026-10-15T12:30:00Z'
+                      - product_id: cpc_seasonal_temp
+                        period: seasonal
+                        lead: 2
+                        valid_label: DJF 2026-2027
+                        variable: temperature
+                        category: below
+                        probability_min: 0.33
+                        probability_max: 0.4
+                        label: Below normal 33-40%
+                        valid_start: '2026-12-01T00:00:00Z'
+                        valid_end: '2027-03-01T00:00:00Z'
+                        issued_at: '2026-10-15T12:30:00Z'
+                    narrative:
+                      awips_id: PMDMRD
+                      issued_at: '2026-10-15T19:00:00Z'
+                      summary: Above-normal temperatures favored across the Great Lakes in the 6-10 day period.
         '400':
           $ref: '#/components/responses/Problem400'
         '502':
@@ -2853,6 +4297,131 @@ components:
         [developers.smarterweather.com/dashboard/api-keys](https://developers.smarterweather.com/dashboard/api-keys).
 
   parameters:
+    SeriesProductQuery:
+      name: product
+      in: query
+      required: false
+      description: |
+        Catalog product id (`GET /v1/catalog`), e.g. `hrrr_surface`. Pair
+        with `var`, or use `select` instead.
+      schema:
+        type: string
+        pattern: '^[a-z0-9_]+$'
+        minLength: 1
+        maxLength: 128
+      example: hrrr_surface
+    SeriesVarQuery:
+      name: var
+      in: query
+      required: false
+      description: |
+        Variable `standard_name` of `product`, or its stored `name` as an
+        alias, repeatable (at most 25); `values` are keyed by
+        `standard_name`. Omit it for every variable of the product.
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 25
+        items:
+          type: string
+          pattern: '^[a-z0-9_]+$'
+          minLength: 1
+          maxLength: 128
+      example: [temperature_2m]
+    SeriesSelectQuery:
+      name: select
+      in: query
+      required: false
+      description: |
+        One or more `product:var` selectors (variable `standard_name`, or
+        the stored `name` as an alias; `values` are keyed by
+        `standard_name`), repeated or comma-joined, at most 25 in all. Not
+        with `product` or `var`.
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 25
+        items:
+          type: string
+          minLength: 3
+          maxLength: 1024
+      example: [hrrr_surface:temperature_2m, rtma_conus:temperature_2m]
+    SeriesUnitsQuery:
+      name: units
+      in: query
+      required: true
+      description: |
+        Units system, required on this route while experimental. `si`
+        serves stored values; `metric` and `imperial` convert to each
+        variable's catalog display unit.
+      schema:
+        type: string
+        enum: [si, metric, imperial]
+      example: imperial
+    SeriesHoursQuery:
+      name: hours
+      in: query
+      required: false
+      description: |
+        Rolling window in hours: forward for a `forecast`, backward for an
+        `analysis`, from the run's initialization time with `run`. Not with
+        `start`/`end`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 384
+      example: 12
+    SeriesStartQuery:
+      name: start
+      in: query
+      required: false
+      description: Window start (RFC 3339), with `end`; at most 16 days before `end`.
+      schema:
+        type: string
+        format: date-time
+      example: '2026-10-14T00:00:00Z'
+    SeriesEndQuery:
+      name: end
+      in: query
+      required: false
+      description: Window end (RFC 3339, inclusive), with `start`.
+      schema:
+        type: string
+        format: date-time
+      example: '2026-10-15T00:00:00Z'
+    SeriesRunQuery:
+      name: run
+      in: query
+      required: false
+      description: |
+        Model cycle: the RFC 3339 initialization time of the run to read
+        (forecast products only). Absent means the latest run per frame.
+      schema:
+        type: string
+        format: date-time
+      example: '2026-10-14T12:00:00Z'
+    SeriesLimitQuery:
+      name: limit
+      in: query
+      required: false
+      description: Frames per series element (default 168, max 744).
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 744
+        default: 168
+      example: 168
+    SeriesCursorQuery:
+      name: cursor
+      in: query
+      required: false
+      description: An opaque `next_cursor` from a truncated response, sent with the same parameters.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 8192
     LatQuery:
       name: lat
       in: query
@@ -2895,7 +4464,7 @@ components:
       in: query
       description: |
         Free-text location name. Examples: `"Boston, MA"`, `"94043"`,
-        `"Kyiv"`. Resolved by an internal geocoder. Mutually exclusive with
+        `"Denver"`. Resolved by an internal geocoder. Mutually exclusive with
         `lat`/`lon` and `zip`.
       required: false
       schema:
@@ -2926,6 +4495,18 @@ components:
       schema:
         type: string
       example: "current,hourly,daily,alerts"
+    CatalogIncludeQuery:
+      name: include
+      in: query
+      description: |
+        Comma-separated optional sections. The only token is `freshness`,
+        which adds each product's `freshness` (**experimental**) and drops
+        the `ETag`. Tokens are case-insensitive; unknown tokens are
+        silently dropped.
+      required: false
+      schema:
+        type: string
+      example: freshness
     DaysQuery:
       name: days
       in: query
@@ -2946,8 +4527,94 @@ components:
         minimum: 1
         maximum: 168
         default: 48
+    ViewQuery:
+      name: view
+      in: query
+      description: |
+        Column preset for `hourly` and `daily` rows. `detailed` (default)
+        returns every column; `concise` returns the documented subset
+        (20 hourly and 22 daily columns, listed in the `GET /v1/weather`
+        description) and never drops rows. `include` wins over the preset.
+        The enum and the `concise` preset only grow. Any other value is a
+        `400`.
+      required: false
+      schema:
+        type: string
+        enum: [concise, detailed]
+        default: detailed
+    HourlyStepQuery:
+      name: hourly_step
+      in: query
+      description: |
+        Keep one hourly row every `hourly_step` hours (by whole-hour offset from
+        `hourly[0].time`), from `hourly_step_from` on. `1` (default) keeps
+        every row. Out of range or non-integer is a `400`.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 24
+        default: 1
+      example: 3
+    HourlyStepFromQuery:
+      name: hourly_step_from
+      in: query
+      description: |
+        Offset in hours from `hourly[0].time` below which every hourly row
+        is kept; `hourly_step` applies from this offset on. `0` (default)
+        thins from the first row. A no-op when `hourly_step` is `1`. Out of
+        range is a `400`.
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 168
+        default: 0
+      example: 24
+    FieldsQuery:
+      name: fields
+      in: query
+      description: |
+        Sparse fieldset for `hourly` and `daily` rows: comma-separated
+        `section.name` paths, where `section` is `hourly` or `daily` and
+        `name` is the exact JSON member name (no aliases). Whitespace is
+        trimmed, paths are lowercased, duplicates collapse, and repeated
+        `fields` parameters are concatenated; at most 64 distinct paths.
+
+        A second segment is allowed only under the objects that are not
+        taken whole: `hourly.uncertainty`, `daily.day`, `daily.night`,
+        `daily.uncertainty`, `daily.climate` (e.g.
+        `daily.day.precip_probability`). Every other member, including
+        `daily.astro` and `daily.threats`, is selected whole.
+
+        `fields` is exact for each section it names and overrides `view`
+        there; `hourly[].time` and `daily[].date` are always returned.
+        `fields` never implies `include`.
+
+        Returns `400`, with the first bad path and the valid names in
+        `detail`, for: an empty value or empty path; an unknown section;
+        an unknown name; a second segment outside the five objects above;
+        a bare section (`fields=hourly`, use `include`); a section missing
+        from the effective `include`; an `uncertainty` path without
+        `include=uncertainty`; a `daily.climate` path without
+        `include=climate`.
+      required: false
+      schema:
+        type: string
+      example: "hourly.temperature,hourly.precip_probability,daily.high,daily.low"
 
   headers:
+    CatalogETag:
+      description: |
+        Weak validator of a catalog response without
+        `include=freshness`: a hash of the response body, so the list and
+        each product have their own tag and it changes whenever the body
+        does. Weak because the body is served identity- or gzip-encoded
+        under one tag. Send it in `If-None-Match` to get `304 Not
+        Modified`. Absent with `include=freshness`.
+      schema:
+        type: string
+        example: 'W/"catalog-3f1c9a0b7d2e4c51"'
     WWWAuthenticate:
       description: |
         RFC 6750 Bearer challenge. `realm` is always
@@ -2961,17 +4628,21 @@ components:
         type: string
         example: Bearer realm="api.smarterweather.com", error="invalid_token", error_description="API key is not recognised.", error_uri="https://developers.smarterweather.com/errors"
     RateLimitLimit:
-      description: The request-rate limit for this API key in the current window.
+      description: |
+        Burst capacity of this API key's token bucket: the most requests it
+        can make at once. `RateLimit-Policy: <limit>;w=<seconds>` gives the
+        time a full bucket takes to refill, so the sustained rate in requests
+        per minute is `Limit × 60 / w`.
       schema:
         type: integer
         minimum: 0
     RateLimitRemaining:
-      description: The number of requests remaining in the current window.
+      description: Requests available now (tokens left in the bucket).
       schema:
         type: integer
         minimum: 0
     RateLimitReset:
-      description: Unix epoch seconds at which the current window resets.
+      description: Seconds until the bucket is full again (0 when full).
       schema:
         type: integer
         minimum: 0
@@ -2984,7 +4655,6 @@ components:
       description: |
         Portal claim URL for this trial key
         (`https://developers.smarterweather.com/claim#ticket=<claim ticket>`).
-        Pre-ticket trial rows still use leftover `#key=<raw bearer>` until they TTL.
         Present on every served trial response while the claim window is open.
       schema:
         type: string
@@ -2995,7 +4665,7 @@ components:
         type: string
         format: date-time
     XTrialCallsRemaining:
-      description: Remaining lifetime calls on this trial key after this request.
+      description: Remaining lifetime calls on this trial key after this request. Only 2xx responses count; a request answered 4xx/5xx is refunded before the response is sent, and this header reflects the refund once it is applied.
       schema:
         type: integer
         minimum: 0
@@ -3097,6 +4767,7 @@ components:
           moon_phase: 0.15
           moon_phase_name: "Waxing Crescent"
           moon_illumination: 0.22
+          polar: null
         units:
           temperature: "F"
           wind_speed: "mph"
@@ -3166,8 +4837,9 @@ components:
 
         Beyond the five standard members the object may carry extension
         members (RFC 9457 §3.2). Today `401`, `402`, `403`, and `429`
-        carry `next_steps`. Clients MUST ignore extension members they
-        do not understand.
+        carry `next_steps`, as do `404` `outside-coverage` and the `404`
+        for a place that matches no US location. Clients MUST ignore
+        extension members they do not understand.
       required: [type, title, status]
       additionalProperties: true
       properties:
@@ -3220,15 +4892,16 @@ components:
     ProblemNextSteps:
       type: object
       description: |
-        Extension member on `401`, `402`, `403`, and `429` problems: where
-        to go next, as a map of link relations. `recommended` names the
+        Extension member on `401`, `402`, `403`, and `429` problems, and
+        on `404` `outside-coverage` and US location-not-found problems:
+        where to go next, as a map of link relations. `recommended` names the
         relation a client should take first; when present,
         `if_no_human_present` names the relation an autonomous agent
         should take when nobody can act on the recommended one right
         now. Every other key is a link relation (`device_flow`,
         `get_key`, `quickstart`, `agents`, `onboarding_mcp`,
         `keyless_x402`, `key_handling`, `errors`, `upgrade`, `pricing`,
-        `usage`, `claim`) whose value is a `ProblemNextStepLink`. New
+        `usage`, `claim`, `coverage`) whose value is a `ProblemNextStepLink`. New
         relations may be added over time; unknown relations MUST be
         ignored.
       required: [recommended]
@@ -3318,6 +4991,12 @@ components:
             Trial mint URL (trial only). No UTM. Returns the bearer in the
             response body's `api_key` field — write only that field to
             `.env` as `SMARTERWEATHER_API_KEY=`; never print it.
+        endpoint:
+          type: string
+          format: uri
+          description: |
+            onboarding_mcp only; Streamable HTTP MCP URL, POST-only (its
+            `href` is the setup guide). No UTM.
 
     PlatformStatus:
       type: object
@@ -3465,9 +5144,14 @@ components:
       type: object
       description: |
         Composite blended weather payload returned by `GET /v1/weather`.
-        Section presence is controlled by the `include` query parameter;
-        every section that is present is the complete shape documented
-        below.
+        Section presence is controlled by the `include` query parameter.
+        With the default `view=detailed` and no `fields`, every section
+        that is present is the complete shape documented below. `view=concise`
+        and `fields` project the members of `hourly[]` and `daily[]` rows
+        (every other section stays complete), and `hourly_step` thins
+        `hourly[]` rows; see "Response density, sampling and sparse
+        fieldsets" on `GET /v1/weather`. A shaped body is always a
+        key-subset of the detailed body for the same request.
       required: [meta, attribution]
       properties:
         location:
@@ -3486,12 +5170,28 @@ components:
             $ref: '#/components/schemas/Daily'
         alerts:
           type: array
-          description: Active NWS alerts for the location.
+          description: >-
+            Active NWS alerts for the location, present whenever the section
+            is included and its fetch succeeded. `[]` means no alerts were in
+            effect in the latest alerts snapshot, which can trail
+            `meta.generated_at` by up to about 30 seconds. Absent when the
+            section is not included, or when its fetch failed (a
+            `meta.warnings` entry with `section: alerts` says so). A stale
+            replay (`X-SW-Stale: 1` header, or a `stale_response` warning on
+            a batch row) repeats the alerts as of its own
+            `meta.generated_at`, not the current set.
           items:
             $ref: '#/components/schemas/Alert'
         outlooks:
           type: array
-          description: SPC convective outlooks active for the location.
+          description: >-
+            SPC convective outlooks active for the location, present whenever
+            the section is included and its fetch succeeded. `[]` means no
+            outlook was in effect in the latest outlooks snapshot, which can
+            trail `meta.generated_at` by up to about 30 seconds. Absent when
+            the section is not included, or when its fetch failed (a
+            `meta.warnings` entry with `section: outlooks` says so). A stale
+            replay repeats the outlooks as of its own `meta.generated_at`.
           items:
             $ref: '#/components/schemas/Outlook'
         astro:
@@ -3670,7 +5370,9 @@ components:
           maximum: 24
         sun_times:
           type: array
-          description: Present when daylight filtering used sunrise and sunset.
+          description: >-
+            Present when daylight filtering used sunrise and sunset. Polar
+            dates (midnight sun, polar night) have neither and are left out.
           items:
             type: object
             required: [sunrise, sunset]
@@ -4626,6 +6328,26 @@ components:
             Map of salient callouts extracted from the alert text
             (e.g., `{"hazard": "Strong winds", "impact": "Loose debris possible"}`).
 
+    AlertsSearchResponse:
+      type: object
+      description: |
+        `GET /v1/alerts` response. `alerts` is always an array, empty
+        when nothing matches.
+      required: [alerts, truncated]
+      properties:
+        alerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alert'
+        truncated:
+          type: boolean
+          description: |
+            `true` when the result reached the cap (50); more may exist.
+            Only a bounding-box search is capped, so this is always
+            `false` for a point search. A bounding-box result is ordered
+            by severity, then soonest `expires`, so the alerts left out
+            are the lower-priority ones.
+
     AlertDetail:
       type: object
       description: |
@@ -4870,10 +6592,12 @@ components:
       description: |
         Drill-down detail for one SPC convective outlook day at a
         location: the categorical risk band, each probabilistic hazard,
-        and the forecaster's written discussion.
+        and the forecaster's written discussion. For the CPC hazards
+        (`temperature`, `precipitation`) it carries `periods` instead.
 
-        Everything except `day` is optional. A point can sit inside a
-        categorical polygon with no probabilistic coverage, and the
+        Everything except `day` and `probabilities` is optional. A point
+        can sit inside
+        a categorical polygon with no probabilistic coverage, and the
         narrative is ingested separately from the polygons so it can lag
         a fresh issuance.
       required: [day, probabilities]
@@ -4882,7 +6606,11 @@ components:
           type: integer
           minimum: 1
           maximum: 8
-          description: The outlook day this detail describes (1 = today).
+          description: |
+            The outlook day this detail describes (1 = today). For the
+            CPC hazards (`temperature`, `precipitation`) it is always `1`
+            and carries no meaning; use each period's `valid_start` and
+            `valid_end`.
         categorical:
           $ref: '#/components/schemas/Outlook'
         dry_thunderstorm:
@@ -4910,8 +6638,178 @@ components:
             Categorical bands never appear here.
           items:
             $ref: '#/components/schemas/Outlook'
+        periods:
+          type: array
+          description: |
+            CPC climate outlooks at the location for
+            `hazard=temperature|precipitation`, one per period in the
+            order 6-10 day, 8-14 day, week 3-4, monthly. A period with no
+            outlook polygon at the location is omitted. Absent for the
+            other hazards.
+          items:
+            $ref: '#/components/schemas/ClimateOutlook'
         narrative:
           $ref: '#/components/schemas/OutlookNarrative'
+
+    ClimateOutlooks:
+      type: object
+      description: |
+        The CPC climate outlooks at a location, as returned by
+        `GET /v1/outlooks/climate`.
+      required: [periods]
+      properties:
+        periods:
+          type: array
+          description: |
+            One entry per (`period`, `variable`, `valid_start`) that has
+            an outlook polygon at the location: one per variable for
+            `610`, `814` and `wk34`, up to two for `monthly` (this month
+            and next), and one per lead for `seasonal`. Ordered by period
+            (`610`, `814`, `wk34`, `monthly`, `seasonal`), then
+            `valid_start`, then temperature before precipitation. Empty
+            outside the US.
+          items:
+            $ref: '#/components/schemas/ClimateOutlook'
+        narrative:
+          $ref: '#/components/schemas/OutlookNarrative'
+        narratives:
+          type: array
+          description: |
+            CPC's discussion for each period in the answer that has one:
+            `PMDMRD` (6-10/8-14 day), `PMD34D` (week 3-4), `PMD30D` (one
+            per `monthly` month) and `PMD90D` (`seasonal`), in that order.
+            Omitted when none applies. `narrative` mirrors the `PMDMRD`
+            entry for compatibility and carries its `body`, which that
+            entry omits.
+          items:
+            $ref: '#/components/schemas/ClimateNarrative'
+
+    ClimateNarrative:
+      type: object
+      description: |
+        One CPC prognostic discussion and the outlook periods of the
+        answer it discusses.
+      required: [periods]
+      properties:
+        awips_id:
+          type: string
+          description: |
+            `PMDMRD` (6-10/8-14 day), `PMD34D` (week 3-4; CPC publishes
+            it on the web only, with no NWS identifier), `PMD30D`
+            (30-day) or `PMD90D` (90-day).
+          example: "PMD30D"
+        issued_at:
+          type: string
+          format: date-time
+        body:
+          type: string
+          description: |
+            Full discussion text as written by the forecaster. Omitted
+            for `PMDMRD`, whose text is in the response's `narrative.body`.
+        summary:
+          type: string
+          description: Short generated summary, when one is available.
+        periods:
+          type: array
+          description: |
+            The periods in this answer the discussion covers: a subset
+            of `610`/`814` for `PMDMRD`, `wk34`, `monthly` or `seasonal`.
+          items:
+            type: string
+            enum: ['610', '814', wk34, monthly, seasonal]
+          example: [monthly]
+        valid_label:
+          type: string
+          description: |
+            For `PMD30D`, the `valid_label` of the monthly outlook it
+            discusses (`Oct 2026`).
+          example: "Oct 2026"
+
+    ClimateOutlook:
+      type: object
+      description: |
+        One CPC temperature or precipitation outlook period at a
+        location: the tercile CPC favors and the probability bin it
+        assigns to it.
+      required: [product_id, period, variable, category, issued_at]
+      properties:
+        product_id:
+          type: string
+          description: Upstream product identifier.
+          example: "cpc_814_temp"
+        period:
+          type: string
+          enum: ['610', '814', wk34, monthly, seasonal]
+          description: |
+            `610` (6-10 day), `814` (8-14 day), `wk34` (week 3-4),
+            `monthly` (a calendar month), or `seasonal` (a three-month
+            season; see `lead`). `GET /v1/outlooks` returns only the
+            first four, one entry each. `GET /v1/outlooks/climate` can
+            return two `monthly` entries per variable: this month, plus
+            next month from CPC's mid-month seasonal release until the
+            month-end monthly update. Entries are unique by (`period`,
+            `variable`, `valid_start`).
+          example: "814"
+        lead:
+          type: integer
+          minimum: 1
+          maximum: 13
+          description: |
+            The seasonal lead, for `period: seasonal` only. CPC issues 13
+            overlapping three-month outlooks; lead 1 starts the month
+            after issuance and each later lead starts one month later.
+          example: 1
+        valid_label:
+          type: string
+          description: |
+            CPC's name for the outlook window, for `monthly` and
+            `seasonal` entries from `GET /v1/outlooks/climate`: a month
+            (`Oct 2026`) or a three-month season of month initials
+            (`NDJ 2026-2027`).
+          example: "NDJ 2026-2027"
+        variable:
+          type: string
+          enum: [temperature, precipitation]
+        category:
+          type: string
+          enum: [above, below, near, equal_chances]
+          description: |
+            The favored tercile. `near` means near normal is favored;
+            `equal_chances` means CPC favors no tercile.
+        probability_min:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: |
+            Lower edge of the favored category's probability bin,
+            fractional (`0.4` = 40%). Omitted for `equal_chances`.
+          example: 0.4
+        probability_max:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: |
+            Upper edge of the favored category's probability bin,
+            fractional. Omitted for `equal_chances`.
+          example: 0.5
+        label:
+          type: string
+          description: Human-readable category and bin.
+          example: "Above normal 40-50%"
+        valid_start:
+          type: string
+          format: date-time
+          description: Start of the outlook period.
+        valid_end:
+          type: string
+          format: date-time
+          description: End of the outlook period (exclusive).
+        issued_at:
+          type: string
+          format: date-time
+          description: When CPC issued the outlook.
 
     OutlookNarrative:
       type: object
@@ -4923,7 +6821,8 @@ components:
           type: string
           description: |
             AWIPS identifier of the source product — `SWODY1`, `SWODY2`,
-            `SWODY3` for the single-day outlooks, `SWOD48` for days 4-8.
+            `SWODY3` for the single-day outlooks, `SWOD48` for days 4-8,
+            `PMDMRD` for the CPC 6-10/8-14 day discussion.
           example: "SWODY1"
         issued_at:
           type: string
@@ -4997,6 +6896,498 @@ components:
           items:
             $ref: '#/components/schemas/GeoJSONReportsFeature'
       additionalProperties: true
+
+    ClimateReportsFeatureCollection:
+      type: object
+      x-stability: experimental
+      description: |
+        GeoJSON FeatureCollection of NWS daily climate reports (CLI).
+        Returned as `application/geo+json` from
+        `GET /v1/climate-reports`. Same forward-compat property-bag
+        contract as `RecordEventsFeatureCollection`.
+        **Experimental**; see the operation description.
+      required: [type, features]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONReportsFeature'
+      additionalProperties: true
+
+    CatalogList:
+      type: object
+      description: |
+        `GET /v1/catalog`: every product on the REST API, sorted by `id`.
+        Complete without `limit` (see the operation description).
+      required: [products]
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogProductSummary'
+
+    CatalogProductSummary:
+      type: object
+      description: A data catalog product, as listed by `GET /v1/catalog`.
+      required:
+        - id
+        - title
+        - family
+        - kind
+        - product_type
+        - domain
+        - coverage
+        - cadence
+        - horizon
+        - step
+        - temporal_type
+        - grid_res_km
+        - stability
+        - cost_class
+        - entitlement
+        - source
+      properties:
+        id:
+          type: string
+          description: Product id, the `product` of `/v1/point` and the MCP `dataset_id`.
+          example: nbm_conus
+        title:
+          type: string
+          example: NBM CONUS Surface Variables
+        family:
+          type: string
+          description: Product family, e.g. `nbm`, `mrms`, `spc`.
+          example: nbm
+        kind:
+          type: string
+          description: |
+            Data shape: `grid` (a gridded field over time), `snapshot` (the
+            latest gridded analysis), `feature` (vector features such as
+            outlook polygons) or `text` (text products). New kinds may be
+            added.
+          example: grid
+        product_type:
+          type: [string, "null"]
+          description: |
+            `forecast`, `analysis` or `climatology`; `null` when the catalog
+            does not classify the product. New values may be added.
+          example: forecast
+        domain:
+          type: string
+          description: Coverage domain, e.g. `conus`, `alaska`, `hawaii`, `global`.
+          example: conus
+        coverage:
+          type: array
+          items:
+            type: string
+          description: Domains the product covers.
+          example: [conus]
+        cadence:
+          type: [string, "null"]
+          description: Nominal update cadence, an ISO 8601 duration.
+          example: PT1H
+        horizon:
+          type: [string, "null"]
+          description: Forecast horizon, an ISO 8601 duration; `null` for analyses.
+          example: PT264H
+        step:
+          type: [string, "null"]
+          description: |
+            Native frame spacing, an ISO 8601 duration: how far apart the
+            product's frames are (`PT6H` for a 6-hourly model, `PT2M` for an
+            MRMS mosaic, `P1D` for a daily product). Set on every `grid` and
+            `snapshot` product; `null` for `feature` and `text` products,
+            which have no frames. A sub-day step divides 24 h and a longer
+            one is whole days. A rolling `/v1/series` forecast window starts
+            at now floored to it from 00:00Z (a step of a day or more floors
+            to UTC midnight), so the frame covering now is in.
+          example: PT1H
+        temporal_type:
+          type: [string, "null"]
+          description: |
+            How the product is stored in time: `now`, `hourly`, `daily` or
+            `climatology`. New values may be added.
+          example: hourly
+        grid_res_km:
+          type: [number, "null"]
+          format: double
+          description: Grid spacing in kilometres; `null` for non-gridded products.
+          example: 2.5
+        stability:
+          type: string
+          description: Catalog stability of the product, `stable`, `beta` or `experimental`.
+          example: stable
+        cost_class:
+          type: string
+          description: Cost class of the product's data calls (ADR 073).
+          example: data
+        entitlement:
+          type: [string, "null"]
+          description: Entitlement label the product requires; `null` when none.
+          example: null
+        source:
+          $ref: '#/components/schemas/CatalogSource'
+        freshness:
+          description: |
+            **Experimental** (`x-stability: experimental`). Present only with
+            `include=freshness`. `null` when the platform has neither a
+            freshness check nor a model run for the product, or when
+            freshness has been unavailable for more than 5 minutes (the
+            catalog still answers).
+          x-stability: experimental
+          oneOf:
+            - $ref: '#/components/schemas/CatalogFreshness'
+            - type: 'null'
+
+    CatalogSource:
+      type: object
+      description: The product's data source and attribution terms.
+      required: [id, name, provider_id, attribution, license, terms_url]
+      properties:
+        id:
+          type: string
+          example: nbm
+        name:
+          type: [string, "null"]
+          example: National Blend of Models
+        provider_id:
+          type: string
+          example: noaa
+        attribution:
+          type: string
+          description: Attribution text to display with the data.
+          example: Data provided by NOAA/NWS
+        license:
+          type: string
+          example: public_domain
+        terms_url:
+          type: [string, "null"]
+          example: https://www.weather.gov/disclaimer
+
+    CatalogProduct:
+      description: |
+        A data catalog product with its variables and retrieval fields
+        (`GET /v1/catalog/{product_id}`).
+      allOf:
+        - $ref: '#/components/schemas/CatalogProductSummary'
+        - type: object
+          required: [agent_description, aliases, question_shapes, related, variables]
+          properties:
+            agent_description:
+              type: [string, "null"]
+              description: Plain-language description of what the product answers.
+            aliases:
+              type: array
+              items:
+                type: string
+              description: Search phrases the product answers to.
+            question_shapes:
+              type: array
+              items:
+                type: string
+              description: Example questions the product answers.
+            related:
+              type: array
+              items:
+                type: string
+              description: Ids of related catalog products.
+            variables:
+              type: array
+              items:
+                $ref: '#/components/schemas/CatalogVariable'
+
+    CatalogVariable:
+      type: object
+      description: One variable of a catalog product.
+      required:
+        - name
+        - standard_name
+        - label
+        - description
+        - units
+        - display_units
+        - kind
+        - threshold
+        - period
+        - min
+        - max
+        - aliases
+        - categories
+        - bands
+        - point
+      properties:
+        name:
+          type: string
+          description: |
+            Stored variable name (the writer's OM variable); accepted as an
+            alias of `standard_name` on `/v1/point` and `/v1/series`.
+          example: tmp2m
+        standard_name:
+          type: string
+          description: |
+            Standard variable name, the public identifier on every door: the
+            `var` of `/v1/point` and `/v1/series`, the MCP `query_dataset`
+            `variables`, and the key of every `values` and `units` map.
+          example: temperature_2m
+        label:
+          type: [string, "null"]
+        description:
+          type: [string, "null"]
+        units:
+          type: [string, "null"]
+          description: Units of the stored values.
+          example: K
+        display_units:
+          type: object
+          required: [conversion, metric, imperial]
+          properties:
+            conversion:
+              type: string
+              description: |
+                `absolute` for a value, `delta` for a difference (converted
+                without an offset). New values may be added.
+            metric:
+              type: [string, "null"]
+            imperial:
+              type: [string, "null"]
+        kind:
+          type: string
+          description: |
+            `deterministic`, `probability`, `percentile`, `stddev` or
+            `category`. New values may be added.
+          example: deterministic
+        threshold:
+          description: The event a probability variable measures; `null` otherwise.
+          oneOf:
+            - type: object
+              required: [op, value, units]
+              properties:
+                op:
+                  type: string
+                  example: lt
+                value:
+                  type: number
+                  format: double
+                units:
+                  type: string
+            - type: 'null'
+        period:
+          type: [string, "null"]
+          description: Accumulation or aggregation period, an ISO 8601 duration.
+          example: PT1H
+        min:
+          type: [number, "null"]
+          format: double
+          description: Lower bound of valid values, in `units`.
+        max:
+          type: [number, "null"]
+          format: double
+          description: Upper bound of valid values, in `units`.
+        aliases:
+          type: array
+          items:
+            type: string
+        categories:
+          type: array
+          description: |
+            Value buckets in ascending `max` order; the last bucket has
+            `max: null` (the catch-all).
+          items:
+            type: object
+            required: [max, label]
+            properties:
+              max:
+                type: [number, "null"]
+                format: double
+              label:
+                type: string
+        bands:
+          type: array
+          description: Categorical codes and their public levels (outlook risk bands).
+          items:
+            type: object
+            required: [code, level, category, label]
+            properties:
+              code:
+                type: string
+                example: SLGT
+              level:
+                type: integer
+                example: 2
+              category:
+                type: string
+                example: slight
+              label:
+                type: string
+                example: Slight
+        point:
+          description: |
+            How `/v1/point` serves the variable: the `unit` it reports
+            (`null` for a categorical zone). `null` when `/v1/point` does not
+            serve the variable.
+          oneOf:
+            - type: object
+              required: [unit]
+              properties:
+                unit:
+                  type: [string, "null"]
+                  example: mm
+            - type: 'null'
+
+    CatalogFreshness:
+      type: object
+      x-stability: experimental
+      description: |
+        **Experimental** (`x-stability: experimental`). How current a
+        product's data is, as the MCP `list_datasets` tool reports it. The
+        shape is final; the values' sources are still being completed:
+        freshness checks cover a fixed set of products today, so some
+        products (for example untracked analyses) have `freshness: null`
+        and an untracked forecast has a `latest_run` but no
+        `freshness_status`. Values are refreshed at most once a minute;
+        while the freshness source is unavailable the last values are kept
+        for up to 5 minutes (`data_age_seconds` is computed when the response
+        is made, so it still shows how old the data is), then `freshness` is
+        `null`.
+      required: [data_age_seconds]
+      properties:
+        freshness_status:
+          type: string
+          enum: [fresh, stale, missing]
+          description: |
+            The platform's freshness check for the product: `fresh` within
+            its expected age, `stale` older, `missing` no data found. When
+            a product is checked in more than one store, the stalest
+            result. Absent when the product is not checked.
+        latest_time:
+          type: string
+          format: date-time
+          description: Valid time of the newest data the freshness check found.
+        latest_run:
+          type: string
+          format: date-time
+          description: Reference time of the latest model run served (forecasts only).
+        data_age_seconds:
+          type: [integer, "null"]
+          description: |
+            Age of the newest data in seconds: from `latest_run` for a
+            forecast, else from `latest_time`. `null` when unknown or when
+            the time is in the future (a forecast valid time says nothing
+            about age).
+          example: 3600
+
+    Lightning:
+      type: object
+      x-stability: experimental
+      description: |
+        Recent lightning near a point (`GET /v1/lightning`).
+        **Experimental**; see the operation description.
+      required: [lat, lon, glm, summary]
+      properties:
+        lat:
+          type: number
+          format: double
+          description: The point the values describe, the request's `lat` snapped to the 0.01° (~1 km) grid.
+        lon:
+          type: number
+          format: double
+          description: The point the values describe, the request's `lon` snapped to the 0.01° (~1 km) grid.
+        glm:
+          description: |
+            GOES GLM satellite flash count near the point. `null` when
+            the count is unavailable.
+          oneOf:
+            - $ref: '#/components/schemas/LightningGLM'
+            - type: 'null'
+        mrms:
+          $ref: '#/components/schemas/LightningMRMS'
+        summary:
+          type: string
+          description: One-line plain-language summary of the activity.
+          example: "No lightning detected within 30 km in the last 10 minutes."
+
+    LightningGLM:
+      type: object
+      x-stability: experimental
+      description: GLM flash count within `radius_km` of the point over the last `window_minutes`.
+      required: [flash_count, radius_km, window_minutes]
+      properties:
+        flash_count:
+          type: integer
+          minimum: 0
+        radius_km:
+          type: integer
+          example: 30
+        window_minutes:
+          type: integer
+          example: 10
+
+    LightningMRMS:
+      type: object
+      x-stability: experimental
+      description: |
+        MRMS lightning at the point. Present only when the grid has a
+        value there; each field is omitted when it has none.
+      properties:
+        lightning_density:
+          type: number
+          format: double
+          description: MRMS lightning flash density at the point.
+        lightning_prob:
+          type: integer
+          description: MRMS probability of lightning in the next 30 minutes, percent.
+
+    TextProductsResponse:
+      type: object
+      description: |
+        `GET /v1/text-products` response. `products` is always an
+        array, newest `issued_at` first.
+      required: [products]
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/TextProduct'
+
+    TextProduct:
+      type: object
+      description: One NWS text product.
+      required: [id, product_type, wfo, issued_at, expires_at, awips_id, wmo_header, body, properties]
+      properties:
+        id:
+          type: integer
+          format: int64
+        product_type:
+          type: string
+          example: AFD
+        wfo:
+          type: [string, 'null']
+          description: Issuing office, or `null` for national-center products.
+          example: LOT
+        issued_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: [string, 'null']
+          format: date-time
+        awips_id:
+          type: [string, 'null']
+          example: AFDLOT
+        wmo_header:
+          type: [string, 'null']
+          example: FXUS63 KLOT
+        body:
+          type: string
+          description: Bulletin text. Empty when `omit_body=true`.
+        properties:
+          type: object
+          description: |
+            Structured fields parsed from the product. Opaque; keys vary
+            by product type and may be added without a sw-api release.
+          additionalProperties: true
 
     NexradFeaturesFeatureCollection:
       type: object
@@ -5453,26 +7844,35 @@ components:
         civil_dawn:
           type: [string, "null"]
           format: date-time
+          description: Null when civil twilight does not begin or end on this date.
         sunrise:
           type: [string, "null"]
           format: date-time
+          description: Null on polar day and night (see `polar`).
         solar_noon:
           type: [string, "null"]
           format: date-time
         sunset:
           type: [string, "null"]
           format: date-time
+          description: Null on polar day and night (see `polar`).
         civil_dusk:
           type: [string, "null"]
           format: date-time
+          description: Null when civil twilight does not begin or end on this date.
         day_length:
           type: integer
           minimum: 0
-          description: Seconds from sunrise to sunset.
+          description: >-
+            Seconds from sunrise to sunset; 86400 under midnight sun, 0 in
+            polar night.
         daylight_length:
           type: integer
           minimum: 0
-          description: Seconds from civil dawn to civil dusk.
+          description: >-
+            Seconds from civil dawn to civil dusk; 86400 when civil twilight
+            never ends (white nights, midnight sun). 0 when there is no civil
+            daylight or it is unknown; see civil_dawn, civil_dusk and polar.
         moonrise:
           type: [string, "null"]
           format: date-time
@@ -5503,6 +7903,14 @@ components:
           format: double
           minimum: 0
           maximum: 1
+        polar:
+          type: [string, "null"]
+          enum: [midnight_sun, polar_night, null]
+          description: >-
+            Set when the sun neither rises nor sets on this date: midnight_sun
+            (above the horizon all day; day_length is 86400) or polar_night
+            (below it all day; day_length is 0). sunrise and sunset are then
+            null. Null when the sun rises and sets.
 
     # -----------------------------------------------------------------------
     # GIS (scoped down), units, attribution, meta
@@ -5702,6 +8110,26 @@ components:
             human-readable `detail`.
           items:
             $ref: '#/components/schemas/MetaWarning'
+        hourly_sampling:
+          type: object
+          description: |
+            Present only when `hourly_step` dropped at least one hourly
+            row. Echoes the effective thinning so a thinned series is
+            distinguishable from a short forecast: every row is kept below
+            `from_hour` hours from `hourly[0].time`, then one row every
+            `step_hours` hours.
+          required: [step_hours, from_hour]
+          properties:
+            step_hours:
+              type: integer
+              minimum: 2
+              maximum: 24
+              description: Effective `hourly_step`.
+            from_hour:
+              type: integer
+              minimum: 0
+              maximum: 168
+              description: Effective `hourly_step_from`.
 
     MetaWarning:
       type: object
@@ -5720,6 +8148,7 @@ components:
             - coverage_limited
             - geocode_ambiguous
             - stale_response
+            - not_enabled
           example: "partial_fetch"
         section:
           type: string
@@ -6113,6 +8542,31 @@ components:
           maximum: 168
           default: 48
           description: Same semantics as the `hourly_hours` query parameter on `GET /v1/weather`.
+        view:
+          type: string
+          enum: [concise, detailed]
+          default: detailed
+          description: Same semantics as the `view` query parameter on `GET /v1/weather`. Applied to every row.
+        fields:
+          type: string
+          description: |
+            Same semantics as the `fields` query parameter on
+            `GET /v1/weather`, as one comma-separated string. Validated once
+            against the batch `include`; an invalid path fails the whole
+            request with `400`.
+          example: "hourly.temperature,daily.high,daily.low"
+        hourly_step:
+          type: integer
+          minimum: 1
+          maximum: 24
+          default: 1
+          description: Same semantics as the `hourly_step` query parameter on `GET /v1/weather`.
+        hourly_step_from:
+          type: integer
+          minimum: 0
+          maximum: 168
+          default: 0
+          description: Same semantics as the `hourly_step_from` query parameter on `GET /v1/weather`.
 
     WeatherBatchLocation:
       type: object
@@ -6198,6 +8652,7 @@ components:
             - upstream_unavailable
             - upstream_timeout
             - internal_error
+            - outside_coverage
         message:
           type: string
           description: Human-readable explanation. Stable for logging; clients should branch on `code`.
@@ -6346,8 +8801,8 @@ components:
           example: sport_rsm_0_2m_pct_conus
         var:
           type: string
-          description: Echoed variable identifier.
-          example: rsm_0_2m_pct
+          description: The `var` as sent (`standard_name` or the stored `name`).
+          example: soil_moisture_percentile_0_200cm
         value:
           type: [number, "null"]
           format: double
@@ -6407,8 +8862,8 @@ components:
           example: spc_day1_categorical
         var:
           type: string
-          description: Echoed variable identifier.
-          example: risk
+          description: The selector's `var` as sent (`standard_name` or the stored `name`).
+          example: convective_outlook_risk
         value:
           type: [number, "null"]
           format: double
@@ -6444,7 +8899,8 @@ components:
           description: |
             Per-item outcome. `ok` — resolved (a zone `"none"` is still `ok`).
             `not_allowlisted` — the selector is not curated. `out_of_domain` —
-            the point is outside the product's coverage. `unavailable` — no data
+            the point is outside the product's coverage (including a point
+            outside lat [-90, 90] / lon [-180, 180]). `unavailable` — no data
             at the point.
           enum: [ok, not_allowlisted, out_of_domain, unavailable]
           example: ok
@@ -6740,7 +9196,210 @@ components:
           items:
             $ref: '#/components/schemas/ClimateNormalsDay'
 
+    SeriesResponse:
+      x-stability: experimental
+      type: object
+      description: The `GET /v1/series` and `POST /v1/series/batch` envelope.
+      required: [units, truncated, next_cursor, meta, series]
+      properties:
+        units:
+          type: string
+          enum: [si, metric, imperial]
+          description: The requested units system.
+        truncated:
+          type: boolean
+          description: True when `limit` cut the series; `next_cursor` resumes them.
+        next_cursor:
+          type: [string, "null"]
+          description: Opaque cursor for the next page, null when not truncated.
+        meta:
+          type: object
+          required: [step, sources]
+          properties:
+            step:
+              type: ["null"]
+              description: The output step; reserved, always null for now (native frames).
+            sources:
+              type: array
+              description: The catalog sources behind the response, with their attribution terms.
+              items:
+                $ref: '#/components/schemas/SeriesSource'
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeriesElement'
+    SeriesSource:
+      type: object
+      required: [id, name, attribution, license, terms_url]
+      properties:
+        id:
+          type: string
+          example: hrrr
+        name:
+          type: [string, "null"]
+        attribution:
+          type: string
+          example: Data provided by NOAA/NWS
+        license:
+          type: string
+          example: public_domain
+        terms_url:
+          type: [string, "null"]
+    SeriesElement:
+      type: object
+      description: |
+        One (product, location) series, column-oriented: every `values`
+        array and `runs` are aligned with `times`.
+      required: [product, lat, lon, status, times, values, units, data_age_seconds, freshness_status, meta]
+      properties:
+        product:
+          type: string
+          example: hrrr_surface
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        label:
+          type: string
+          description: The batch location's `label`, when it had one.
+        status:
+          type: string
+          enum: [ok, partial, unavailable, out_of_domain, not_public, entitlement_required]
+          description: |
+            `ok`; `unavailable` (no frames in the window); `out_of_domain`
+            (outside the product's coverage); `not_public` (public on
+            another door, not served on this route). `partial` and
+            `entitlement_required` are reserved.
+        related:
+          type: string
+          description: With `out_of_domain`, a related product that covers the point.
+          example: hrrr_alaska_surface
+        times:
+          type: array
+          description: Frame valid times, RFC 3339 UTC, ascending.
+          items:
+            type: string
+            format: date-time
+        values:
+          type: object
+          description: Values per variable `standard_name`, aligned with `times`; null where missing.
+          additionalProperties:
+            type: array
+            items:
+              type: [number, "null"]
+        units:
+          type: object
+          description: Unit per variable `standard_name`; null for a raw value with no stored unit.
+          additionalProperties:
+            type: [string, "null"]
+        run:
+          type: string
+          format: date-time
+          description: The model run behind every frame, when they share one.
+        runs:
+          type: array
+          description: Per-frame model runs aligned with `times`, when frames mix runs.
+          items:
+            type: [string, "null"]
+            format: date-time
+        data_age_seconds:
+          type: [integer, "null"]
+          description: Age of the product's latest data (or of the pinned `run`), null when unknown.
+        freshness_status:
+          type: [string, "null"]
+          enum: [fresh, stale, missing, null]
+          description: |
+            The product's freshness, as on the catalog; with `run`, the
+            pinned run's age against the product's freshness budget (the
+            strictest of its stores). Null when unknown.
+        meta:
+          type: object
+          required: [timezone]
+          properties:
+            timezone:
+              type: [string, "null"]
+              description: IANA timezone of the location, null when it cannot be resolved.
+              example: America/Chicago
+    SeriesBatchRequest:
+      x-stability: experimental
+      type: object
+      additionalProperties: false
+      required: [locations, units]
+      description: |
+        The `GET /v1/series` grammar as JSON, with `locations[]` in place
+        of `lat` and `lon`.
+      properties:
+        locations:
+          type: array
+          minItems: 1
+          maxItems: 25
+          items:
+            $ref: '#/components/schemas/SeriesBatchLocation'
+        product:
+          type: string
+          example: hrrr_surface
+        var:
+          type: array
+          maxItems: 25
+          items:
+            type: string
+          example: [temperature_2m]
+        select:
+          type: array
+          maxItems: 25
+          items:
+            type: string
+          example: [hrrr_surface:temperature_2m]
+        units:
+          type: string
+          enum: [si, metric, imperial]
+        hours:
+          type: integer
+          minimum: 1
+          maximum: 384
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        run:
+          type: string
+          format: date-time
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 744
+          default: 168
+        cursor:
+          type: string
+    SeriesBatchLocation:
+      type: object
+      additionalProperties: false
+      required: [lat, lon]
+      properties:
+        lat:
+          type: number
+          format: double
+          example: 41.88
+        lon:
+          type: number
+          format: double
+          example: -87.63
+        label:
+          type: string
+          maxLength: 128
+          example: chicago
   responses:
+    CatalogNotModified:
+      description: |
+        The `If-None-Match` tag matches the current catalog: no body. The
+        `ETag` and `Cache-Control` headers are repeated.
+      headers:
+        ETag:
+          $ref: '#/components/headers/CatalogETag'
     Problem400:
       description: Bad request.
       content:
@@ -6768,7 +9427,7 @@ components:
               recommended: device_flow
               device_flow:
                 href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api#device-flow
-                description: "Human present: run command. It shows the human a verification URL and code, writes SMARTERWEATHER_API_KEY to ./.env (0600, gitignored), and prints only a key prefix. Without Node: device grant at the endpoints below, then POST api_keys_endpoint and write only the response's key field to .env as a SMARTERWEATHER_API_KEY= line (e.g. pipe through jq -r .key). Never print the key or access token."
+                description: "Human present: run the `command` below. It shows the human a verification URL and code, writes SMARTERWEATHER_API_KEY to ./.env (0600, gitignored), and prints only a key prefix. Without Node: device grant at the endpoints below, then POST api_keys_endpoint and write only the response's key field to .env as a SMARTERWEATHER_API_KEY= line (e.g. pipe through jq -r .key). Never print the key or access token."
                 command: "npx -y @smarterweather/mcp-onboarding@latest login"
                 client_id: k2h05BUoTP393zcD
                 device_authorization_endpoint: https://clerk.smarterweather.com/oauth/device_authorization
@@ -6784,8 +9443,9 @@ components:
                 href: https://developers.smarterweather.com/llms.txt?utm_campaign=401&utm_medium=problem-json&utm_source=api
                 description: "Agents: start here. The full agent path, key handling, and the machine-readable contracts."
               onboarding_mcp:
-                href: https://mcp.developers.smarterweather.com?utm_campaign=401&utm_medium=problem-json&utm_source=api
-                description: Anonymous Streamable HTTP MCP that can sign you up, mint a key, and configure the weather MCP in your client.
+                href: https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api
+                description: "Anonymous Streamable HTTP MCP that can sign you up, mint a key, and configure the weather MCP in your client. Connect your MCP client to endpoint (POST-only); href is the setup guide."
+                endpoint: https://mcp.developers.smarterweather.com
               keyless_x402:
                 href: https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#x402
                 description: Agents with a wallet can pay per call (USDC on Base via x402) on the weather MCP with no account.
@@ -6811,7 +9471,10 @@ components:
       description: |
         Resource not found. For `/v1/weather`, returned when the requested
         location cannot be resolved (unknown ZIP, unrecognised free-text
-        location) or when no upstream data covers the location.
+        location) or when no upstream data covers the location. A
+        location outside the 50 US states and DC returns type
+        `https://smarterweather.com/errors/outside-coverage`; both carry
+        `next_steps` (`recommended = coverage`).
       content:
         application/problem+json:
           schema:
