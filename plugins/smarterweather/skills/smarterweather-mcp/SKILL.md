@@ -24,6 +24,14 @@ is one-shot: keep it in the client config only until `configure_mcp`
 has written the weather MCP entry, then remove it so its account tools
 are not left in a long-lived session.
 
+**Coverage:** Smarter Weather covers the 50 US states and DC only. The
+US territories (Puerto Rico, the US Virgin Islands, Guam, the Northern
+Mariana Islands and American Samoa) and other countries are outside it.
+Weather tools return an `outside-coverage` error for a point outside the
+US model grids, and for any point outside the 50 states and DC on tools
+backed by the state-checked REST routes. Tell the user, and do not retry
+the same place as lat,lon.
+
 | Server | Endpoint | Auth | Purpose |
 | --- | --- | --- | --- |
 | Weather MCP | `https://mcp.smarterweather.com` | API key Bearer or keyless x402 | Hosted weather tools. The root URL serves the `core` and `catalog` toolsets: forecasts, current conditions, alerts, observed rain, probabilities, catalog search and raw dataset queries. Outlooks and forecaster text (`guidance`), rendered radar/satellite/sounding imagery (`visual`) and the other toolsets are at `/x/all`, or `/x/<toolset>[,<toolset>]` (also `X-SW-Toolsets`). |

@@ -28,6 +28,17 @@ The platform offers two surfaces; pick the right one for the user's goal:
 When in doubt, default to REST for code-generation tasks and MCP for
 agent-runtime tool calls.
 
+**Coverage:** Smarter Weather covers the 50 US states and DC only. The
+US territories (Puerto Rico, the US Virgin Islands, Guam, the Northern
+Mariana Islands and American Samoa) and other countries are outside it.
+/v1/weather, /v1/windows and /v1/geocode/reverse return 404
+outside-coverage for a point outside the 50 states and DC, and
+/v1/weather/batch reports it per item as outside_coverage; /v1/point and
+/v1/series return the same 404 only for points outside the US model
+grids. Other routes may return empty results for points outside
+coverage, so do not treat an empty result as an all-clear. Do not retry
+an outside-coverage response.
+
 ## Authentication — required reading
 
 Every Smarter Weather request is authenticated with an API key. **Never
@@ -159,10 +170,13 @@ shape. Always parse defensively.
 | 400 | Invalid request shape | No — fix the call |
 | 401 | Missing or invalid API key | No — re-mint or check env |
 | 403 | Key valid but not authorized for this endpoint or tier | No |
-| 404 | Resource not found | No |
-| 422 | Semantically invalid (e.g. coordinates outside coverage) | No |
+| 404 | `type` `https://smarterweather.com/errors/not-found`: resource or place not found | No |
+| 404 | `type` `https://smarterweather.com/errors/outside-coverage`: the point is outside the 50 US states and DC | No — follow `next_steps.coverage` |
 | 429 | Rate-limited | Yes — back off (see below) |
 | 5xx | Server error | Yes — exponential backoff with jitter |
+
+Two problems share `404`, so branch on the problem `type`, not the
+status.
 
 When surfacing errors to the user, include the problem `type` and
 `instance` (or the `X-Request-Id` response header) so support can look

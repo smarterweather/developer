@@ -19,6 +19,17 @@ weather client is configured, **remove this server** from the client
 config. Never wire it into a long-lived config alongside the weather MCP
 (`https://mcp.smarterweather.com`).
 
+**Coverage:** Smarter Weather covers the 50 US states and DC only. The
+US territories (Puerto Rico, the US Virgin Islands, Guam, the Northern
+Mariana Islands and American Samoa) and other countries are outside it.
+Tell the user before signup if they need weather elsewhere. /v1/weather,
+/v1/windows and /v1/geocode/reverse return 404 outside-coverage for a
+point outside the 50 states and DC, and /v1/weather/batch reports it per
+item as outside_coverage; /v1/point and /v1/series return the same 404
+only for points outside the US model grids. Other routes may return
+empty results for points outside coverage, so do not treat an empty
+result as an all-clear.
+
 ## Flow
 
 Prefer CLI when possible:
