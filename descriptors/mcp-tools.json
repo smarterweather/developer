@@ -1541,7 +1541,7 @@
     {
       "name": "get_forecast_distribution",
       "title": "Get forecast distribution",
-      "description": "NBM probabilistic guidance for one weather aspect: percentiles (p10-p90), exceedance probabilities and ensemble spread. Use this for any question about odds, ranges, potential or confidence (\"how much could we get\", \"range of possible highs\", \"how sure is this\") -- a deterministic forecast value cannot answer one. Reading the percentiles: p50 is the most likely outcome, p90 is the reasonable worst case when the risk is the high end (snow totals, wind, rainfall), and p10 when the risk is the low end (cold, visibility, ceiling). A single percentile is not the forecast -- report the likely value with the tail that matters, and label which is which. Aspects: precip (PoP, QPF + percentiles), snow (accumulation percentiles, >1/2/4in probabilities, snow level, snow-type probability), ice (ice accretion, freezing-rain / ice-pellet probabilities), temperature (`daily` high/low p10/p50/p90: the NBM value -/+ 1.28 stddev; hourly temp + stddev), wind (speed/gust percentiles), severe (thunderstorm probability plus NBM CWASP, a severe-environment index, both in percent: severe_weather_prob_p50 is the median CWASP value and severe_weather_prob_above_75 the probability CWASP exceeds 75; NBM has no tornado, hail or damaging-wind probabilities, so use get_outlooks hazard=severe for SPC's), aviation (LIFR/IFR/MVFR visibility + ceiling odds), confidence (ensemble stddev; low = settled, high = details still in play). Labels in unit_labels. Example: {\"location\": \"Denver\", \"aspect\": \"snow\", \"hours\": 72}.",
+      "description": "NBM probabilistic guidance for one weather aspect: percentiles (p10-p90), exceedance probabilities and ensemble spread. Use this for any question about odds, ranges, potential or confidence (\"how much could we get\", \"range of possible highs\", \"how sure is this\") -- a deterministic forecast value cannot answer one. Reading the percentiles: p50 is the most likely outcome, p90 is the reasonable worst case when the risk is the high end (snow totals, wind, rainfall), and p10 when the risk is the low end (cold, visibility, ceiling). A single percentile is not the forecast -- report the likely value with the tail that matters, and label which is which. Aspects: precip (PoP, QPF + percentiles), snow (accumulation percentiles, >1/2/4in probabilities, snow level, snow-type probability), ice (ice accretion, freezing-rain / ice-pellet probabilities), temperature (`daily` high/low p10/p50/p90: the NBM value -/+ 1.28 stddev; hourly temp + stddev), wind (speed/gust percentiles), severe (thunderstorm probability plus NBM CWASP, a severe-environment index, both in percent: severe_weather_prob_p50 is the median CWASP value and severe_weather_prob_above_75 the probability CWASP exceeds 75; NBM has no tornado, hail or damaging-wind odds; SPC's: get_outlooks (guidance) hazard=severe), aviation (LIFR/IFR/MVFR visibility + ceiling odds), confidence (ensemble stddev; low = settled, high = details still in play). Labels in unit_labels. Example: {\"location\": \"Denver\", \"aspect\": \"snow\", \"hours\": 72}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3069,7 +3069,7 @@
     {
       "name": "get_observed_precipitation",
       "title": "Observed precipitation",
-      "description": "How much rain fell: observed precipitation totals at a location. Use for \"did it rain\", \"how much rain fell\", \"rain in the last 24 hours / since yesterday\". Source: MRMS MultiSensor QPE Pass2 (radar bias-corrected to rain gauges) over 1/3/6/24/48/72 h windows (CONUS; 1 h only in Alaska and Hawaii). Values have about 2 mm (0.08 in) resolution, so 0 means under about 1 mm; data runs about an hour behind real time. Pass `at` (within 33 h) for totals ending at a past time (newest frame up to 3 h before it). With include_nowcast (default) it also returns a next-hour radar nowcast (CONUS): peak intensity (light/moderate/heavy), type and start time, not an amount. For forecast totals beyond the next hour use get_period_totals; for station reports use get_observations.",
+      "description": "How much rain fell: observed precipitation totals at a location. Use for \"did it rain\", \"how much rain fell\", \"rain in the last 24 hours / since yesterday\". Source: MRMS MultiSensor QPE Pass2 (radar bias-corrected to rain gauges) over 1/3/6/24/48/72 h windows (CONUS; 1 h only in Alaska and Hawaii). Values have about 2 mm (0.08 in) resolution, so 0 means under about 1 mm; data runs about an hour behind real time. Pass `at` (within 33 h) for totals ending at a past time (newest frame up to 3 h before it). With include_nowcast (default) it also returns a next-hour radar nowcast (CONUS): peak intensity (light/moderate/heavy), type and start time, not an amount. Forecast totals past the next hour: get_period_totals (planning); station reports: get_observations (observed).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -5268,15 +5268,22 @@
                     "arguments"
                   ],
                   "additionalProperties": false,
-                  "description": "The exact call that answers from this dataset."
+                  "description": "The exact call that answers from this dataset. Absent when that tool is not on this connection; see `connect`."
+                },
+                "toolset": {
+                  "type": "string",
+                  "description": "With no `call`: the toolset whose tool answers this dataset."
+                },
+                "connect": {
+                  "type": "string",
+                  "description": "With no `call`: the path that serves this connection's toolsets plus that one, e.g. /x/core,catalog,guidance."
                 }
               },
               "required": [
                 "dataset_id",
                 "title",
                 "kind",
-                "why",
-                "call"
+                "why"
               ],
               "additionalProperties": false
             }
