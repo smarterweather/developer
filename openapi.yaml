@@ -29,7 +29,10 @@ info:
     extension member: a machine-readable map of where to go next
     (`recommended` names the link to take first), so a client -- or a
     coding agent acting for one -- can recover from "no key", "wrong
-    scope", or "over quota" without leaving the response. Trial keys
+    scope", or "over quota" without leaving the response. A `404` for a
+    point outside coverage (type `outside-coverage`) or a place that
+    matches no US location carries `next_steps.recommended = coverage`.
+    Coverage is the 50 US states and DC, for every caller. Trial keys
     whose free value has ended receive `402` with
     `next_steps.recommended = claim`. `401` and `403` also carry an
     RFC 6750 `WWW-Authenticate: Bearer` challenge. Every `type` URI
@@ -130,7 +133,9 @@ tags:
   - name: Geocode
     description: |
       Forward, reverse, and typeahead geocoding for locations within
-      the supported NWS coverage domain (CONUS, AK, HI, PR, GU/MP).
+      the 50 US states and DC. Forward and typeahead results omit places
+      outside it (Puerto Rico, Guam and the other territories); reverse
+      geocoding returns 404 `outside-coverage` for other points.
   - name: Health
     description: Service health.
   - name: Meta
@@ -395,7 +400,7 @@ paths:
         - `lat` **and** `lon` — latitude/longitude pair.
         - `zip` — 5-digit US ZIP code.
         - `location` — free-text location name (e.g., `"Boston, MA"`,
-          `"94043"`, `"Kyiv"`). Resolved by the same upstream geocoder
+          `"94043"`, `"Denver"`). Resolved by the same upstream geocoder
           that powers the dedicated `/v1/geocode/{search,autosuggest,reverse}`
           endpoints; clients that need geocoding without a weather
           fetch should call those directly.
@@ -419,10 +424,19 @@ paths:
 
         ### Coverage
 
-        Sections that depend on US-only datasets (e.g., `alerts`, some
-        `outlooks`, radar-adjacent `gis.nearest_radar` fields) may be
-        empty or absent for international locations. Partial-coverage
-        scenarios are reported via `meta.warnings[]` with a structured
+        Coverage is the 50 US states and DC, for every caller. A location
+        outside it (another country, Puerto Rico, Guam and the other
+        territories, or open water beyond about 3 nm offshore) returns
+        `404` with type `https://smarterweather.com/errors/outside-coverage`
+        and `next_steps` (`recommended = coverage`); in
+        `POST /v1/weather/batch` that row's `error.code` is
+        `outside_coverage`. Do not retry the same point. A `zip` or
+        `location` resolves to its first match inside coverage (so
+        `Carolina` is Carolina, RI, not Carolina, PR); one whose every
+        match is outside coverage returns `outside-coverage`, and one that
+        matches no US place returns `404` `not-found`, both with
+        `next_steps`. Partial-coverage scenarios inside
+        coverage are reported via `meta.warnings[]` with a structured
         code so clients can respond programmatically.
 
         ### Response density, sampling and sparse fieldsets
@@ -2603,9 +2617,9 @@ paths:
       summary: Reverse-geocode a coordinate to a location.
       description: |
         Resolves a `(lat, lon)` coordinate into a city / nearest-city /
-        state / county / IANA timezone tuple. Coverage is the supported
-        NWS domain (CONUS, AK, HI, PR, GU/MP); coordinates outside the
-        domain return a 404 Problem.
+        state / county / IANA timezone tuple. Coverage is the 50 US
+        states and DC; other points return 404 `outside-coverage` with
+        `next_steps`.
 
         ### Caching
 
@@ -3257,10 +3271,10 @@ paths:
         Location selectors match `GET /v1/weather`: exactly one of
         `lat`+`lon`, `zip`, or `location`.
 
-        Outside CONUS, Alaska, and Hawaii the response is `200` with
-        `windows: []` and `message` explaining that window search uses
-        NBM. An empty scan inside coverage may also return `windows: []`
-        with `message` when no forecast series is available.
+        A location outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`, as on `GET /v1/weather`.
+        An empty scan inside coverage may return `windows: []` with
+        `message` when no forecast series is available.
 
         `activity` does not change the metered weight of the call.
       tags: [Weather]
@@ -3438,7 +3452,9 @@ paths:
 
         Each allowlisted entry carries a coverage domain; a point outside it
         returns `404` (single) or an `out_of_domain` item (batch) without an
-        upstream call. Scalar values are sampled from the nearest grid cell
+        upstream call. A single point outside the 50 US states and DC gets
+        the `404` `outside-coverage` problem with `next_steps`; in a batch
+        such a point is `out_of_domain` for every selector. Scalar values are sampled from the nearest grid cell
         (products are snapped to a ~1 km grid), so nearby requests share cache
         entries.
 
@@ -3655,6 +3671,15 @@ paths:
         `day_length` -1 means no event. `GET /v1/catalog/{product_id}`
         describes each variable's encoding.
 
+        ### Coverage
+
+        Coverage is the 50 US states and DC. On `GET /v1/series` an
+        in-range point outside it returns `404` `outside-coverage` with
+        `next_steps`, as `GET /v1/point` does; `global` products (GFS,
+        AIFS, `astro`, `uv_index`, ...) are not served there either. In
+        `POST /v1/series/batch` such a location is an `out_of_domain`
+        element.
+
         ### Envelope
 
         `series[]` holds one element per (product, location), in request
@@ -3662,7 +3687,8 @@ paths:
         variable aligned with `times[]`, and `run` when every frame shares
         one model run, else `runs[]` aligned with `times[]`. Each element
         has a `status`: `ok`; `unavailable` for an empty window;
-        `out_of_domain` outside the product's catalog `coverage[]`, with
+        `out_of_domain` outside the product's catalog `coverage[]` or
+        outside the 50 US states and DC (`global` products included), with
         `related` naming a sibling product that covers the point when one
         exists (there is no automatic switch); `not_public`. `partial` and
         `entitlement_required` are reserved. `data_age_seconds` and
@@ -4435,7 +4461,7 @@ components:
       in: query
       description: |
         Free-text location name. Examples: `"Boston, MA"`, `"94043"`,
-        `"Kyiv"`. Resolved by an internal geocoder. Mutually exclusive with
+        `"Denver"`. Resolved by an internal geocoder. Mutually exclusive with
         `lat`/`lon` and `zip`.
       required: false
       schema:
@@ -4808,8 +4834,9 @@ components:
 
         Beyond the five standard members the object may carry extension
         members (RFC 9457 §3.2). Today `401`, `402`, `403`, and `429`
-        carry `next_steps`. Clients MUST ignore extension members they
-        do not understand.
+        carry `next_steps`, as do `404` `outside-coverage` and the `404`
+        for a place that matches no US location. Clients MUST ignore
+        extension members they do not understand.
       required: [type, title, status]
       additionalProperties: true
       properties:
@@ -4862,15 +4889,16 @@ components:
     ProblemNextSteps:
       type: object
       description: |
-        Extension member on `401`, `402`, `403`, and `429` problems: where
-        to go next, as a map of link relations. `recommended` names the
+        Extension member on `401`, `402`, `403`, and `429` problems, and
+        on `404` `outside-coverage` and US location-not-found problems:
+        where to go next, as a map of link relations. `recommended` names the
         relation a client should take first; when present,
         `if_no_human_present` names the relation an autonomous agent
         should take when nobody can act on the recommended one right
         now. Every other key is a link relation (`device_flow`,
         `get_key`, `quickstart`, `agents`, `onboarding_mcp`,
         `keyless_x402`, `key_handling`, `errors`, `upgrade`, `pricing`,
-        `usage`, `claim`) whose value is a `ProblemNextStepLink`. New
+        `usage`, `claim`, `coverage`) whose value is a `ProblemNextStepLink`. New
         relations may be added over time; unknown relations MUST be
         ignored.
       required: [recommended]
@@ -8608,6 +8636,7 @@ components:
             - upstream_unavailable
             - upstream_timeout
             - internal_error
+            - outside_coverage
         message:
           type: string
           description: Human-readable explanation. Stable for logging; clients should branch on `code`.
@@ -9426,7 +9455,10 @@ components:
       description: |
         Resource not found. For `/v1/weather`, returned when the requested
         location cannot be resolved (unknown ZIP, unrecognised free-text
-        location) or when no upstream data covers the location.
+        location) or when no upstream data covers the location. A
+        location outside the 50 US states and DC returns type
+        `https://smarterweather.com/errors/outside-coverage`; both carry
+        `next_steps` (`recommended = coverage`).
       content:
         application/problem+json:
           schema:
