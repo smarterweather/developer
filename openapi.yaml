@@ -3465,7 +3465,7 @@ paths:
           in: query
           required: false
           description: |
-            Allowlisted stored product identifier (lowercase, digits,
+            Allowlisted catalog product id (lowercase, digits,
             underscores), e.g. `sport_rsm_0_2m_pct_conus`,
             `mrms_qpe_24h_pass2_conus`, or the outlook `spc_day1_categorical`.
             Single form: pair with `var` + `lat` + `lon`. Ignored when `select`
@@ -3480,15 +3480,17 @@ paths:
           in: query
           required: false
           description: |
-            Variable identifier within the product, e.g. `rsm_0_2m_pct`,
-            `qpe_24h`, or `risk` for zone outlooks. Ignored when `select` is
-            provided.
+            Variable `standard_name` within the product, e.g.
+            `soil_moisture_percentile_0_200cm`, `multisensor_qpe_24h_pass2`,
+            or `convective_outlook_risk` for zone outlooks. The variable's
+            stored `name` is also accepted, as an alias; the response echoes
+            `var` as sent. Ignored when `select` is provided.
           schema:
             type: string
             pattern: '^[a-z0-9_]+$'
             minLength: 1
             maxLength: 128
-          example: rsm_0_2m_pct
+          example: soil_moisture_percentile_0_200cm
         - name: lat
           in: query
           required: false
@@ -3514,9 +3516,10 @@ paths:
           required: false
           description: |
             Batch form. One or more `product:var` selectors (each individually
-            allowlisted). Repeat the parameter or comma-join within a single
-            value, e.g.
-            `select=sport_rsm_0_2m_pct_conus:rsm_0_2m_pct&select=spc_day1_categorical:risk`.
+            allowlisted; `var` is the variable `standard_name`, or the stored
+            `name` as an alias, and each item echoes its selector as sent).
+            Repeat the parameter or comma-join within a single value, e.g.
+            `select=sport_rsm_0_2m_pct_conus:soil_moisture_percentile_0_200cm&select=spc_day1_categorical:convective_outlook_risk`.
             Presence of `select` (or `points`) switches the response to
             `PointBatchResponse`. Max 25 selectors; points × selectors ≤ 500.
           style: form
@@ -3529,7 +3532,7 @@ paths:
               pattern: '^[a-z0-9_]+:[a-z0-9_]+(,[a-z0-9_]+:[a-z0-9_]+)*$'
               minLength: 3
               maxLength: 1024
-          example: [sport_rsm_0_2m_pct_conus:rsm_0_2m_pct, spc_day1_categorical:risk]
+          example: [sport_rsm_0_2m_pct_conus:soil_moisture_percentile_0_200cm, spc_day1_categorical:convective_outlook_risk]
         - name: points
           in: query
           required: false
@@ -4283,8 +4286,9 @@ components:
       in: query
       required: false
       description: |
-        Variable `standard_name` of `product`, repeatable (at most 25).
-        Omit it for every variable of the product.
+        Variable `standard_name` of `product`, or its stored `name` as an
+        alias, repeatable (at most 25); `values` are keyed by
+        `standard_name`. Omit it for every variable of the product.
       style: form
       explode: true
       schema:
@@ -4301,9 +4305,10 @@ components:
       in: query
       required: false
       description: |
-        One or more `product:var` selectors (variable `standard_name`s),
-        repeated or comma-joined, at most 25 in all. Not with `product` or
-        `var`.
+        One or more `product:var` selectors (variable `standard_name`, or
+        the stored `name` as an alias; `values` are keyed by
+        `standard_name`), repeated or comma-joined, at most 25 in all. Not
+        with `product` or `var`.
       style: form
       explode: true
       schema:
@@ -7068,14 +7073,20 @@ components:
         - aliases
         - categories
         - bands
+        - point
       properties:
         name:
           type: string
-          description: Stored variable name, the `var` of `/v1/point`.
+          description: |
+            Stored variable name (the writer's OM variable); accepted as an
+            alias of `standard_name` on `/v1/point` and `/v1/series`.
           example: tmp2m
         standard_name:
           type: string
-          description: Standard variable name used across sources (MCP `query_dataset` `variables`).
+          description: |
+            Standard variable name, the public identifier on every door: the
+            `var` of `/v1/point` and `/v1/series`, the MCP `query_dataset`
+            `variables`, and the key of every `values` and `units` map.
           example: temperature_2m
         label:
           type: [string, "null"]
@@ -7168,6 +7179,19 @@ components:
               label:
                 type: string
                 example: Slight
+        point:
+          description: |
+            How `/v1/point` serves the variable: the `unit` it reports
+            (`null` for a categorical zone). `null` when `/v1/point` does not
+            serve the variable.
+          oneOf:
+            - type: object
+              required: [unit]
+              properties:
+                unit:
+                  type: [string, "null"]
+                  example: mm
+            - type: 'null'
 
     CatalogFreshness:
       type: object
@@ -8732,8 +8756,8 @@ components:
           example: sport_rsm_0_2m_pct_conus
         var:
           type: string
-          description: Echoed variable identifier.
-          example: rsm_0_2m_pct
+          description: The `var` as sent (`standard_name` or the stored `name`).
+          example: soil_moisture_percentile_0_200cm
         value:
           type: [number, "null"]
           format: double
@@ -8793,8 +8817,8 @@ components:
           example: spc_day1_categorical
         var:
           type: string
-          description: Echoed variable identifier.
-          example: risk
+          description: The selector's `var` as sent (`standard_name` or the stored `name`).
+          example: convective_outlook_risk
         value:
           type: [number, "null"]
           format: double
