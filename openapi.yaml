@@ -3661,6 +3661,14 @@ paths:
         ahead, so with no time word it returns the newest row and `hours`
         looks back from now; pass `start` and `end` for specific days.
 
+        `mrms_radar_nowcast_conus` is a `forecast` served from one nowcast
+        run, the newest whose frames (5 to 60 minutes after the run) reach
+        the window, and `run` names it. Frames of that run outside the
+        window are dropped. A past window is not stitched across runs, so
+        a window no run reaches is `unavailable`. Observed radar history
+        comes from `mrms_reflectivity_conus` and the MRMS QPE products
+        such as `mrms_qpe_01h_pass2_conus`.
+
         ### Units and raw values
 
         `units` is `si`, `metric` or `imperial`. `si` serves stored values
