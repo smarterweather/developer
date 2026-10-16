@@ -2685,7 +2685,9 @@ paths:
         Successful responses carry `Cache-Control: private,
         max-age=86400`. The underlying place-name <-> timezone mapping
         changes on the order of years; clients should treat this as a
-        long-term cache.
+        long-term cache. The exception is a temporarily degraded or
+        fallback answer, which is sent with `Cache-Control: no-store` so
+        that no cache keeps it.
 
         `private` means your own client may store the response for the
         full `max-age`, but shared caches (CDNs, proxies) must not:
@@ -3803,7 +3805,11 @@ paths:
 
         `Cache-Control: max-age=N, stale-while-revalidate=N` with N the
         smallest selected product cadence clamped to 60-3600 s, `public`
-        for first-party keys and `private` for partner keys.
+        for first-party keys and `private` for partner keys. An element's
+        `meta.timezone` may be null when the timezone lookup is
+        unavailable or slow; the response is then sent with
+        `Cache-Control: no-store`, as it is when the timezone comes from a
+        temporarily degraded or fallback lookup.
 
         ### Auth and cost
 
