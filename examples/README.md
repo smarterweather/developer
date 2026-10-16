@@ -1,7 +1,9 @@
 # Examples
 
-Small programs that call Smarter Weather, one directory each. Every one runs
-as-is once you put your key in it, and CI runs every one on each change.
+Small programs and client configs for Smarter Weather, one directory each.
+Every REST example runs as-is once `SMARTERWEATHER_API_KEY` is set. On each
+change, CI runs every REST example against a mock of the API and checks every
+MCP config statically (see [below](#how-ci-checks-examples-without-a-key)).
 
 ## The bar
 
@@ -13,7 +15,8 @@ Apple's WeatherKit hands back one `Weather` value from one call. Each example:
 
 - shows a real result in the fewest lines its language allows;
 - never needs a second call to be useful;
-- opens with one placeholder key constant and nothing else to configure;
+- reads the key from `SMARTERWEATHER_API_KEY`, with one placeholder constant
+  as the fallback for a quick local try, and needs nothing else configured;
 - prints or renders `attribution.sources`, the data sources behind the answer.
 
 The first example in each language is the shortest useful call: the key, the
@@ -45,17 +48,24 @@ Get a free key at <https://developers.smarterweather.com/dashboard/api-keys>,
 or run `npx -y @smarterweather/mcp-onboarding@latest login`, which writes it to
 `.env` as `SMARTERWEATHER_API_KEY` and never prints it.
 
-Every REST example starts with one line to edit:
+Set it in the environment; every example reads `SMARTERWEATHER_API_KEY`
+first:
+
+```bash
+export SMARTERWEATHER_API_KEY=...   # or source the .env that login wrote
+```
+
+For a quick local try without the variable, each REST example also opens with
+one placeholder constant you can paste the key into:
 
 ```js
 const API_KEY = "YOUR_SMARTERWEATHER_API_KEY"; // insert your key here
 ```
 
-The `SMARTERWEATHER_API_KEY` environment variable wins over that constant, so
-you can leave the file alone and export the variable instead. Never commit a
-real key; if one leaks, revoke it in the dashboard and mint another. No key of
-any kind lives in this repository, and CI fails on anything that looks like
-one.
+The variable wins whenever it is set and not empty. Never commit a real key;
+if one leaks, revoke it in the dashboard and mint another. No key of any kind
+lives in this repository, and CI fails on any file in it that looks like one.
+The MCP configs hold no key at all: the bridge reads it from a `.env` file.
 
 Browser code never holds the key. The API answers cross-origin requests only
 from Smarter Weather's own sites, so a web page calls your server and your
@@ -65,7 +75,8 @@ server calls the API with the key.
 
 ```text
 examples/
-  index.json            one entry per example and language (schema: index.schema.json)
+  index.json            {version, examples[]}: one entry per example, surface and language
+  index.schema.json     its JSON Schema
   rest/<language>/<example>/
   mcp/<client>/
   sdk/                  reserved for when an SDK ships
@@ -73,48 +84,76 @@ examples/
 ```
 
 `index.json` is what the developer portal reads to list examples. An example
-written in several languages is several entries that share an `id`, and
-`(id, language)` is unique. A new set of examples, such as an SDK, is a new
-`surface` value and a directory; nothing else changes.
+written in several languages, or on several surfaces (the REST call and, one
+day, the same thing with an SDK), is several entries that share an `id`;
+`(id, surface, language)` is unique. `kind` says what the entry is: `code`
+(a program, which must carry the placeholder constant) or `config` (which
+must hold no key). An entry with a `test` is run by CI; one without is only
+listed. A new set of examples, such as an SDK, is one more value in the
+`surface` list in `index.schema.json` and a directory; the harness needs no
+change.
 
 ## How CI checks examples without a key
 
 [`examples-ci`](../.github/workflows/examples-ci.yml) never calls the real
-API and uses no secret:
+API and uses no secret. For REST examples (`kind: code`):
 
 1. [Prism](https://github.com/stoplightio/prism) 5.14.2 mocks the API from
    [`openapi.yaml`](../openapi.yaml). It answers 401 when the
    `Authorization` header is missing and the documented example otherwise.
 2. [`_harness/record-proxy.mjs`](./_harness/record-proxy.mjs) sits in front
-   of the mock and records each request's method, path, query and whether a
-   `Bearer` token was sent (never the token).
-3. For every `index.json` entry with a `test`, the example runs with
-   `SMARTERWEATHER_API_BASE` pointed at the proxy and a fake key, and
-   [`_harness/expect-run.mjs`](./_harness/expect-run.mjs) checks its exit
-   code, its output and the recorded request against the example's
-   `test.json`. A second run goes through a path where the proxy drops the
-   header; the mock must answer 401 and the example must fail.
-4. [`_harness/validate-index.mjs`](./_harness/validate-index.mjs) checks
-   `index.json` against its schema, the READMEs' relative links and the key
-   constant; [`_harness/scan-keys.mjs`](./_harness/scan-keys.mjs) looks for
-   anything shaped like a key.
+   of the mock and records each request's method, path and query, whether a
+   `Bearer` token was sent, and whether it was the fake key from the
+   environment or the placeholder (never the token itself).
+3. [`_harness/expect-run.mjs`](./_harness/expect-run.mjs) runs the example
+   four times with `SMARTERWEATHER_API_BASE` pointed at the proxy:
+   - with the fake key in `SMARTERWEATHER_API_KEY`: it must exit 0, print
+     what its `test.json` expects, and send exactly the request listed
+     there, with that key as the bearer;
+   - with `SMARTERWEATHER_API_KEY` set but empty: it must fall back to the
+     placeholder constant;
+   - through a path where the proxy drops the header: the mock answers 401,
+     and the example must exit non-zero and show the problem's `detail` and
+     recommended next step;
+   - through a path where the proxy answers 502 with an HTML page: the
+     example must exit non-zero and show the status and the start of the
+     page, not a JSON parse error.
 
-Run the same thing locally (Node.js 20+, plus Python, Go and jq for those
-examples):
+For MCP configs (`kind: config`),
+[`_harness/check-mcp-config.mjs`](./_harness/check-mcp-config.mjs) checks the
+JSON shape, that the server is the `@smarterweather/mcp-weather` bridge or a
+remote entry whose URL is the hosted server `https://mcp.smarterweather.com`,
+that the key comes from `.env` or the environment by the variable names the
+bridge reads, and that no value holds a key. It makes no network call.
+
+For everything, [`_harness/validate-index.mjs`](./_harness/validate-index.mjs)
+checks `index.json` against its schema, the READMEs' relative links and the
+key constant. Separately, [`key-scan`](../.github/workflows/key-scan.yml)
+runs [`_harness/scan-keys.mjs`](./_harness/scan-keys.mjs) over the whole
+repository on every pull request and push to `main`.
+
+Run the same thing locally (Node.js 20+, plus Python 3.10+, Go and jq for
+those examples):
 
 ```bash
 cd examples/_harness
 npm ci
-npm run validate && npm run scan
-npm test               # every example
+npm run validate && npm run scan && npm run test:unit
+npm test                                 # every example
 ./with-mock.sh node run-all.mjs python   # one language
 ```
+
+Locally, `with-mock.sh` creates a Python venv in `_harness/.venv` (with `uv`
+when it is installed, otherwise `python3 -m venv`) and puts it first on
+`PATH`, so the Python examples install their requirements there, never into
+your system Python. An already active venv is used as is. CI uses
+`actions/setup-python` instead.
 
 ## Contributing an example
 
 Open an issue first ([CONTRIBUTING](../CONTRIBUTING.md), Tier 2). An example
-is a directory with a `README.md`, the code, a `test.json` and an
-`index.json` entry. Keep it to the bar above, US locations only.
+is a directory with a `README.md`, the code or config, an `index.json`
+entry and, for code, a `test.json`. Keep it to the bar above, US locations only.
 
 ## License
 

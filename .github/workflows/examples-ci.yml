@@ -1,7 +1,8 @@
 name: examples-ci
 # Runs every example under examples/ against a Prism mock of openapi.yaml,
-# behind a proxy that records each request. No secrets and no call to the
-# real API, so it runs the same on forks. See examples/README.md.
+# behind a proxy that records each request, and checks the MCP configs
+# statically. No secrets and no call to the real API, so it runs the same on
+# forks. The repo-wide key scan is key-scan.yml. See examples/README.md.
 on:
   pull_request:
     paths:
@@ -43,7 +44,7 @@ jobs:
         run: npm ci
       - name: Validate index.json, links and the key constant
         run: npm run validate
-      - name: Scan for key-shaped strings
-        run: npm run scan
+      - name: Harness unit tests
+        run: npm run test:unit
       - name: Run every example against the mock
         run: npm test

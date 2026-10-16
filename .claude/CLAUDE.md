@@ -53,6 +53,10 @@ Every Smarter Weather request needs an API key. Hard rules:
   auto-revoke leaked keys.
 - Use `sw_test_*` keys when generating examples, tests, or local dev
   scaffolds. Use `sw_live_*` keys for production paths.
+- The examples under [`examples/`](https://github.com/smarterweather/developer/tree/main/examples)
+  read `SMARTERWEATHER_API_KEY` from the environment and fall back to a
+  placeholder constant (`YOUR_SMARTERWEATHER_API_KEY`, for a quick local
+  try only); production code should read the env var and nothing else.
 - Keys are minted at
   <https://developers.smarterweather.com/dashboard/api-keys>. If the user
   doesn't have one, point them there, or use the onboarding MCP server's

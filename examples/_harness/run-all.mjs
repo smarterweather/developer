@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const examples = join(dirname(fileURLToPath(import.meta.url)), "..");
 const only = process.argv[2];
-const entries = JSON.parse(readFileSync(join(examples, "index.json"), "utf8")).filter(
+const entries = JSON.parse(readFileSync(join(examples, "index.json"), "utf8")).examples.filter(
   (entry) => entry.test && (!only || entry.language === only),
 );
 

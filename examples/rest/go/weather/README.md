@@ -5,11 +5,13 @@ temperature, the conditions and the data sources. Standard library only; the
 struct decodes just the fields it prints.
 
 ```go
+// Quick local try: paste your key below. Prefer the SMARTERWEATHER_API_KEY
+// environment variable, which wins when set, and never commit a real key.
 const apiKey = "YOUR_SMARTERWEATHER_API_KEY" // insert your key here
 ```
 
-`SMARTERWEATHER_API_KEY` in the environment wins over the constant. The full
-program is [`main.go`](./main.go).
+The full program is [`main.go`](./main.go). On an error it prints the status,
+the problem's `detail` and its recommended next step, and exits 1.
 
 ## Run it
 

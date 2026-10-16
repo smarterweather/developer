@@ -1,0 +1,26 @@
+name: key-scan
+# Fails when any file in the repository looks like a real Smarter Weather
+# key (sw_live_, sw_test_, sw_trial_, sw_internal_<audience>_ + 8 or more
+# key characters). Runs on every PR and push to main, no secrets, no
+# dependencies. Scanner and tests: examples/_harness/scan-keys*.mjs.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Scanner tests
+        run: node --test examples/_harness/scan-keys.test.mjs
+      - name: Scan the repository
+        run: node examples/_harness/scan-keys.mjs

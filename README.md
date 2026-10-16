@@ -46,9 +46,9 @@ specification for `api.smarterweather.com`.
 - **Client SDKs** -- TypeScript and Python first; Go to follow. Not yet
   shipped; call the REST API directly in the meantime.
 - **Examples** -- [`examples/`](./examples/): the first call in curl,
-  JavaScript, Python and Go, and MCP client setups, each one run against a
-  mock of the API in CI. Listed in
-  [`examples/index.json`](./examples/index.json).
+  JavaScript, Python and Go, which CI runs against a mock of the API, and
+  MCP client configs for Claude Desktop and Cursor, which CI checks
+  statically. Listed in [`examples/index.json`](./examples/index.json).
 - **Agent Plugins** -- [`plugins/smarterweather/`](./plugins/smarterweather/)
   is the long-lived [Agent Plugins 1.0](https://agent-plugins.org/) package
   (weather MCP + playbooks).

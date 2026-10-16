@@ -3,6 +3,9 @@
 # record-proxy.mjs on 127.0.0.1:4011, runs "$@" pointed at the proxy with a
 # fake bearer, then stops both. No key and no network call to the real API.
 # Needs `npm ci` in this directory first (Prism is pinned in package.json).
+# Outside CI it also creates and activates a Python venv in .venv (with uv
+# when installed, else python3 -m venv), so the Python examples install
+# their requirements there and not into the system Python.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -12,6 +15,19 @@ work="$(mktemp -d)"
 export SMARTERWEATHER_CI_LOG="$work/requests.jsonl"
 export SMARTERWEATHER_API_BASE="http://127.0.0.1:4011"
 export SMARTERWEATHER_API_KEY="ci-mock-key"
+
+if [ -z "${GITHUB_ACTIONS:-}" ] && [ -z "${VIRTUAL_ENV:-}" ]; then
+  venv="$here/.venv"
+  if [ ! -x "$venv/bin/python3" ]; then
+    if command -v uv >/dev/null 2>&1; then
+      uv venv --quiet --seed "$venv"
+    else
+      python3 -m venv "$venv"
+    fi
+  fi
+  export VIRTUAL_ENV="$venv"
+  export PATH="$venv/bin:$PATH"
+fi
 
 "$here/node_modules/.bin/prism" mock "$root/openapi.yaml" --errors -h 127.0.0.1 -p 4010 >"$work/prism.log" 2>&1 &
 prism=$!
