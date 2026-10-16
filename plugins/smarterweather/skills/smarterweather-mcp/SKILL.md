@@ -28,9 +28,8 @@ are not left in a long-lived session.
 US territories (Puerto Rico, the US Virgin Islands, Guam, the Northern
 Mariana Islands and American Samoa) and other countries are outside it.
 Weather tools return an `outside-coverage` error for a point outside the
-US model grids, and for any point outside the 50 states and DC on tools
-backed by the state-checked REST routes. Tell the user, and do not retry
-the same place as lat,lon.
+50 states and DC. Tell the user, and do not retry the same place as
+lat,lon.
 
 | Server | Endpoint | Auth | Purpose |
 | --- | --- | --- | --- |

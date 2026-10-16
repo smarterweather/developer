@@ -32,7 +32,9 @@ info:
     scope", or "over quota" without leaving the response. A `404` for a
     point outside coverage (type `outside-coverage`) or a place that
     matches no US location carries `next_steps.recommended = coverage`.
-    Coverage is the 50 US states and DC, for every caller. Trial keys
+    Coverage is the 50 US states and DC, for every caller; if the
+    location lookup behind the check is unavailable, a point route can
+    briefly fail open and serve the point. Trial keys
     whose free value has ended receive `402` with
     `next_steps.recommended = claim`. `401` and `403` also carry an
     RFC 6750 `WWW-Authenticate: Bearer` challenge. Every `type` URI
@@ -695,6 +697,14 @@ paths:
         The scope is `public` for first-party keys and `private` for
         partner keys.
 
+        ### Coverage
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`, and so does an area (a bounding
+        box) that touches none of the US domains (CONUS, Alaska, Hawaii). A
+        box that touches one is served as is and may include area outside
+        the US.
+
         ### Auth
 
         Standard sw-api Bearer auth applies.
@@ -818,6 +828,8 @@ paths:
           $ref: '#/components/responses/TrialEnded'
         '403':
           $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -1287,6 +1299,11 @@ paths:
         `zip`, `location`, `n`, `radius`) are not accepted here and return
         `400`; for the stations nearest a point use
         `GET /v1/observations/nearest`.
+
+        An area (a bounding box) that touches none of the US domains (CONUS,
+        Alaska, Hawaii) returns `404` `outside-coverage` with `next_steps`;
+        a box that touches one is served as is and may include area outside
+        the US. `station` is not checked.
       tags: [Observations]
       security:
         - bearerAuth: []
@@ -1334,6 +1351,8 @@ paths:
                 type: object
         '400':
           $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
         '503':
@@ -1348,6 +1367,9 @@ paths:
       description: |
         Returns the N nearest METAR stations to a point, deduplicated to
         the latest observation per station, sorted by distance.
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
       tags: [Observations]
       security:
         - bearerAuth: []
@@ -1370,6 +1392,8 @@ paths:
                 type: object
         '400':
           $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
         '503':
@@ -1402,6 +1426,11 @@ paths:
         Successful responses carry `Cache-Control: max-age=60,
         stale-while-revalidate=30`, `public` for first-party keys and
         `private` for partner keys.
+
+        ### Coverage
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
 
         ### Auth
 
@@ -1458,6 +1487,8 @@ paths:
           $ref: '#/components/responses/TrialEnded'
         '403':
           $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -1546,6 +1577,9 @@ paths:
 
         The full `properties` bag is forward-compatible: the reader pipeline
         may add keys without a sw-api release, so treat unknown keys as opaque.
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
       tags: [Observations]
       security:
         - bearerAuth: []
@@ -1568,6 +1602,8 @@ paths:
                 type: object
         '400':
           $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
         '503':
@@ -1713,6 +1749,11 @@ paths:
         Successful responses carry `Cache-Control: public, max-age=30,
         stale-while-revalidate=30`.
 
+        ### Coverage
+
+        With `lat`/`lon`, a point outside the 50 US states and DC returns
+        `404` `outside-coverage` with `next_steps`; `site` is not checked.
+
         ### Auth
 
         Standard sw-api Bearer auth applies.
@@ -1789,6 +1830,8 @@ paths:
           $ref: '#/components/responses/Problem401'
         '403':
           $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -1947,6 +1990,12 @@ paths:
         stale-while-revalidate=60`, `public` for first-party keys and
         `private` for partner keys.
 
+        ### Coverage
+
+        With `lat`/`lon`, a point outside the 50 US states and DC returns
+        `404` `outside-coverage` with `next_steps`; `wfo` and national queries
+        are not filtered by point.
+
         ### Auth
 
         Standard sw-api Bearer auth applies.
@@ -2052,6 +2101,8 @@ paths:
           $ref: '#/components/responses/TrialEnded'
         '403':
           $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -3041,6 +3092,9 @@ paths:
 
         Launches behind the `AGRICULTURE_GDD_ENABLED` feature flag: returns
         `404` when the flag is off.
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
       tags: [Agriculture]
       security:
         - bearerAuth: []
@@ -3162,7 +3216,7 @@ paths:
         says which. Across the contiguous US they are read from NCEI's gridded
         normals at the requested coordinates (the nClimGrid 1/24° mesh, roughly
         5 km), so they describe that point directly: `source` is `grid`.
-        Outside CONUS — Alaska, Hawaii, the territories — and for any day the
+        Outside CONUS — Alaska and Hawaii — and for any day the
         grid has no value for, they come from the nearest station record, and
         `source` is `station`, or `mixed` where one series draws on both.
 
@@ -3178,8 +3232,8 @@ paths:
         and elevation differences matter more than distance alone suggests.
 
         **Coverage.** The gridded normals cover the contiguous US; the station
-        normals add roughly 7,400 US stations including Alaska, Hawaii and the
-        territories. Remote points outside CONUS may have no station in range.
+        normals add roughly 7,400 US stations, Alaska and Hawaii among them.
+        Remote points outside CONUS may have no station in range.
 
         **Precipitation is gridded-only.** `normal_precip` has no station
         equivalent — NCEI's station normals publish no daily precipitation
@@ -3194,6 +3248,9 @@ paths:
 
         Launches behind the `CLIMATE_NORMALS_ENABLED` feature flag: returns
         `404` when the flag is off.
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
       tags: [Climate]
       security:
         - bearerAuth: []
@@ -3458,11 +3515,16 @@ paths:
 
         ### Coverage
 
-        Each allowlisted entry carries a coverage domain; a point outside it
-        returns `404` (single) or an `out_of_domain` item (batch) without an
-        upstream call. A single point outside the 50 US states and DC gets
+        Coverage is the 50 US states and DC. A single point outside it gets
         the `404` `outside-coverage` problem with `next_steps`; in a batch
-        such a point is `out_of_domain` for every selector. Scalar values are sampled from the nearest grid cell
+        such a point is `out_of_domain` for every selector, as is a batch
+        point the check could not reach within its time limit (retry it; the
+        lookup carries on and caches). A point outside
+        every US model grid is rejected without an upstream call; one inside
+        a grid but outside the 50 states and DC (Canada, Mexico, open water)
+        is rejected after a cached reverse geocode. Each allowlisted entry
+        also carries a coverage domain; a covered point outside it returns
+        the plain `404` (single) or an `out_of_domain` item (batch). Scalar values are sampled from the nearest grid cell
         (products are snapped to a ~1 km grid), so nearby requests share cache
         entries.
 
@@ -3692,12 +3754,17 @@ paths:
 
         ### Coverage
 
-        Coverage is the 50 US states and DC. On `GET /v1/series` an
-        in-range point outside it returns `404` `outside-coverage` with
-        `next_steps`, as `GET /v1/point` does; `global` products (GFS,
-        AIFS, `astro`, `uv_index`, ...) are not served there either. In
-        `POST /v1/series/batch` such a location is an `out_of_domain`
-        element.
+        Coverage is the 50 US states and DC, decided on the point's state
+        (Canada, Mexico and open water inside a model grid are outside
+        it). On `GET /v1/series` an in-range point outside it returns
+        `404` `outside-coverage` with `next_steps`, as `GET /v1/point`
+        does; `global` products (GFS, AIFS, `astro`, `uv_index`, ...) are
+        not served there either. In `POST /v1/series/batch` such a
+        location is an `out_of_domain` element, as is a location the check
+        could not reach within its time limit (retry it; the lookup carries
+        on and caches). A point that no selected
+        product (nor a related one) serves is an `out_of_domain` element
+        without the state check, since nothing would be served there.
 
         ### Envelope
 
@@ -3942,9 +4009,7 @@ paths:
         `period` (`610`, `814`, `wk34`, or `monthly`) narrows the answer
         to one period. `day` does not apply and is ignored. At a covered
         location, a period with no outlook polygon is omitted (an answer
-        of "no outlook here", not equal chances). A location outside
-        coverage currently gets `200` with an empty `periods` array, not
-        a `404` `outside-coverage`. `probabilities` is always empty; `day` is always `1` and
+        of "no outlook here", not equal chances. `probabilities` is always empty; `day` is always `1` and
         carries no meaning (each period has its own `valid_start` and
         `valid_end`). When a 6-10 or 8-14 day
         period is present, `narrative` carries CPC's prognostic
@@ -3988,6 +4053,11 @@ paths:
         the day 1 outlook a handful of times a day. Climate outlook
         responses are cacheable for 5 minutes as well, although CPC
         issues them at most daily.
+
+        ### Coverage
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
 
         ### Auth
 
@@ -4071,6 +4141,8 @@ paths:
                 $ref: '#/components/schemas/OutlookDetail'
         '400':
           $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
         '504':
@@ -4109,9 +4181,7 @@ paths:
 
         `variable` and `period` narrow the answer. At a covered location,
         a period (or lead) with no outlook polygon is omitted, an answer
-        of "no outlook here", not equal chances. A location outside
-        coverage currently gets `200` with an empty `periods` array, not
-        a `404` `outside-coverage`.
+        of "no outlook here", not equal chances.
 
         ### Narratives
 
@@ -4153,6 +4223,11 @@ paths:
 
         Successful responses are cacheable for 5 minutes, although CPC
         issues these outlooks at most daily.
+
+        ### Coverage
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
 
         ### Auth
 
@@ -4283,6 +4358,8 @@ paths:
                       summary: Above-normal temperatures favored across the Great Lakes in the 6-10 day period.
         '400':
           $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
         '504':
@@ -6685,7 +6762,6 @@ components:
             and next), and one per lead for `seasonal`. Ordered by period
             (`610`, `814`, `wk34`, `monthly`, `seasonal`), then
             `valid_start`, then temperature before precipitation.
-            Currently empty for a location outside coverage.
           items:
             $ref: '#/components/schemas/ClimateOutlook'
         narrative:
@@ -9487,12 +9563,13 @@ components:
             $ref: '#/components/schemas/Problem'
     Problem404:
       description: |
-        Resource not found. For `/v1/weather`, returned when the requested
-        location cannot be resolved (unknown ZIP, unrecognised free-text
-        location) or when no upstream data covers the location. A
-        location outside the 50 US states and DC returns type
-        `https://smarterweather.com/errors/outside-coverage`; both carry
-        `next_steps` (`recommended = coverage`).
+        Resource not found: a location that cannot be resolved (unknown
+        ZIP, unrecognised free-text location), no upstream data for the
+        location, or a missing resource. On a route that checks coverage
+        (its description says so), a location outside the 50 US states and
+        DC returns type `https://smarterweather.com/errors/outside-coverage`;
+        that and the location-not-found problem carry `next_steps`
+        (`recommended = coverage`).
       content:
         application/problem+json:
           schema:
