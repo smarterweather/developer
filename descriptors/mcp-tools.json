@@ -3586,7 +3586,7 @@
     {
       "name": "get_path_exposure",
       "title": "Get path exposure",
-      "description": "Civic POIs (schools, hospitals, airports, …) inside a caller-supplied GeoJSON Polygon or MultiPolygon. Clip first — do not pass a CONUS HeatRisk dissolve. For an NWS alert use get_alerts({alert_id}) (already includes pois). Optional classes filters the civic allowlist. Example: {\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[-88.15,41.77],[-88.14,41.77],[-88.14,41.78],[-88.15,41.78],[-88.15,41.77]]]},\"classes\":[\"school\"]}.",
+      "description": "Civic POIs (schools, hospitals, airports, …) inside a caller-supplied GeoJSON Polygon or MultiPolygon. Not enabled for every caller: when off it returns 403 flag-disabled. Clip first; not a CONUS HeatRisk dissolve. Optional classes filters the civic allowlist. Example: {\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[-88.15,41.77],[-88.14,41.77],[-88.14,41.78],[-88.15,41.78],[-88.15,41.77]]]},\"classes\":[\"school\"]}.",
       "inputSchema": {
         "type": "object",
         "properties": {

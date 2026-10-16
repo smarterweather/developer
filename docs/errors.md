@@ -185,6 +185,12 @@ status per tool call, so key on `type`, then `status`.
 - A `400` or `404` problem from the API behind a tool reaches you as the
   API sent it, `next_steps` included (for example `outside-coverage`).
 - Every `5xx` carries a fixed, generic `detail`.
+- `get_path_exposure` returns `flag-disabled` (`403`, no `next_steps`)
+  when civic place counts are not enabled for the caller, without calling
+  the API behind it. A second text block tells a model not to retry. The
+  `detail` says "this caller" rather than "this API key", because an MCP
+  caller may have no key. `search_locations` does not fail in that case: it
+  returns place and ZIP rows without address or POI rows.
 - `next_steps` appears on `401`, `402` (`trial-ended`, `payment-required`),
   `403` (trial keys), `429` (`rate-limit-exceeded`) and on the `503` a
   keyless x402 call gets while the payment rail is unavailable.
