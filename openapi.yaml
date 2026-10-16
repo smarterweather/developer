@@ -5826,10 +5826,14 @@ components:
             radar nowcast horizon are reconciled against the nowcast summary:
             wet peak intensity may floor values upward; when peak intensity is
             `none`, covered hours may be pulled down toward zero (unless the
-            hour already carries precip conditions).
+            hour already carries precip conditions). Null when the hour's
+            amount is no data and no model PoP covers the hour.
         precip_amount:
           type: [number, "null"]
           format: double
+          description: >-
+            Liquid-equivalent precipitation for the hour ending at `time`.
+            `0` is a dry hour; null when no forecast source covers the hour.
         conditions:
           type: string
         icon:
@@ -5900,6 +5904,7 @@ components:
         snow_amount:
           type: [number, "null"]
           format: double
+          description: Null when no snow is forecast or no source covers the hour.
         cloud_ceiling:
           type: [number, "null"]
           format: double
@@ -6072,12 +6077,15 @@ components:
         precip_total:
           type: [number, "null"]
           format: double
+          description: Null when no forecast source covers any hour of the day.
         snow_total:
           type: [number, "null"]
           format: double
+          description: Null when no forecast source covers any hour of the day.
         ice_total:
           type: [number, "null"]
           format: double
+          description: Null when no forecast source covers any hour of the day.
         wind_speed_max:
           type: [number, "null"]
           format: double
@@ -6292,7 +6300,7 @@ components:
         temperature:
           type: [number, "null"]
           format: double
-          description: High for `day`, low for `night`.
+          description: High for `day`, low for `night`; null when the half has no temperature.
         wind_speed:
           type: [number, "null"]
           format: double
@@ -6313,12 +6321,15 @@ components:
         precip_total:
           type: [number, "null"]
           format: double
+          description: Null when no forecast source covers any hour of the day.
         snow_total:
           type: [number, "null"]
           format: double
+          description: Null when no forecast source covers any hour of the day.
         ice_total:
           type: [number, "null"]
           format: double
+          description: Null when no forecast source covers any hour of the day.
         humidity:
           type: [number, "null"]
           format: double
