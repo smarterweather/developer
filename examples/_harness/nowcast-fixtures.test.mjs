@@ -1,10 +1,11 @@
 // node --test examples/_harness/
 // The rain-next-hour fixtures must be shapes the API can return. Their points
-// are leads on one grid after nowcast.generated_at, up to 60 minutes (a lead
-// may be missing), interval_seconds is the most common gap between points,
-// and the summary is what the API's documented rule (openapi.yaml,
-// NowcastSummary) gives for those points at the request time in
-// meta.generated_at:
+// are leads on one grid after nowcast.generated_at, up to 60 minutes; a lead
+// may be missing (a null value keeps its place on the grid and is left out of
+// points). interval_seconds is the grid step, the most common gap between
+// lead times (here, between points). The summary is what the API's
+// documented rule (openapi.yaml, NowcastSummary) gives for those points at
+// the request time in meta.generated_at:
 // - the onset is the first of two consecutive wet points; a missing lead is
 //   not wet, so wet points either side of it are not consecutive;
 // - the episode ends at two consecutive dry steps after the onset; a missing

@@ -18,12 +18,13 @@ Each fixture is a nowcast the API can return, with the request time in
 
 - `starts_at` is the first of two consecutive wet points, and `type` is that
   point's type (`unknown` for an unrecognized radar code).
-- A missing lead is not wet: wet points on either side of it are not
-  consecutive, and it counts as dry toward the end, including the leads after
-  the last point up to the window's end (`generated_at` + 60 minutes).
+- A missing lead (a null value; the API leaves it out of `points`) keeps its
+  place on the grid and counts as dry: wet points on either side of it are
+  not consecutive, and it counts toward the end, including missing leads
+  after the last point up to the window's end (`generated_at` + 60 minutes).
 - The episode ends at two consecutive dry steps; one does not end it.
-  `ends_at` is the last wet point's time plus `interval_seconds` (the most
-  common gap between points), and `duration_minutes` runs from `starts_at`
+  `ends_at` is the last wet point's time plus `interval_seconds` (the grid
+  step: the most common gap between lead times), and `duration_minutes` runs from `starts_at`
   to it. Both are omitted while it runs to the end of the window.
 - `already_occurring` is `true` when `starts_at` is at or before the request
   time. Otherwise it is omitted.
