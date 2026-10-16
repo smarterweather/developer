@@ -3691,7 +3691,7 @@
     {
       "name": "get_period_totals",
       "title": "Get period totals",
-      "description": "Aggregate a weather variable over one or more time periods. Returns server-computed totals, maxima, minima, or averages per period. Period start/end times should use the user's local timezone boundaries (not UTC midnight). Response includes the converted value and unit per period. Period-ending totals (1 h rain/snow, 6 h buckets, MRMS QPE) sum windows ending in (start, end]. period_total variables need periods on their bucket grid (UTC-aligned for 3 h/6 h buckets such as precipitation_6h; hourly totals fit any hour); off-grid periods error naming the grid. Past the data: partial: true, frames_used/frames_expected, covered_start/covered_end. Ideal for questions like \"total rainfall today and tomorrow\" or \"peak wind speed this weekend\". For rain that already fell, use get_observed_precipitation. Accepts a place name directly. Example: {\"location\": \"Portland, OR\", \"variable\": \"precipitation\", \"aggregation\": \"sum\", \"periods\": [{\"start\": \"2026-07-08T07:00:00Z\", \"end\": \"2026-07-09T07:00:00Z\", \"label\": \"Today\"}]}.",
+      "description": "Aggregate a weather variable over one or more time periods. Returns server-computed totals, maxima, minima, or averages per period. Period start/end times should use the user's local timezone boundaries (not UTC midnight). Response includes the converted value and unit per period. Period-ending totals (1 h rain/snow, MRMS QPE) add whole windows; off-grid periods error naming the grid. Rain/snow/ice sums use 6 h QPF buckets if the model has them (source_variable), as get_forecast daily totals do; a bucket an edge cuts adds its share (approximate: true). Past the data: partial: true, frames_used/frames_expected, covered_start/covered_end. Ideal for questions like \"total rainfall today and tomorrow\" or \"peak wind speed this weekend\". For rain that already fell, use get_observed_precipitation. Accepts a place name directly. Example: {\"location\": \"Portland, OR\", \"variable\": \"precipitation\", \"aggregation\": \"sum\", \"periods\": [{\"start\": \"2026-07-08T07:00:00Z\", \"end\": \"2026-07-09T07:00:00Z\", \"label\": \"Today\"}]}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3812,6 +3812,9 @@
           "variable": {
             "type": "string"
           },
+          "source_variable": {
+            "type": "string"
+          },
           "aggregation": {
             "type": "string"
           },
@@ -3845,6 +3848,12 @@
                   "type": "number"
                 },
                 "partial": {
+                  "type": "boolean"
+                },
+                "approximate": {
+                  "type": "boolean"
+                },
+                "trace": {
                   "type": "boolean"
                 },
                 "covered_start": {
