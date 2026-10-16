@@ -42,6 +42,12 @@ Sources: NOAA NBM, HRRR, RTMA, MRMS, NWS, JPL Ephemeris
 
 Coverage is the 50 US states and DC.
 
+## Build on it
+
+| Example | Language | Run |
+| --- | --- | --- |
+| [Will it rain in the next hour?](./rest/python/rain-next-hour/): one sentence from the radar nowcast | Python 3.10+, [JavaScript](./rest/javascript/rain-next-hour/) (Node.js 20+) | `python3 rain.py`, `node rain.mjs` |
+
 ## Your key
 
 Get a free key at <https://developers.smarterweather.com/dashboard/api-keys>,
@@ -124,6 +130,11 @@ API and uses no secret. For REST examples (`kind: code`):
      with `{"message":"Endpoint request timed out"}` (JSON, but not a
      problem): the example must exit non-zero and print `<status>: ` and the
      start of the body, not a parse error.
+   - with each body listed under `fixtures` in its `test.json`: a local server
+     answers 200 with that body, and the example must exit 0 and print what
+     the fixture expects. Fixtures are small hand-written responses in the
+     API's shape, for answers the mock's one example body cannot give (it has
+     no radar nowcast, for instance).
 
 Every example gives up after 10 seconds.
 

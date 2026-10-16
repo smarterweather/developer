@@ -39,6 +39,8 @@ remove that server afterwards.
 - [Current weather in one call (Go)](https://github.com/smarterweather/developer/tree/main/examples/rest/go/weather): the same call with net/http
 - [Weather tools in Claude Desktop](https://github.com/smarterweather/developer/tree/main/examples/mcp/claude-desktop): the mcp-weather bridge reading the key from .env, and a find_best_window prompt
 - [Weather tools in Cursor](https://github.com/smarterweather/developer/tree/main/examples/mcp/cursor): .cursor/mcp.json with envFile, and a find_best_window prompt
+- [Will it rain in the next hour? (Python)](https://github.com/smarterweather/developer/tree/main/examples/rest/python/rain-next-hour): GET /v1/weather?include=nowcast,location, print one sentence from nowcast.summary in the location's local time
+- [Will it rain in the next hour? (JavaScript)](https://github.com/smarterweather/developer/tree/main/examples/rest/javascript/rain-next-hour): the same with Node.js fetch, no dependencies
 - [Examples index (JSON)](https://github.com/smarterweather/developer/blob/main/examples/index.json): every example with its surface, language, level and directory
 
 ## Optional

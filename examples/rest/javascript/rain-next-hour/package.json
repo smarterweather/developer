@@ -1,0 +1,12 @@
+{
+  "name": "smarterweather-example-rain-next-hour",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node rain.mjs",
+    "test": "node ../../../_harness/expect-run.mjs"
+  }
+}

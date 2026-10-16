@@ -1,0 +1,17 @@
+{
+  "run": ["node", "rain.mjs"],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/v1/weather",
+      "query": { "lat": "47.61", "lon": "-122.33", "include": "nowcast,location" }
+    }
+  ],
+  "stdout": ["^No radar nowcast for this location right now\\.$", "^Sources: \\S.*$"],
+  "fixtures": [
+    { "body": "fixtures/no-rain.json", "stdout": ["^No rain expected in the next 60 minutes\\.$", "^Sources: NOAA NBM, HRRR, RTMA, MRMS, NWS, JPL Ephemeris$"] },
+    { "body": "fixtures/rain-starting.json", "stdout": ["^Light rain starting around 3:40 PM, ending around 4:05 PM\\.$"] },
+    { "body": "fixtures/heavy-rain-arriving.json", "stdout": ["^Heavy rain starting around 4:00 PM\\.$"] },
+    { "body": "fixtures/mix-now.json", "stdout": ["^Moderate wintry mix now, ending around 4:20 PM\\.$"] }
+  ]
+}

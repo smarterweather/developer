@@ -12,10 +12,15 @@
 //   5. through /_504json (JSON that is not a problem): the example exits
 //      non-zero and a line starting `<status>: ` shows the start of the body,
 //      without a parse error.
+// Then, for each entry in test.json's optional `fixtures`, it serves that
+// canned 200 body (a path relative to the example) from a local server and
+// checks the example exits 0 and prints what the entry's `stdout` expects.
+// Fixtures cover answers the mock's one example body cannot produce.
 // Run from an example directory: node ../../../_harness/expect-run.mjs
 import { deepStrictEqual, ok, strictEqual } from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import http from "node:http";
 
 const spec = JSON.parse(readFileSync(process.argv[2] ?? "test.json", "utf8"));
 const base = process.env.SMARTERWEATHER_API_BASE?.replace(/\/$/, "");
@@ -80,7 +85,39 @@ for (const [route, status, text] of [
   ok(!PARSE_ERRORS.test(r.output), show(`tried to parse the ${status} body as a problem`, r));
 }
 
+// 6. Fixture bodies. The example runs while this process serves the body, so
+// it is spawned asynchronously.
+function runAsync(env) {
+  const [command, ...args] = spec.run;
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { env: { ...process.env, ...env }, timeout: 120_000 });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8").on("data", (d) => (stdout += d));
+    child.stderr.setEncoding("utf8").on("data", (d) => (stderr += d));
+    child.on("error", reject);
+    child.on("close", (status) => resolve({ status, stdout, stderr }));
+  });
+}
+
+const fixtures = spec.fixtures ?? [];
+for (const fixture of fixtures) {
+  const body = readFileSync(fixture.body);
+  const server = http.createServer((req, res) => {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(body);
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const r = await runAsync({ SMARTERWEATHER_API_BASE: `http://127.0.0.1:${server.address().port}` });
+  server.close();
+  strictEqual(r.status, 0, show(`exited ${r.status} on ${fixture.body}`, r));
+  for (const pattern of fixture.stdout) {
+    ok(new RegExp(pattern, "m").test(r.stdout), show(`${fixture.body}: stdout does not match /${pattern}/m`, r));
+  }
+}
+
 console.log(
   `ok ${name}: ${spec.requests.map((r) => `${r.method} ${r.path}`).join(", ")} with the env key; ` +
-    "placeholder when the env var is empty; 401 problem shown; 502 HTML and 504 JSON bodies shown",
+    "placeholder when the env var is empty; 401 problem shown; 502 HTML and 504 JSON bodies shown" +
+    (fixtures.length ? `; ${fixtures.length} fixture bodies answered` : ""),
 );
