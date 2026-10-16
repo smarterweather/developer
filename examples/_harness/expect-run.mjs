@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Runs one example five times against the mock, through record-proxy.mjs:
+// Runs one example five times against the mock, plus once per fixture, all
+// through record-proxy.mjs:
 //   1. key from the environment: exits 0, prints what test.json expects, and
 //      sends exactly the requests test.json lists (method, path, query) with
 //      `Authorization: Bearer <the env key>`, each answered 2xx;
@@ -11,18 +12,23 @@
 //   4. through /_502 (an HTML error page) and
 //   5. through /_504json (JSON that is not a problem): the example exits
 //      non-zero and a line starting `<status>: ` shows the start of the body,
-//      without a parse error.
-// Then, for each entry in test.json's optional `fixtures`, it serves that
-// canned 200 body (a path relative to the example) from a local server and
-// checks the example exits 0 and prints what the entry's `stdout` expects.
-// Fixtures cover answers the mock's one example body cannot produce.
+//      without a parse error;
+//   6. once per entry in test.json's optional `fixtures`, through
+//      /_fixture/<file> (the proxy answers 200 with that JSON file): exits 0,
+//      prints what the entry's `stdout` expects, and sends the same requests
+//      as run 1, with the env key. Fixtures give answers the mock's one
+//      example body cannot (see test-spec.mjs for the shape).
 // Run from an example directory: node ../../../_harness/expect-run.mjs
 import { deepStrictEqual, ok, strictEqual } from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import http from "node:http";
+import { resolve } from "node:path";
+import { checkTestSpec, fixturePath } from "./test-spec.mjs";
 
-const spec = JSON.parse(readFileSync(process.argv[2] ?? "test.json", "utf8"));
+const specPath = resolve(process.argv[2] ?? "test.json");
+const spec = JSON.parse(readFileSync(specPath, "utf8"));
+const specErrors = checkTestSpec(spec, specPath);
+ok(specErrors.length === 0, `invalid test.json:\n  ${specErrors.join("\n  ")}`);
 const base = process.env.SMARTERWEATHER_API_BASE?.replace(/\/$/, "");
 const log = process.env.SMARTERWEATHER_CI_LOG;
 ok(base && log && process.env.SMARTERWEATHER_API_KEY, "run through with-mock.sh (it sets the base, the log and a fake key)");
@@ -43,18 +49,22 @@ function run(env) {
 const show = (label, r) => `${name}: ${label}\n--- stdout\n${r.stdout}--- stderr\n${r.stderr}`;
 const is2xx = (status) => status >= 200 && status < 300;
 
+// Exit 0, the expected output, and exactly the listed requests with the env key.
+function expectSuccess(r, patterns, label) {
+  strictEqual(r.status, 0, show(`${label}exited ${r.status}`, r));
+  for (const pattern of patterns) ok(new RegExp(pattern, "m").test(r.stdout), show(`${label}stdout does not match /${pattern}/m`, r));
+  strictEqual(r.requests.length, spec.requests.length, `${name}: ${label}expected ${spec.requests.length} request(s), saw ${JSON.stringify(r.requests)}`);
+  spec.requests.forEach((want, i) => {
+    const got = r.requests[i];
+    deepStrictEqual({ method: got.method, path: got.path, query: got.query }, want, `${name}: ${label}request ${i + 1}`);
+    ok(got.bearer, `${name}: ${label}request ${i + 1} has no Authorization: Bearer header`);
+    ok(got.token_matches_env, `${name}: ${label}request ${i + 1} did not send SMARTERWEATHER_API_KEY from the environment`);
+    ok(is2xx(got.status), `${name}: ${label}request ${i + 1} got ${got.status}`);
+  });
+}
+
 // 1. The env key.
-const good = run({});
-strictEqual(good.status, 0, show(`exited ${good.status}`, good));
-for (const pattern of spec.stdout) ok(new RegExp(pattern, "m").test(good.stdout), show(`stdout does not match /${pattern}/m`, good));
-strictEqual(good.requests.length, spec.requests.length, `${name}: expected ${spec.requests.length} request(s), saw ${JSON.stringify(good.requests)}`);
-spec.requests.forEach((want, i) => {
-  const got = good.requests[i];
-  deepStrictEqual({ method: got.method, path: got.path, query: got.query }, want, `${name}: request ${i + 1}`);
-  ok(got.bearer, `${name}: request ${i + 1} has no Authorization: Bearer header`);
-  ok(got.token_matches_env, `${name}: request ${i + 1} did not send SMARTERWEATHER_API_KEY from the environment`);
-  ok(is2xx(got.status), `${name}: request ${i + 1} got ${got.status} from the mock`);
-});
+expectSuccess(run({}), spec.stdout, "");
 
 // 2. An empty env var counts as unset.
 const empty = run({ SMARTERWEATHER_API_KEY: "" });
@@ -85,35 +95,12 @@ for (const [route, status, text] of [
   ok(!PARSE_ERRORS.test(r.output), show(`tried to parse the ${status} body as a problem`, r));
 }
 
-// 6. Fixture bodies. The example runs while this process serves the body, so
-// it is spawned asynchronously.
-function runAsync(env) {
-  const [command, ...args] = spec.run;
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { env: { ...process.env, ...env }, timeout: 120_000 });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.setEncoding("utf8").on("data", (d) => (stdout += d));
-    child.stderr.setEncoding("utf8").on("data", (d) => (stderr += d));
-    child.on("error", reject);
-    child.on("close", (status) => resolve({ status, stdout, stderr }));
-  });
-}
-
+// 6. Fixtures, served by the proxy.
 const fixtures = spec.fixtures ?? [];
 for (const fixture of fixtures) {
-  const body = readFileSync(fixture.body);
-  const server = http.createServer((req, res) => {
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end(body);
-  });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const r = await runAsync({ SMARTERWEATHER_API_BASE: `http://127.0.0.1:${server.address().port}` });
-  server.close();
-  strictEqual(r.status, 0, show(`exited ${r.status} on ${fixture.body}`, r));
-  for (const pattern of fixture.stdout) {
-    ok(new RegExp(pattern, "m").test(r.stdout), show(`${fixture.body}: stdout does not match /${pattern}/m`, r));
-  }
+  const file = fixturePath(specPath, fixture.body);
+  const r = run({ SMARTERWEATHER_API_BASE: `${base}/_fixture/${encodeURIComponent(file)}` });
+  expectSuccess(r, fixture.stdout, `${fixture.body}: `);
 }
 
 console.log(

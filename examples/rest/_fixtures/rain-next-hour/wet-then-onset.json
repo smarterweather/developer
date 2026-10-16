@@ -1,0 +1,33 @@
+{
+  "location": {
+    "lat": 47.61,
+    "lon": -122.33,
+    "name": "Seattle",
+    "region": "WA",
+    "country": "US",
+    "timezone": "America/Los_Angeles"
+  },
+  "nowcast": {
+    "interval_seconds": 300,
+    "generated_at": "2026-10-16T22:15:00Z",
+    "summary": {
+      "starts_at": "2026-10-16T22:30:00Z",
+      "ends_at": "2026-10-16T22:50:00Z",
+      "duration_minutes": 20,
+      "type": "rain",
+      "peak_intensity": "light",
+      "already_occurring": true
+    }
+  },
+  "attribution": {
+    "sources": [
+      "NOAA NBM",
+      "HRRR",
+      "RTMA",
+      "MRMS",
+      "NWS",
+      "JPL Ephemeris"
+    ],
+    "notice": "Weather data from NOAA/NWS. Astronomical calculations from JPL ephemerides."
+  }
+}

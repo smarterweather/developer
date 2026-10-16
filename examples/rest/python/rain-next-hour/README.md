@@ -6,7 +6,7 @@ the radar nowcast, in the location's local time.
 
 ```python
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import requests
@@ -34,23 +34,31 @@ def problem_text(res):
     return f"{text}\nNext step: {hint}" if hint else text
 
 
-def clock(timestamp, timezone):
-    """2026-10-16T22:40:00Z -> 3:40 PM, in the location's time zone."""
-    t = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-    return t.astimezone(ZoneInfo(timezone) if timezone else None).strftime("%I:%M %p").lstrip("0")
+def parse(timestamp):
+    return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+
+
+def clock(time, tz):
+    """A UTC datetime -> 3:40 PM, in the location's time zone."""
+    return time.astimezone(ZoneInfo(tz) if tz else None).strftime("%I:%M %p").lstrip("0")
 
 
 def answer(weather):
     """One sentence from nowcast.summary: the radar's next 60 minutes."""
-    summary = (weather.get("nowcast") or {}).get("summary")
+    nowcast = weather.get("nowcast") or {}
+    summary = nowcast.get("summary")
     if summary is None:
         return "No radar nowcast for this location right now."
     if not summary.get("starts_at"):
         return "No rain expected in the next 60 minutes."
-    timezone = (weather.get("location") or {}).get("timezone")
+    tz = (weather.get("location") or {}).get("timezone")
+    radar_time = parse(nowcast["generated_at"]) if nowcast.get("generated_at") else datetime.now(timezone.utc)
+    step = timedelta(seconds=nowcast.get("interval_seconds") or 300)
+    starts = parse(summary["starts_at"])
     what = f"{summary['peak_intensity']} {PRECIP.get(summary['type'], 'precipitation')}".capitalize()
-    when = "now" if summary.get("already_occurring") else f"starting around {clock(summary['starts_at'], timezone)}"
-    until = f", ending around {clock(summary['ends_at'], timezone)}" if summary.get("ends_at") else ""
+    when = "now" if starts <= radar_time else f"starting around {clock(starts, tz)}"
+    # ends_at is the start of the last wet step, so it stops about a step later.
+    until = f", ending around {clock(parse(summary['ends_at']) + step, tz)}" if summary.get("ends_at") else ""
     return f"{what} {when}{until}."
 
 
@@ -79,24 +87,25 @@ python3 rain.py
 ```
 
 ```text
-Light rain starting around 3:40 PM, ending around 4:05 PM.
+Light rain starting around 3:40 PM, ending around 4:10 PM.
 Sources: NOAA NBM, HRRR, RTMA, MRMS, NWS, JPL Ephemeris
 ```
 
 Other answers look like `No rain expected in the next 60 minutes.`,
-`Heavy rain starting around 4:00 PM.` or `Moderate wintry mix now, ending
-around 4:20 PM.`
+`Heavy rain starting around 4:00 PM.`, `Light snow now, ending around 3:50 PM.`
+or `Moderate wintry mix now.`
 
 It reads `nowcast.summary`, which the API computes from the radar's next 60
-minutes in 5-minute steps (`nowcast.points`):
+minutes in 5-minute steps (`nowcast.points`), and two fields beside it:
 
 | Field | Used for |
 | --- | --- |
-| `starts_at` | When it starts; absent when nothing falls in the hour |
-| `ends_at` | When it stops, if it stops inside the hour |
-| `already_occurring` | `true` when it is falling now |
-| `peak_intensity` | `light`, `moderate` or `heavy`, the strongest in the event |
-| `type` | `rain`, `snow`, `freezing_rain` or `wintry_mix` |
+| `summary.starts_at` | The first of two wet steps in a row; absent when nothing falls in the hour. At or before `generated_at` means it is falling now |
+| `summary.ends_at` | The start of the last wet step, when it stops inside the hour, so it stops about one step (`interval_seconds`) later; absent when it runs past the hour |
+| `summary.peak_intensity` | `light`, `moderate` or `heavy`, the strongest in the event |
+| `summary.type` | `rain`, `snow`, `freezing_rain` or `wintry_mix` |
+| `generated_at` | The radar frame the nowcast starts from, the "now" the answer is relative to |
+| `interval_seconds` | The step length, 300 |
 
 Times print in the location's time zone, `location.timezone`, which
 `include=location` adds. `include` replaces the default sections, so the
@@ -106,10 +115,12 @@ for the point, `nowcast` is absent and the script says so.
 
 On an error it prints the status, the problem's `detail` and its recommended
 next step (or the first 200 characters of a body that is not a problem) and
-exits 1; it gives up after 10 seconds. Seattle is a placeholder: change
+exits 1. It waits up to 10 seconds to connect and up to 10 seconds for each
+read (requests' `timeout` is per step, not a total). Seattle is a placeholder: change
 `lat` and `lon`, or send `zip` or `location` instead.
 
 - Route: [`GET /v1/weather`](https://developers.smarterweather.com/api/weather/)
 - Test: [`test.json`](./test.json), run by [`../../../_harness`](../../../_harness/),
-  including each answer above from the bodies in [`fixtures/`](./fixtures/)
+  including each answer above from the shared bodies in
+  [`../../_fixtures/rain-next-hour/`](../../_fixtures/rain-next-hour/)
 - License: code [MIT](../../../../LICENSE), prose [CC BY 4.0](../../../../LICENSE-docs)

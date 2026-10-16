@@ -29,16 +29,20 @@ function answer({ nowcast, location }) {
   const summary = nowcast?.summary;
   if (!summary) return "No radar nowcast for this location right now.";
   if (!summary.starts_at) return "No rain expected in the next 60 minutes.";
+  const radarTime = nowcast.generated_at ? Date.parse(nowcast.generated_at) : Date.now();
+  const step = (nowcast.interval_seconds || 300) * 1000;
+  const starts = Date.parse(summary.starts_at);
   const what = `${summary.peak_intensity} ${PRECIP[summary.type] ?? "precipitation"}`;
-  const when = summary.already_occurring ? "now" : `starting around ${clock(summary.starts_at, location?.timezone)}`;
-  const until = summary.ends_at ? `, ending around ${clock(summary.ends_at, location?.timezone)}` : "";
+  const when = starts <= radarTime ? "now" : `starting around ${clock(starts, location?.timezone)}`;
+  // ends_at is the start of the last wet step, so it stops about a step later.
+  const until = summary.ends_at ? `, ending around ${clock(Date.parse(summary.ends_at) + step, location?.timezone)}` : "";
   return `${what[0].toUpperCase()}${what.slice(1)} ${when}${until}.`;
 }
 
-// 2026-10-16T22:40:00Z -> 3:40 PM, in the location's time zone.
-function clock(timestamp, timeZone) {
-  const time = new Date(timestamp).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone });
-  return time.replace(" ", " ");
+// Milliseconds since the epoch -> 3:40 PM, in the location's time zone.
+function clock(time, timeZone) {
+  const text = new Date(time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone });
+  return text.replace("\u202f", " ");
 }
 
 // Errors are RFC 9457 problems (JSON) whose next_steps names a fix; anything
@@ -67,24 +71,25 @@ node rain.mjs
 ```
 
 ```text
-Light rain starting around 3:40 PM, ending around 4:05 PM.
+Light rain starting around 3:40 PM, ending around 4:10 PM.
 Sources: NOAA NBM, HRRR, RTMA, MRMS, NWS, JPL Ephemeris
 ```
 
 Other answers look like `No rain expected in the next 60 minutes.`,
-`Heavy rain starting around 4:00 PM.` or `Moderate wintry mix now, ending
-around 4:20 PM.`
+`Heavy rain starting around 4:00 PM.`, `Light snow now, ending around 3:50 PM.`
+or `Moderate wintry mix now.`
 
 It reads `nowcast.summary`, which the API computes from the radar's next 60
-minutes in 5-minute steps (`nowcast.points`):
+minutes in 5-minute steps (`nowcast.points`), and two fields beside it:
 
 | Field | Used for |
 | --- | --- |
-| `starts_at` | When it starts; absent when nothing falls in the hour |
-| `ends_at` | When it stops, if it stops inside the hour |
-| `already_occurring` | `true` when it is falling now |
-| `peak_intensity` | `light`, `moderate` or `heavy`, the strongest in the event |
-| `type` | `rain`, `snow`, `freezing_rain` or `wintry_mix` |
+| `summary.starts_at` | The first of two wet steps in a row; absent when nothing falls in the hour. At or before `generated_at` means it is falling now |
+| `summary.ends_at` | The start of the last wet step, when it stops inside the hour, so it stops about one step (`interval_seconds`) later; absent when it runs past the hour |
+| `summary.peak_intensity` | `light`, `moderate` or `heavy`, the strongest in the event |
+| `summary.type` | `rain`, `snow`, `freezing_rain` or `wintry_mix` |
+| `generated_at` | The radar frame the nowcast starts from, the "now" the answer is relative to |
+| `interval_seconds` | The step length, 300 |
 
 Times print in the location's time zone, `location.timezone`, which
 `include=location` adds. `include` replaces the default sections, so the
@@ -94,10 +99,11 @@ for the point, `nowcast` is absent and the script says so.
 
 On an error it prints the status, the problem's `detail` and its recommended
 next step (or the first 200 characters of a body that is not a problem) and
-exits 1; it gives up after 10 seconds. Seattle is a placeholder: change
+exits 1; it gives up after 10 seconds in all. Seattle is a placeholder: change
 `lat` and `lon`, or send `zip` or `location` instead.
 
 - Route: [`GET /v1/weather`](https://developers.smarterweather.com/api/weather/)
 - Test: `npm test` runs [`test.json`](./test.json) through [`../../../_harness`](../../../_harness/),
-  including each answer above from the bodies in [`fixtures/`](./fixtures/)
+  including each answer above from the shared bodies in
+  [`../../_fixtures/rain-next-hour/`](../../_fixtures/rain-next-hour/)
 - License: code [MIT](../../../../LICENSE), prose [CC BY 4.0](../../../../LICENSE-docs)
