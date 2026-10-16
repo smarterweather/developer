@@ -14,9 +14,7 @@ info:
     - Non-breaking additions ship without notice.
     - Fields marked `x-stability: experimental` (also flagged in their
       descriptions) are excluded from the 90-day breaking-change
-      commitment during Phase 2 closed beta. Stability commitments apply
-      to every field at general availability per ADR 001 unless
-      explicitly carved out.
+      commitment. Every other field carries it.
 
     ## Errors
 
@@ -32,7 +30,9 @@ info:
     scope", or "over quota" without leaving the response. A `404` for a
     point outside coverage (type `outside-coverage`) or a place that
     matches no US location carries `next_steps.recommended = coverage`.
-    Coverage is the 50 US states and DC, for every caller. Trial keys
+    Coverage is the 50 US states and DC, for every caller; if the
+    location lookup behind the check is unavailable, a point route can
+    briefly fail open and serve the point. Trial keys
     whose free value has ended receive `402` with
     `next_steps.recommended = claim`. `401` and `403` also carry an
     RFC 6750 `WWW-Authenticate: Bearer` challenge. Every `type` URI
@@ -57,8 +57,10 @@ info:
     ## Rate limits
 
     Authenticated operations return rate-limit state on every response via
-    `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset`
-    headers. Exceeding the rate limit returns `429 Too Many Requests` with a
+    `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` and
+    `RateLimit-Policy` headers, plus `RateLimit-Daily-Limit`,
+    `RateLimit-Daily-Remaining` and `RateLimit-Daily-Reset` for keys with a
+    daily quota. Exceeding the rate limit returns `429 Too Many Requests` with a
     `Retry-After` header. See individual operation responses for header
     definitions.
 
@@ -76,8 +78,8 @@ info:
     | `alerts`    | yes     | stable    | Active NWS alerts for the location.               |
     | `outlooks`  | yes     | stable    | SPC convective outlooks for the location.         |
     | `astro`     | yes     | stable    | Sunrise/sunset/moon phase, etc.                   |
-    | `location`  | no      | stable    | Echo of the resolved location (lat/lon/name/tz).  |
-    | `gis`       | no      | stable    | Geographic metadata (population, timezone, nearest radar site). |
+    | `location`  | always  | stable    | Echo of the resolved location (lat/lon/name/tz).  |
+    | `gis`       | always  | stable    | Geographic metadata (population, timezone, nearest radar site). |
     | `narrations`| no      | experimental | LLM-generated narrative text for current/short-term conditions. |
     | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/NOW/HLS/MCD/MPD/PMD). Canonical for new clients. |
     | `discussions` | no    | experimental | Deprecated. Prefer `include=guidance` (`guidance.mcds` / `guidance.afd`). |
@@ -86,24 +88,24 @@ info:
     | `climate`     | no    | experimental | NCEI day-of-year normals for the location, plus per-day departure from normal on `daily[]`. |
     | `metar`       | no    | experimental | Nearest METAR sky layers and present weather for the photoreal canvas. |
 
-    `radar` and `products` (wx visual-products manifest) are **not** in the
-    v1 token set. They will land in Phase 5 alongside a separate
-    `/v1/radar/*` family, once the public CDN authentication design
-    (signed-URL minting or equivalent) is accepted in a follow-up ADR.
-  version: 0.1.0
+    `location` and `gis` are valid tokens, but every 200 response carries
+    them whether or not `include` names them. Any `include` value replaces
+    the default set: `include=current` returns `current` plus `location`,
+    `gis`, `units`, `attribution` and `meta`, and `include=location`
+    returns only `location`, `gis`, `units`, `attribution` and `meta`.
+
+    `radar` and `products` (visual-products manifest) are **not** in the
+    v1 token set. Radar imagery will ship later as a separate
+    `/v1/radar/*` family.
+  version: 1.0.0
+  termsOfService: https://developers.smarterweather.com/legal/terms
   contact:
     name: Smarter Weather Developer Platform
     url: https://github.com/smarterweather/developer
+  license:
+    name: Creative Commons Attribution 4.0 International
+    identifier: CC-BY-4.0
 
-# Canonical public base URL. Adopted by sw-api at the Phase 2 closed-beta
-# launch via Track A.3 PR-0 (#7754) per ADR 013, which supersedes ADR 006's
-# "interim execute-api hostname through Phase 5" plan.
-#
-# SDK generators emit https://api.smarterweather.com as the default base URL
-# from this point on. Closed-beta design partners onboarded against the raw
-# *.execute-api.us-east-1.amazonaws.com URL (per superseded ADR 006) keep
-# working -- the API Gateway URL is unaffected by the CloudFront repointing
-# in PR-0 -- but should switch to the canonical hostname before GA.
 servers:
   - url: https://api.smarterweather.com
     description: Production
@@ -118,7 +120,7 @@ tags:
   - name: Alerts
     description: NWS weather alert lookups.
   - name: Storms
-    description: Severe-weather tracking products (storm tracks, etc.).
+    description: Severe-weather tracking products (storm tracks, storm reports, record events).
   - name: Guidance
     description: |
       Forecaster guidance products (SPC mesoscale discussions, WPC
@@ -128,8 +130,8 @@ tags:
       `/v1/discussions/*` remains a temporary alias of mesoscale only.
   - name: Products
     description: |
-      Gridded / vector weather products and derived summaries (risk-zone
-      population exposure, etc.).
+      Gridded / vector weather products and derived summaries, such as
+      risk-zone population exposure.
   - name: Geocode
     description: |
       Forward, reverse, and typeahead geocoding for locations within
@@ -228,7 +230,7 @@ paths:
       summary: List the data catalog's products.
       description: |
         Lists every product the REST API serves, from the Smarter Weather
-        data catalog (ADR 074): its family, kind, cadence, coverage, horizon,
+        data catalog: its family, kind, cadence, coverage, horizon,
         stability, cost class, entitlement and source attribution, sorted by
         `id`. `GET /v1/catalog/{product_id}` adds a product's variables and
         retrieval fields. Field names match the MCP `list_datasets` and
@@ -286,6 +288,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
             X-Trial-Claim-Url:
               $ref: '#/components/headers/XTrialClaimUrl'
             X-Trial-Expires-At:
@@ -352,6 +362,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
             X-Trial-Claim-Url:
               $ref: '#/components/headers/XTrialClaimUrl'
             X-Trial-Expires-At:
@@ -527,6 +545,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
             X-Trial-Claim-Url:
               $ref: '#/components/headers/XTrialClaimUrl'
             X-Trial-Expires-At:
@@ -567,7 +593,7 @@ paths:
       summary: Get blended weather for up to 25 locations in one call.
       description: |
         Multi-location form of `GET /v1/weather`. Accepts a JSON body with
-        an array of up to 25 locations and returns one F2 weather result
+        an array of up to 25 locations and returns one weather result
         per input, preserving order.
 
         ### Locations
@@ -619,6 +645,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
             X-Trial-Claim-Url:
               $ref: '#/components/headers/XTrialClaimUrl'
             X-Trial-Expires-At:
@@ -694,6 +728,14 @@ paths:
         `max-age=3600` with `at` (a past snapshot does not change).
         The scope is `public` for first-party keys and `private` for
         partner keys.
+
+        ### Coverage
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`, and so does an area (a bounding
+        box) that touches none of the US domains (CONUS, Alaska, Hawaii). A
+        box that touches one is served as is and may include area outside
+        the US.
 
         ### Auth
 
@@ -800,6 +842,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
             X-Trial-Claim-Url:
               $ref: '#/components/headers/XTrialClaimUrl'
             X-Trial-Expires-At:
@@ -818,6 +868,8 @@ paths:
           $ref: '#/components/responses/TrialEnded'
         '403':
           $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -835,9 +887,10 @@ paths:
       summary: Get a single NWS alert by id.
       description: |
         Returns the full alert detail (geometry, spatial metadata,
-        affected population, etc.) for a single NWS alert. Accepts
-        either a `group_id` (the canonical primary key on the alerts
-        table) or a `message_id` (resolved via `nws_alerts_map`);
+        affected population, etc.) for a single NWS alert. Use the
+        `id` of an alert in `alerts[]` from `GET /v1/alerts`. Accepts either a
+        `group_id` (the alert's canonical id, stable across its
+        updates) or a `message_id` (one NWS message in that alert);
         callers do not need to disambiguate.
 
         ### Caching
@@ -848,11 +901,7 @@ paths:
         own client may reuse the response for the full `max-age`, but
         shared caches (CDNs, proxies) must not store it, since each
         request on a partner key is metered and rate-limited
-        individually. First-party callers get `public, max-age=60`, except
-        iOS keys while App Attest is enforced, which get `private`.
-        Smarter Weather's own CloudFront distributions key any cached
-        response on the full URL plus the `Authorization` and `Origin`
-        headers.
+        individually.
 
         ### Geometry
 
@@ -863,11 +912,7 @@ paths:
 
         ### Auth
 
-        Standard sw-api Bearer auth applies. Internal first-party
-        keys (`sw_internal_web_*`, `sw_internal_ios_*`,
-        `sw_internal_og_*`) are accepted alongside `sw_live_*` /
-        `sw_test_*` partner keys; the OG-image lambda authenticates
-        with the `og` audience.
+        Standard sw-api Bearer auth applies.
       tags: [Alerts]
       security:
         - bearerAuth: []
@@ -876,15 +921,14 @@ paths:
           in: path
           required: true
           description: |
-            Alert identifier — either `group_id` (canonical primary
-            key) or `message_id` (NWS-issued, resolved via
-            `nws_alerts_map`). URL-encode embedded dots / colons /
-            slashes; the handler `url.PathEscape`s on the wire.
+            Alert identifier: the `id` of an alert in `alerts[]` from
+            `GET /v1/alerts`, or an alert's `group_id` or `message_id`.
+            URL-encode embedded colons and slashes.
           schema:
             type: string
             minLength: 1
             maxLength: 256
-          example: "1.2.3-NWS-WW.SAMPLE.CASE"
+          example: "urn:oid:2.49.0.1.840.0.d1e1a911ed0a8ca7b56a9e6a3c5d6ba0035c88fb.001.1"
         - name: include
           in: query
           required: false
@@ -906,6 +950,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
             X-Trial-Claim-Url:
               $ref: '#/components/headers/XTrialClaimUrl'
             X-Trial-Expires-At:
@@ -1010,6 +1062,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/json:
               schema:
@@ -1060,11 +1120,11 @@ paths:
       summary: Civic POIs inside a bounded polygon.
       description: |
         Returns civic POI counts and a 50-row feature sample for a caller-supplied
-        GeoJSON Polygon or MultiPolygon via `wx.estimate_polygon_pois`.
+        GeoJSON Polygon or MultiPolygon.
 
         Rejects national-scale dissolves (area over 250,000 km²), invalid
         geometry, unknown classes, bodies over 1 MiB, and queries that exceed
-        a 2s reader budget. Clip HeatRisk / outlook polygons first — do not
+        a 2s query budget. Clip HeatRisk / outlook polygons first — do not
         pass a CONUS product dissolve.
 
         Optional `classes` filters to the civic allowlist (school, hospital,
@@ -1112,6 +1172,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/json:
               schema:
@@ -1175,11 +1243,11 @@ paths:
 
         ### Detailed mode
 
-        `detailed=true` requests the LATERAL-joined impact payload
+        `detailed=true` adds each cell's impact payload
         (`properties.impact.affected_cities`,
         `properties.impact.affected_population`). Detailed responses
-        are larger and use a 60s reader cache; the all-sites all-cells
-        path uses a 30s cache.
+        are larger and use a 60s server-side cache; the all-sites
+        all-cells path uses a 30s cache.
 
         ### Schema stability
 
@@ -1187,7 +1255,7 @@ paths:
         `properties.site_id` / `properties.scan_time` /
         `properties.valid_time` fields are stable. Other property-bag
         keys (`impact.*`, `category`, etc.) are documented as
-        forward-compat: the reader pipeline may add new keys without a
+        forward-compat: the data pipeline may add new keys without a
         sw-api release, so consumers should treat unknown keys as
         opaque additive data.
 
@@ -1200,8 +1268,7 @@ paths:
 
         ### Auth
 
-        Standard sw-api Bearer auth applies. The legacy CRA storm-tracks
-        UI uses `sw_internal_web_*` keys; partners use `sw_live_*`.
+        Standard sw-api Bearer auth applies.
       tags: [Storms]
       security:
         - bearerAuth: []
@@ -1224,7 +1291,7 @@ paths:
           in: query
           required: false
           description: |
-            When `true`, includes the LATERAL-joined impact payload
+            When `true`, includes each cell's impact payload
             (affected cities + populations). When omitted or `false`,
             returns the lightweight cell-only response.
           schema:
@@ -1244,6 +1311,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
@@ -1272,55 +1347,80 @@ paths:
       description: |
         Returns a GeoJSON FeatureCollection of METAR surface observations
         ingested from MADIS. By default returns the latest observation per
-        station within the last 2 hours. Optional `station`, `hours`, and
-        bounding-box (`min_lon`, `min_lat`, `max_lon`, `max_lat`) filters
-        are forwarded to the reader. A bounding box needs all four values as
+        station within the last 2 hours. `hours` or `station` switches to
+        every report in a lookback window, newest first: `hours` sets the
+        window (1-24 hours) and `station` limits it to one station (window
+        1 hour unless `hours` is set).
+
+        A bounding box (`min_lon`, `min_lat`, `max_lon`, `max_lat`) filters
+        only the default latest-per-station view, so combining it with
+        `hours` or `station` is a `400`. It needs all four values as
         finite numbers with `-180 <= min_lon <= max_lon <= 180` and
         `-90 <= min_lat <= max_lat <= 90` (antimeridian-crossing boxes are not
         supported); a partial, non-numeric, out-of-range or inverted box is a
-        `400`. Empty-valued bbox params count as absent. A box filters only
-        the latest report per station, so combining it with `hours` or
-        `station` is a `400`. A non-integer `hours`, or one outside 1-24, is
+        `400`. Empty-valued bbox params count as absent. A non-integer `hours`, or one outside 1-24, is
         a `400`, as is repeating `hours`, `station` or a bbox key.
 
         Point parameters (`lat`, `lon`, `lng`, `latitude`, `longitude`,
         `zip`, `location`, `n`, `radius`) are not accepted here and return
         `400`; for the stations nearest a point use
         `GET /v1/observations/nearest`.
+
+        An area (a bounding box) that touches none of the US domains (CONUS,
+        Alaska, Hawaii) returns `404` `outside-coverage` with `next_steps`;
+        a box that touches one is served as is and may include area outside
+        the US. `station` is not checked.
       tags: [Observations]
       security:
         - bearerAuth: []
       parameters:
         - name: station
           in: query
+          description: |
+            ICAO station identifier (e.g. `KORD`), case-insensitive. Returns
+            every report from that station in the last `hours` hours
+            (default 1), newest first. Cannot be combined with a bounding
+            box.
           schema:
             type: string
+          example: KORD
         - name: hours
           in: query
+          description: |
+            Lookback window in whole hours (1-24). When set, returns every
+            report in the window, newest first, instead of the latest report
+            per station. Unset: the latest report per station within the last
+            2 hours. Cannot be combined with a bounding box.
           schema:
             type: integer
             minimum: 1
             maximum: 24
         - name: min_lon
           in: query
+          description: |
+            West edge of the bounding box (degrees). Give all four box values
+            together; the box filters the latest report per station.
           schema:
             type: number
             minimum: -180
             maximum: 180
         - name: min_lat
           in: query
+          description: South edge of the bounding box (degrees).
           schema:
             type: number
             minimum: -90
             maximum: 90
         - name: max_lon
           in: query
+          description: East edge of the bounding box (degrees).
           schema:
             type: number
             minimum: -180
             maximum: 180
         - name: max_lat
           in: query
+          description: North edge of the bounding box (degrees).
           schema:
             type: number
             minimum: -90
@@ -1328,12 +1428,29 @@ paths:
       responses:
         '200':
           description: GeoJSON FeatureCollection of METAR observations.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
                 type: object
         '400':
           $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
         '503':
@@ -1347,7 +1464,14 @@ paths:
       summary: Get nearest METAR station observations.
       description: |
         Returns the N nearest METAR stations to a point, deduplicated to
-        the latest observation per station, sorted by distance.
+        the latest observation per station (within the last 2 hours),
+        sorted by distance.
+
+        A location is required. This route currently accepts it as `lat`
+        and `lon`; a request without a location returns `400`.
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
       tags: [Observations]
       security:
         - bearerAuth: []
@@ -1356,6 +1480,9 @@ paths:
         - $ref: '#/components/parameters/LonQuery'
         - name: n
           in: query
+          description: |
+            Number of stations to return (1-10, default 1). A value that is
+            not an integer in range falls back to 1.
           schema:
             type: integer
             minimum: 1
@@ -1364,14 +1491,35 @@ paths:
       responses:
         '200':
           description: GeoJSON FeatureCollection of nearest METAR observations.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
                 type: object
         '400':
           $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
 
   /v1/lightning:
     get:
@@ -1398,6 +1546,11 @@ paths:
         Successful responses carry `Cache-Control: max-age=60,
         stale-while-revalidate=30`, `public` for first-party keys and
         `private` for partner keys.
+
+        ### Coverage
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
 
         ### Auth
 
@@ -1436,6 +1589,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
             X-Trial-Claim-Url:
               $ref: '#/components/headers/XTrialClaimUrl'
             X-Trial-Expires-At:
@@ -1454,6 +1615,8 @@ paths:
           $ref: '#/components/responses/TrialEnded'
         '403':
           $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -1472,8 +1635,10 @@ paths:
       description: |
         Returns a GeoJSON FeatureCollection of RAOB (radiosonde) vertical
         soundings ingested from MADIS. By default returns the latest sounding
-        per station within the last 24 hours. Optional `station` and `hours`
-        filters are forwarded to the reader.
+        per station within the last 24 hours. `hours` switches to every
+        sounding in the last `hours` hours (1-24), newest first. `station`
+        limits the result to every sounding from that station in the window
+        (the last 24 hours unless `hours` is set).
 
         Heavy `profile` and `wind_profile` arrays are stripped from bulk
         responses to keep payloads small for map overlays. Use
@@ -1482,18 +1647,31 @@ paths:
 
         Each feature retains `station_id`, `observed_at`, `elevation_m`,
         `level_count`, `wind_level_count`, and the `derived` indices object
-        (see `/v1/soundings/nearest` for field descriptions). The reader
-        also injects `valid_time` from the database column.
+        (see `/v1/soundings/nearest` for field descriptions), plus
+        `valid_time`, the sounding's valid time.
       tags: [Observations]
       security:
         - bearerAuth: []
       parameters:
         - name: station
           in: query
+          description: |
+            WMO station number (e.g. `72469`). Returns every sounding from
+            that station in the last `hours` hours, newest first. With
+            `hours` unset, or not an integer from 1 to 24, the window is the
+            last 24 hours.
           schema:
             type: string
+          example: "72469"
         - name: hours
           in: query
+          description: |
+            Lookback window in whole hours (1-24). When set, returns every
+            sounding in the window, newest first, instead of the latest
+            sounding per station. Unset, or a value that is not an integer
+            in range: without `station`, the latest sounding per station
+            within the last 24 hours; with `station`, every sounding from
+            that station in the last 24 hours.
           schema:
             type: integer
             minimum: 1
@@ -1501,12 +1679,29 @@ paths:
       responses:
         '200':
           description: GeoJSON FeatureCollection of RAOB soundings (profile stripped).
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
                 type: object
         '502':
           $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
         '504':
           $ref: '#/components/responses/Problem504'
 
@@ -1538,8 +1733,14 @@ paths:
           `lcl_*`/`lfc_*`/`el_*` pressure and height; `bulk_shear_0_6km_kt`.
         - station metadata: `station_id`, `observed_at`, `elevation_m`.
 
-        The full `properties` bag is forward-compatible: the reader pipeline
+        The full `properties` bag is forward-compatible: the data pipeline
         may add keys without a sw-api release, so treat unknown keys as opaque.
+
+        A location is required. This route currently accepts it as `lat`
+        and `lon`; a request without a location returns `400`.
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
       tags: [Observations]
       security:
         - bearerAuth: []
@@ -1548,6 +1749,9 @@ paths:
         - $ref: '#/components/parameters/LonQuery'
         - name: n
           in: query
+          description: |
+            Number of stations to return (1-5, default 1). A value that is
+            not an integer in range falls back to 1.
           schema:
             type: integer
             minimum: 1
@@ -1556,14 +1760,33 @@ paths:
       responses:
         '200':
           description: GeoJSON FeatureCollection of nearest RAOB soundings.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
                 type: object
         '400':
           $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
         '504':
           $ref: '#/components/responses/Problem504'
 
@@ -1577,22 +1800,23 @@ paths:
         etc. Each feature carries the report's geometry plus a
         `properties` bag with at minimum `valid_time` and the
         report's payload fields (event-type-specific magnitude /
-        narrative). The full property bag is forward-compat: the reader
+        narrative). The full property bag is forward-compat: the data
         pipeline may add new keys without a sw-api release, so consumers
         should treat unknown keys as opaque additive data.
 
         ### Filters
 
-        - `hours` — rolling lookback in whole hours (1 ≤ N ≤ 168). Empty
-          falls through to the reader's default window.
+        - `hours` — rolling lookback in whole hours, applied from 1 to 24.
+          Empty means the default window of 6 hours. Values from 25 to 168
+          are accepted but currently return the default 6-hour window.
         - `type` — single-letter NWS report code (e.g. `T` tornado, `H`
           hail, `W` damaging wind, `F` flood). Server uppercases the
           input before forwarding.
         - `wfo` — 3-letter NWS Weather Forecast Office identifier (e.g.
           `LOT`). Server uppercases the input.
 
-        Filters compose: setting all three returns the AND of each
-        filter applied to the reader's recent-reports table.
+        Filters compose: setting all three returns the reports that match
+        every filter.
 
         ### Caching
 
@@ -1611,8 +1835,9 @@ paths:
           in: query
           required: false
           description: |
-            Rolling lookback window in whole hours (1-168). When empty,
-            the reader's default window applies.
+            Rolling lookback window in whole hours. Default 6. Values from
+            1 to 24 are applied; values from 25 to 168 are accepted but
+            currently return the default 6-hour window.
           schema:
             type: integer
             minimum: 1
@@ -1654,6 +1879,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
@@ -1704,6 +1937,11 @@ paths:
 
         Successful responses carry `Cache-Control: public, max-age=30,
         stale-while-revalidate=30`.
+
+        ### Coverage
+
+        With `lat`/`lon`, a point outside the 50 US states and DC returns
+        `404` `outside-coverage` with `next_steps`; `site` is not checked.
 
         ### Auth
 
@@ -1771,6 +2009,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
@@ -1781,6 +2027,8 @@ paths:
           $ref: '#/components/responses/Problem401'
         '403':
           $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -1799,7 +2047,7 @@ paths:
       description: |
         Returns a GeoJSON `FeatureCollection` of non-expired SPC Mesoscale
         Discussions that have geometry. Structured fields and the bulletin
-        `body` (when fetched from S3) live on each feature's `properties`
+        `body` (bulletin text when available) live on each feature's `properties`
         bag (forward-compat).
 
         The endpoint takes no parameters. Prefer this path over the
@@ -1828,6 +2076,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
@@ -1855,7 +2111,7 @@ paths:
         Returns a GeoJSON `FeatureCollection` of non-expired WPC Mesoscale
         Precipitation Discussions (MPDs) that have geometry. Structured
         fields (`mpd_number`, `flash_flood_tier`, `concerning`, …) and the
-        bulletin `body` (when fetched from S3) live on each feature's
+        bulletin `body` (bulletin text when available) live on each feature's
         `properties` bag. This is not SPC `/v1/guidance/mesoscale`.
 
         The endpoint takes no parameters. There is no `/v1/discussions/precipitation`
@@ -1884,6 +2140,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
@@ -1938,6 +2202,12 @@ paths:
         Successful responses carry `Cache-Control: max-age=60,
         stale-while-revalidate=60`, `public` for first-party keys and
         `private` for partner keys.
+
+        ### Coverage
+
+        With `lat`/`lon`, a point outside the 50 US states and DC returns
+        `404` `outside-coverage` with `next_steps`; `wfo` and national queries
+        are not filtered by point.
 
         ### Auth
 
@@ -2026,6 +2296,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
             X-Trial-Claim-Url:
               $ref: '#/components/headers/XTrialClaimUrl'
             X-Trial-Expires-At:
@@ -2044,6 +2322,8 @@ paths:
           $ref: '#/components/responses/TrialEnded'
         '403':
           $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -2069,6 +2349,21 @@ paths:
       responses:
         '200':
           description: Same body as `/v1/guidance/mesoscale`.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
@@ -2131,6 +2426,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
@@ -2293,6 +2596,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
@@ -2323,23 +2634,24 @@ paths:
         events (record high / low temperatures, daily precipitation
         records, etc.) within the requested time window. Each feature's
         `properties` bag carries at minimum `valid_time` plus the
-        event-type-specific payload from the reader pipeline. As with
+        event-type-specific payload from the data pipeline. As with
         `/v1/storm-reports`, additional `properties` keys may appear
         without a sw-api release.
 
         ### Time window
 
-        Exactly one of three selectors is forwarded to the reader:
+        Three selectors choose the window:
 
         1. `date=YYYY-MM-DD` — single-day window
         2. `start=...&end=...` — explicit RFC3339 window (both required
            together)
-        3. `hours=N` — rolling lookback (1 ≤ N ≤ 720, i.e. 30 days)
+        3. `hours=N` — rolling lookback, applied from 1 to 168 (7 days).
+           Values from 169 to 720 are accepted but currently return the
+           last 24 hours.
 
-        When more than one selector is set, the precedence is
-        `date` > `start+end` > `hours`. The handler enforces this by
-        forwarding all three to libs/wxreader, which picks the
-        highest-priority selector.
+        If several are set, `date` wins, then `start`+`end`, then
+        `hours`; every selector that is set must still be well formed.
+        With none, the last 24 hours.
 
         ### Filters
 
@@ -2350,8 +2662,7 @@ paths:
         ### Caching
 
         Successful responses carry `Cache-Control: public, max-age=60,
-        stale-while-revalidate=60`. Mirrors the reader's
-        recordEventsCacheTTL.
+        stale-while-revalidate=60`.
 
         ### Auth
 
@@ -2364,8 +2675,10 @@ paths:
           in: query
           required: false
           description: |
-            Rolling lookback window in whole hours (1-720). Lowest
-            precedence among the time-window selectors.
+            Rolling lookback window in whole hours. Values from 1 to 168
+            are applied; values from 169 to 720 are accepted but currently
+            return the last 24 hours. Lowest precedence among the
+            time-window selectors.
           schema:
             type: integer
             minimum: 1
@@ -2435,6 +2748,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/geo+json:
               schema:
@@ -2466,7 +2787,7 @@ paths:
         reports (CLI): observed high and low, precipitation and snowfall
         per station, with departures from normal. Each feature's
         `properties` bag carries at minimum `valid_time`; other keys
-        come from the reader pipeline and may be added without a
+        come from the data pipeline and may be added without a
         sw-api release.
 
         **Experimental** (`x-stability: experimental`): excluded from
@@ -2582,6 +2903,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
             X-Trial-Claim-Url:
               $ref: '#/components/headers/XTrialClaimUrl'
             X-Trial-Expires-At:
@@ -2626,7 +2955,9 @@ paths:
         Successful responses carry `Cache-Control: private,
         max-age=86400`. The underlying place-name <-> timezone mapping
         changes on the order of years; clients should treat this as a
-        long-term cache.
+        long-term cache. The exception is a temporarily degraded or
+        fallback answer, which is sent with `Cache-Control: no-store` so
+        that no cache keeps it.
 
         `private` means your own client may store the response for the
         full `max-age`, but shared caches (CDNs, proxies) must not:
@@ -2671,6 +3002,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
             X-Trial-Claim-Url:
               $ref: '#/components/headers/XTrialClaimUrl'
             X-Trial-Expires-At:
@@ -2709,8 +3048,8 @@ paths:
       description: |
         Returns up to `count` location candidates whose names match the
         partial `input` string. Designed for client-side typeahead
-        widgets: latency is dominated by the reader's PostGIS prefix
-        index.
+        widgets: lookups use a prefix index, so latency stays low as you
+        type.
 
         ### Caching
 
@@ -2787,8 +3126,8 @@ paths:
           required: false
           description: |
             Soft rank bias latitude. Must be paired with `bias_lon`.
-            Range [-90, 90]. Forwarded as parsed; wxreader formats
-            one-decimal precision on the reader wire.
+            Range [-90, 90]. The bias is applied at 0.1°
+            precision.
           schema:
             type: number
             format: double
@@ -2800,8 +3139,8 @@ paths:
           required: false
           description: |
             Soft rank bias longitude. Must be paired with `bias_lat`.
-            Range [-180, 180]. Forwarded as parsed; wxreader formats
-            one-decimal precision on the reader wire.
+            Range [-180, 180]. The bias is applied at 0.1°
+            precision.
           schema:
             type: number
             format: double
@@ -2839,6 +3178,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
             X-Trial-Claim-Url:
               $ref: '#/components/headers/XTrialClaimUrl'
             X-Trial-Expires-At:
@@ -2939,6 +3286,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
             X-Trial-Claim-Url:
               $ref: '#/components/headers/XTrialClaimUrl'
             X-Trial-Expires-At:
@@ -3031,8 +3386,11 @@ paths:
         `computation_path`, `source`, `unit`, any `gaps`) so nothing is
         silently assumed.
 
-        Launches behind the `AGRICULTURE_GDD_ENABLED` feature flag: returns
-        `404` when the flag is off.
+        A location is required. This route currently accepts it as `lat`
+        and `lon`; a request without a location returns `400`.
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
       tags: [Agriculture]
       security:
         - bearerAuth: []
@@ -3123,6 +3481,21 @@ paths:
       responses:
         '200':
           description: Growing Degree Units for the requested point.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/json:
               schema:
@@ -3154,7 +3527,7 @@ paths:
         says which. Across the contiguous US they are read from NCEI's gridded
         normals at the requested coordinates (the nClimGrid 1/24° mesh, roughly
         5 km), so they describe that point directly: `source` is `grid`.
-        Outside CONUS — Alaska, Hawaii, the territories — and for any day the
+        Outside CONUS — Alaska and Hawaii — and for any day the
         grid has no value for, they come from the nearest station record, and
         `source` is `station`, or `mixed` where one series draws on both.
 
@@ -3170,8 +3543,8 @@ paths:
         and elevation differences matter more than distance alone suggests.
 
         **Coverage.** The gridded normals cover the contiguous US; the station
-        normals add roughly 7,400 US stations including Alaska, Hawaii and the
-        territories. Remote points outside CONUS may have no station in range.
+        normals add roughly 7,400 US stations, Alaska and Hawaii among them.
+        Remote points outside CONUS may have no station in range.
 
         **Precipitation is gridded-only.** `normal_precip` has no station
         equivalent — NCEI's station normals publish no daily precipitation
@@ -3184,8 +3557,11 @@ paths:
         `meta.missing_days`, so the series stays aligned with the dates you
         asked for.
 
-        Launches behind the `CLIMATE_NORMALS_ENABLED` feature flag: returns
-        `404` when the flag is off.
+        A location is required. This route currently accepts it as `lat`
+        and `lon`; a request without a location returns `400`.
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
       tags: [Climate]
       security:
         - bearerAuth: []
@@ -3238,6 +3614,21 @@ paths:
       responses:
         '200':
           description: Climate normals for the requested point.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/json:
               schema:
@@ -3386,6 +3777,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/json:
               schema:
@@ -3418,7 +3817,7 @@ paths:
         with friendly output (canonical `unit`, an optional `category` label,
         `observed_at`, and a staleness flag).
 
-        This is the one curated wrapper over the internal point-query: it serves
+        This is the one curated point lookup over stored data: it serves
         only the `(product, var)` pairs on a server-side **allowlist**, so the
         public surface stays safe and small while every widget/card is
         onboarded by adding an allowlist entry — no new endpoint. The
@@ -3429,8 +3828,8 @@ paths:
 
         ### Data kinds (transparent to the caller)
 
-        The allowlist entry's kind selects the internal resolution — a
-        **scalar** raster/OM cell, or a vector **zone** (point-in-polygon
+        The allowlist entry's kind selects how the point is resolved — a
+        **scalar** grid cell, or a vector **zone** (point-in-polygon
         outlook, e.g. SPC categorical / fire-weather). Both collapse to one
         answer at a location and share one envelope: `value`/`unit` are present
         for scalars and ordinal bands, `category`/`label` name the band, and a
@@ -3450,11 +3849,16 @@ paths:
 
         ### Coverage
 
-        Each allowlisted entry carries a coverage domain; a point outside it
-        returns `404` (single) or an `out_of_domain` item (batch) without an
-        upstream call. A single point outside the 50 US states and DC gets
+        Coverage is the 50 US states and DC. A single point outside it gets
         the `404` `outside-coverage` problem with `next_steps`; in a batch
-        such a point is `out_of_domain` for every selector. Scalar values are sampled from the nearest grid cell
+        such a point is `out_of_domain` for every selector, as is a batch
+        point the check could not reach within its time limit (retry it; the
+        lookup carries on and caches). A point outside
+        every US model grid is rejected without an upstream call; one inside
+        a grid but outside the 50 states and DC (Canada, Mexico, open water)
+        is rejected after a cached reverse geocode. Each allowlisted entry
+        also carries a coverage domain; a covered point outside it returns
+        the plain `404` (single) or an `out_of_domain` item (batch). Scalar values are sampled from the nearest grid cell
         (products are snapped to a ~1 km grid), so nearby requests share cache
         entries.
 
@@ -3585,6 +3989,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/json:
               schema:
@@ -3608,8 +4020,8 @@ paths:
       description: |
         Returns the time series of one or more data catalog products at one
         location: the public, catalog-governed door to stored model and
-        analysis data (ADR 074 slice 17). Any `grid` or `snapshot` product
-        that `GET /v1/catalog` lists qualifies, for example `hrrr_surface`,
+        analysis data. Any `grid` or `snapshot` product that
+        `GET /v1/catalog` lists qualifies, for example `hrrr_surface`,
         `nbm_conus`, `gfs_surface`, `rtma_conus`, `mrms_qpe_01h_pass2_conus`
         or `astro`. Variables are named by their catalog `standard_name`.
 
@@ -3661,6 +4073,14 @@ paths:
         ahead, so with no time word it returns the newest row and `hours`
         looks back from now; pass `start` and `end` for specific days.
 
+        `mrms_radar_nowcast_conus` is a `forecast` served from one nowcast
+        run, the newest whose frames (5 to 60 minutes after the run) reach
+        the window, and `run` names it. Frames of that run outside the
+        window are dropped. A past window is not stitched across runs, so
+        a window no run reaches is `unavailable`. Observed radar history
+        comes from `mrms_reflectivity_conus` and the MRMS QPE products
+        such as `mrms_qpe_01h_pass2_conus`.
+
         ### Units and raw values
 
         `units` is `si`, `metric` or `imperial`. `si` serves stored values
@@ -3676,12 +4096,17 @@ paths:
 
         ### Coverage
 
-        Coverage is the 50 US states and DC. On `GET /v1/series` an
-        in-range point outside it returns `404` `outside-coverage` with
-        `next_steps`, as `GET /v1/point` does; `global` products (GFS,
-        AIFS, `astro`, `uv_index`, ...) are not served there either. In
-        `POST /v1/series/batch` such a location is an `out_of_domain`
-        element.
+        Coverage is the 50 US states and DC, decided on the point's state
+        (Canada, Mexico and open water inside a model grid are outside
+        it). On `GET /v1/series` an in-range point outside it returns
+        `404` `outside-coverage` with `next_steps`, as `GET /v1/point`
+        does; `global` products (GFS, AIFS, `astro`, `uv_index`, ...) are
+        not served there either. In `POST /v1/series/batch` such a
+        location is an `out_of_domain` element, as is a location the check
+        could not reach within its time limit (retry it; the lookup carries
+        on and caches). A point that no selected
+        product (nor a related one) serves is an `out_of_domain` element
+        without the state check, since nothing would be served there.
 
         ### Envelope
 
@@ -3720,7 +4145,11 @@ paths:
 
         `Cache-Control: max-age=N, stale-while-revalidate=N` with N the
         smallest selected product cadence clamped to 60-3600 s, `public`
-        for first-party keys and `private` for partner keys.
+        for first-party keys and `private` for partner keys. An element's
+        `meta.timezone` may be null when the timezone lookup is
+        unavailable or slow; the response is then sent with
+        `Cache-Control: no-store`, as it is when the timezone comes from a
+        temporarily degraded or fallback lookup.
 
         ### Auth and cost
 
@@ -3772,6 +4201,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/json:
               schema:
@@ -3852,6 +4289,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/json:
               schema:
@@ -3924,10 +4369,9 @@ paths:
         tercile and carries no bin; it is not the same as `near`.
 
         `period` (`610`, `814`, `wk34`, or `monthly`) narrows the answer
-        to one period. `day` does not apply and is ignored. A period
-        with no outlook polygon at the location is omitted (an answer of
-        "no outlook here", not equal chances); locations outside the US
-        get an empty `periods` array. `probabilities` is always empty; `day` is always `1` and
+        to one period. `day` does not apply and is ignored. At a covered
+        location, a period with no outlook polygon is omitted (an answer
+        of "no outlook here", not equal chances. `probabilities` is always empty; `day` is always `1` and
         carries no meaning (each period has its own `valid_start` and
         `valid_end`). When a 6-10 or 8-14 day
         period is present, `narrative` carries CPC's prognostic
@@ -3971,6 +4415,11 @@ paths:
         the day 1 outlook a handful of times a day. Climate outlook
         responses are cacheable for 5 minutes as well, although CPC
         issues them at most daily.
+
+        ### Coverage
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
 
         ### Auth
 
@@ -4048,12 +4497,22 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OutlookDetail'
         '400':
           $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
         '504':
@@ -4090,10 +4549,9 @@ paths:
           in `valid_start` and `valid_label` (`Oct 2026`, `Nov 2026`);
           neither has a `lead`.
 
-        `variable` and `period` narrow the answer. A period (or lead)
-        with no outlook polygon at the location is omitted, an answer of
-        "no outlook here", not equal chances; locations outside the US
-        get an empty `periods` array.
+        `variable` and `period` narrow the answer. At a covered location,
+        a period (or lead) with no outlook polygon is omitted, an answer
+        of "no outlook here", not equal chances.
 
         ### Narratives
 
@@ -4135,6 +4593,11 @@ paths:
 
         Successful responses are cacheable for 5 minutes, although CPC
         issues these outlooks at most daily.
+
+        ### Coverage
+
+        A point outside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`.
 
         ### Auth
 
@@ -4196,6 +4659,14 @@ paths:
               $ref: '#/components/headers/RateLimitRemaining'
             RateLimit-Reset:
               $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
           content:
             application/json:
               schema:
@@ -4265,6 +4736,8 @@ paths:
                       summary: Above-normal temperatures favored across the Great Lakes in the 6-10 day period.
         '400':
           $ref: '#/components/responses/Problem400'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
         '504':
@@ -4426,8 +4899,8 @@ components:
       name: lat
       in: query
       description: |
-        Latitude. Must be provided together with `lon`. Mutually exclusive
-        with `zip` and `location`.
+        Latitude (WGS84 decimal degrees). Give it with `lon`. On a route
+        that also takes `zip` or `location`, give only one location form.
       required: false
       schema:
         type: number
@@ -4439,8 +4912,8 @@ components:
       name: lon
       in: query
       description: |
-        Longitude. Must be provided together with `lat`. Mutually exclusive
-        with `zip` and `location`.
+        Longitude (WGS84 decimal degrees). Give it with `lat`. On a route
+        that also takes `zip` or `location`, give only one location form.
       required: false
       schema:
         type: number
@@ -4464,7 +4937,7 @@ components:
       in: query
       description: |
         Free-text location name. Examples: `"Boston, MA"`, `"94043"`,
-        `"Denver"`. Resolved by an internal geocoder. Mutually exclusive with
+        `"Denver"`. Resolved by the Smarter Weather geocoder. Mutually exclusive with
         `lat`/`lon` and `zip`.
       required: false
       schema:
@@ -4646,6 +5119,34 @@ components:
       schema:
         type: integer
         minimum: 0
+    RateLimitPolicy:
+      description: |
+        Token-bucket policy as `<burst>;w=<seconds>`: the burst capacity
+        (`RateLimit-Limit`) and the seconds a full bucket takes to refill.
+        The sustained rate in requests per minute is `burst × 60 / w`.
+      schema:
+        type: string
+        example: 30;w=30
+    RateLimitDailyLimit:
+      description: |
+        Daily request quota for this API key. Omitted for keys with no
+        daily cap.
+      schema:
+        type: integer
+        minimum: 0
+    RateLimitDailyRemaining:
+      description: |
+        Requests left in today's quota. Omitted for keys with no daily cap.
+      schema:
+        type: integer
+        minimum: 0
+    RateLimitDailyReset:
+      description: |
+        Seconds until the daily quota resets (at 00:00 UTC). Omitted for
+        keys with no daily cap.
+      schema:
+        type: integer
+        minimum: 0
     RetryAfter:
       description: Seconds to wait before retrying after a rate-limit rejection.
       schema:
@@ -4672,17 +5173,15 @@ components:
 
   examples:
     WeatherBoston:
-      summary: Composite weather response for Boston, MA (default include, imperial).
+      summary: Composite weather response for a point in Boston, MA (lat/lon input, default include, imperial).
       value:
         location:
           lat: 42.3601
           lon: -71.0589
           name: "Boston"
           region: "MA"
-          country: "US"
           timezone: "America/New_York"
           county: "Suffolk"
-          zip: "02108"
         current:
           time: "2026-04-20T15:00:00Z"
           temperature: 58.4
@@ -4768,6 +5267,28 @@ components:
           moon_phase_name: "Waxing Crescent"
           moon_illumination: 0.22
           polar: null
+        gis:
+          lat: 42.3601
+          lon: -71.0589
+          city: "Boston"
+          state: "MA"
+          county: "Suffolk"
+          population: null
+          timezone: "America/New_York"
+          nearest_radar:
+            id: "BOX"
+            name: "Boston"
+            lat: 41.9558
+            lon: -71.1369
+            distance_km: 45.4
+          nearest_station:
+            id: "KBOS"
+            name: "Boston Logan International Airport"
+            state: "MA"
+            lat: 42.3656
+            lon: -71.0096
+            distance_km: 4.1
+            elevation_m: 6
         units:
           temperature: "F"
           wind_speed: "mph"
@@ -4776,15 +5297,15 @@ components:
           precip_amount: "in"
         attribution:
           sources:
-            - "NOAA NBM"
+            - "NOAA/NWS"
+            - "NBM"
+            - "GFS"
             - "HRRR"
             - "RTMA"
             - "MRMS"
-            - "NWS"
-            - "JPL Ephemeris"
-          notice: "Weather data from NOAA/NWS. Astronomical calculations from JPL ephemerides."
+          notice: "Data sourced from NOAA/NWS public products. Derived products produced by SmarterWeather."
         meta:
-          schema_version: "2026-04-20"
+          schema_version: "1.0.0"
           generated_at: "2026-04-20T15:00:04Z"
           freshness:
             - source: "rtma"
@@ -4813,7 +5334,7 @@ components:
 
   schemas:
     # -----------------------------------------------------------------------
-    # Health / deprecations / error envelope (existing F1 surfaces)
+    # Health / deprecations / error envelope
     # -----------------------------------------------------------------------
 
     Health:
@@ -4826,7 +5347,7 @@ components:
         reader:
           type: string
           enum: [reachable, unreachable]
-          description: Reader (internal data plane) connectivity status.
+          description: Upstream data service connectivity.
 
     Problem:
       type: object
@@ -4920,22 +5441,36 @@ components:
         $ref: '#/components/schemas/ProblemNextStepLink'
       example:
         recommended: device_flow
-        device_flow:
-          href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api#device-flow
-          description: "No install, no loopback port: POST device_authorization_endpoint, show the human the code, poll, then GET /developer/keys."
-          client_id: k2h05BUoTP393zcD
-          device_authorization_endpoint: https://clerk.smarterweather.com/oauth/device_authorization
-          token_endpoint: https://clerk.smarterweather.com/oauth/token
-          api_keys_endpoint: https://api.smarterweather.com/developer/keys
-        get_key:
-          href: https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api
-          description: "Sign in (free, no card) and mint an API key. Pass it as 'Authorization: Bearer sw_live_*'."
-        quickstart:
-          href: https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api
-          description: Three requests from zero to a live forecast call; the no-install path for agents and humans.
         agents:
-          href: https://developers.smarterweather.com/llms.txt?utm_campaign=401&utm_medium=problem-json&utm_source=api
+          href: "https://developers.smarterweather.com/llms.txt?utm_campaign=401&utm_medium=problem-json&utm_source=api"
           description: "Agents: start here. The full agent path, key handling, and the machine-readable contracts."
+        device_flow:
+          href: "https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api#device-flow"
+          description: "Human present: run the `command` below. It shows the human a verification URL and code, writes SMARTERWEATHER_API_KEY to ./.env (0600, gitignored), and prints only a key prefix. Without Node: device grant at the endpoints below, then POST api_keys_endpoint and write only the response's key field to .env as a SMARTERWEATHER_API_KEY= line (e.g. pipe through jq -r .key). Never print the key or access token."
+          command: "npx -y @smarterweather/mcp-onboarding@latest login"
+          client_id: "k2h05BUoTP393zcD"
+          device_authorization_endpoint: "https://clerk.smarterweather.com/oauth/device_authorization"
+          token_endpoint: "https://clerk.smarterweather.com/oauth/token"
+          api_keys_endpoint: "https://api.smarterweather.com/developer/keys"
+        errors:
+          href: "https://developers.smarterweather.com/errors?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+          description: "What every problem type means and what to do next."
+        get_key:
+          href: "https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+          description: "Sign in (free, no card) and mint an API key. Pass it as 'Authorization: Bearer sw_live_*'."
+        key_handling:
+          href: "https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#key-handling"
+          description: "Write the key to .env, add .env to .gitignore, read SMARTERWEATHER_API_KEY in code, never echo the key in chat or commit it."
+        keyless_x402:
+          href: "https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#x402"
+          description: "Agents with a wallet can pay per call (USDC on Base via x402) on the weather MCP with no account."
+        onboarding_mcp:
+          href: "https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+          description: "Anonymous Streamable HTTP MCP that can sign you up, mint a key, and configure the weather MCP in your client. Connect your MCP client to endpoint (POST-only); href is the setup guide."
+          endpoint: "https://mcp.developers.smarterweather.com"
+        quickstart:
+          href: "https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+          description: "Three requests from zero to a live forecast call; the no-install path for agents and humans."
 
     ProblemNextStepLink:
       type: object
@@ -5059,8 +5594,8 @@ components:
           enum: [customer_facing, internal]
           description: |
             Whether staleness of this source is visible to end customers
-            (`customer_facing`) or only affects internal products
-            (`internal`).
+            (`customer_facing`) or only affects Smarter Weather's own
+            products (`internal`).
         incident:
           type: object
           description: Present when state is not `ok` and an incident is open.
@@ -5126,7 +5661,7 @@ components:
           description: |
             ISO 8601 date on or after which the deprecated surface may be
             removed (minimum 90 days for shape changes, 6 months for
-            endpoint removal per ADR 001).
+            endpoint removal).
           example: "2026-07-01"
         migration:
           type: string
@@ -5144,15 +5679,15 @@ components:
       type: object
       description: |
         Composite blended weather payload returned by `GET /v1/weather`.
-        Section presence is controlled by the `include` query parameter.
-        With the default `view=detailed` and no `fields`, every section
+        Section presence is controlled by the `include` query parameter;
+        `location` and `gis` are always present. With the default `view=detailed` and no `fields`, every section
         that is present is the complete shape documented below. `view=concise`
         and `fields` project the members of `hourly[]` and `daily[]` rows
         (every other section stays complete), and `hourly_step` thins
         `hourly[]` rows; see "Response density, sampling and sparse
         fieldsets" on `GET /v1/weather`. A shaped body is always a
         key-subset of the detailed body for the same request.
-      required: [meta, attribution]
+      required: [location, gis, meta, attribution]
       properties:
         location:
           $ref: '#/components/schemas/Location'
@@ -5249,7 +5784,7 @@ components:
           example: KORD
         distance_km:
           type: number
-          description: Great-circle distance from the requested point to the station.
+          description: Great-circle distance from the requested point to the station, rounded to 0.1 km.
         observed_at:
           type: string
           format: date-time
@@ -5459,7 +5994,10 @@ components:
           maximum: 180
         name:
           type: string
-          description: Human-readable place name (city or nearest city).
+          description: |
+            Human-readable place name, usually without the state; see
+            `region`. The resolved place name, else the city, else the
+            nearest city. Empty when none is known.
           example: "Boston"
         region:
           type: string
@@ -5527,7 +6065,7 @@ components:
         visibility:
           type: [number, "null"]
           format: double
-          description: Visibility distance (may be null for international coverage).
+          description: Visibility distance (null when no station or model value is available).
         cloud_cover:
           type: [number, "null"]
           format: double
@@ -5573,7 +6111,17 @@ components:
           format: double
         aqi:
           type: [integer, "null"]
-          description: Air-quality index (US EPA scale, 0-500).
+          description: |
+            Air-quality index (US EPA scale): usually 0-500, can exceed 500
+            in extreme events ("Beyond the AQI"). `null` when AirNow has no
+            value at the point, or when its latest observation is older than
+            the source's freshness limit (currently 3 hours for AirNow). The
+            stale case also adds a `stale_source` warning to `meta.warnings`
+            (`section: current`, `product_id: airquality_combined`), which
+            tells the two apart. The product's age is the `meta.freshness`
+            entry with the same `product_id`. A reported 0 is currently also
+            served as `null`: AirNow stores cells outside its coverage as 0,
+            so a 0 cannot yet be told from no data.
         aqi_category:
           type: string
           description: |
@@ -5583,15 +6131,42 @@ components:
         pm25:
           type: [number, "null"]
           format: double
-          description: PM2.5 concentration (µg/m³).
+          description: |
+            AirNow AQI sub-index for PM2.5, on the same scale as `aqi`:
+            usually 0-500, can exceed 500 in extreme events. Integer-valued
+            at the source; a value may show a small fractional error, so
+            round to a whole number. Not a concentration: the field name
+            names the pollutant and is kept for compatibility. `null` when
+            AirNow has no value at the point, when its latest hour is stale
+            (reported by a `stale_source` warning, see `aqi`), or when the
+            reported value is 0 (currently indistinguishable from no data,
+            see `aqi`).
         ozone:
           type: [number, "null"]
           format: double
-          description: Ozone concentration (ppb).
+          description: |
+            AirNow AQI sub-index for ozone, on the same scale as `aqi`:
+            usually 0-500, can exceed 500 in extreme events. Integer-valued
+            at the source; a value may show a small fractional error, so
+            round to a whole number. Not a concentration: the field name
+            names the pollutant and is kept for compatibility. `null` when
+            AirNow has no value at the point, when its latest hour is stale
+            (reported by a `stale_source` warning, see `aqi`), or when the
+            reported value is 0 (currently indistinguishable from no data,
+            see `aqi`).
         pm10:
           type: [number, "null"]
           format: double
-          description: PM10 concentration (µg/m³).
+          description: |
+            AirNow AQI sub-index for PM10, on the same scale as `aqi`:
+            usually 0-500, can exceed 500 in extreme events. Integer-valued
+            at the source; a value may show a small fractional error, so
+            round to a whole number. Not a concentration: the field name
+            names the pollutant and is kept for compatibility. `null` when
+            AirNow has no value at the point, when its latest hour is stale
+            (reported by a `stale_source` warning, see `aqi`), or when the
+            reported value is 0 (currently indistinguishable from no data,
+            see `aqi`).
         precip_rate:
           type: [number, "null"]
           format: double
@@ -5616,9 +6191,8 @@ components:
             window (currently 3 hours, the same window `/v1/point` uses to
             mark it approximate). Source resolution is about 2 mm.
 
-            **Experimental.** May change during Phase 2 closed beta without
-            notice; the 90-day breaking-change commitment applies at general
-            availability per ADR 001.
+            **Experimental.** May change without notice: excluded from the
+            90-day breaking-change commitment.
         lightning_density:
           type: [number, "null"]
           format: double
@@ -5679,10 +6253,14 @@ components:
             radar nowcast horizon are reconciled against the nowcast summary:
             wet peak intensity may floor values upward; when peak intensity is
             `none`, covered hours may be pulled down toward zero (unless the
-            hour already carries precip conditions).
+            hour already carries precip conditions). Null when the hour's
+            amount is no data and no model PoP covers the hour.
         precip_amount:
           type: [number, "null"]
           format: double
+          description: >-
+            Liquid-equivalent precipitation for the hour ending at `time`.
+            `0` is a dry hour; null when no forecast source covers the hour.
         conditions:
           type: string
         icon:
@@ -5691,7 +6269,6 @@ components:
           type: boolean
           default: false
 
-        # Tier 1 fields (promoted from internal-only in wx-api).
         wind_gust:
           type: [number, "null"]
           format: double
@@ -5707,7 +6284,6 @@ components:
           type: [number, "null"]
           format: double
 
-        # Tier 2 fields.
         pressure:
           type: [number, "null"]
           format: double
@@ -5745,7 +6321,6 @@ components:
           minimum: 0
           maximum: 100
 
-        # Tier 3 fields.
         cape:
           type: [number, "null"]
           format: double
@@ -5753,6 +6328,7 @@ components:
         snow_amount:
           type: [number, "null"]
           format: double
+          description: Null when no snow is forecast or no source covers the hour.
         cloud_ceiling:
           type: [number, "null"]
           format: double
@@ -5925,12 +6501,15 @@ components:
         precip_total:
           type: [number, "null"]
           format: double
+          description: Null when no forecast source covers any hour of the day.
         snow_total:
           type: [number, "null"]
           format: double
+          description: Null when no forecast source covers any hour of the day.
         ice_total:
           type: [number, "null"]
           format: double
+          description: Null when no forecast source covers any hour of the day.
         wind_speed_max:
           type: [number, "null"]
           format: double
@@ -5955,6 +6534,11 @@ components:
         uv_index_max:
           type: [number, "null"]
           format: double
+          description: |
+            The day's maximum UV index. Often an estimate from the solar-noon
+            UV index and forecast cloud cover rather than a maximum of hourly
+            values; today's value can change during the day. Null when it
+            can't be determined.
         cape_max:
           type: [number, "null"]
           format: double
@@ -6145,7 +6729,7 @@ components:
         temperature:
           type: [number, "null"]
           format: double
-          description: High for `day`, low for `night`.
+          description: High for `day`, low for `night`; null when the half has no temperature.
         wind_speed:
           type: [number, "null"]
           format: double
@@ -6166,12 +6750,15 @@ components:
         precip_total:
           type: [number, "null"]
           format: double
+          description: Null when no forecast source covers any hour of the day.
         snow_total:
           type: [number, "null"]
           format: double
+          description: Null when no forecast source covers any hour of the day.
         ice_total:
           type: [number, "null"]
           format: double
+          description: Null when no forecast source covers any hour of the day.
         humidity:
           type: [number, "null"]
           format: double
@@ -6279,8 +6866,10 @@ components:
       properties:
         id:
           type: string
-          description: Unique alert identifier.
-          example: "urn:oid:2.49.0.1.840.0.abc123"
+          description: |
+            Unique alert identifier (the NWS message id). Pass it to
+            `GET /v1/alerts/{id}` for the full alert.
+          example: "urn:oid:2.49.0.1.840.0.d1e1a911ed0a8ca7b56a9e6a3c5d6ba0035c88fb.001.1"
         event:
           type: string
           example: "Wind Advisory"
@@ -6355,11 +6944,7 @@ components:
         Supersets `Alert` with full description, instruction, geometry,
         spatial metadata (centroid, recommended zoom, affected
         population), the upstream NWS VTEC identifier, and path-impact
-        (`pois`, `buildings`) when the reader computed it.
-
-        Field shape mirrors `wx-api`'s `GET /v1/alerts/{id}` so iOS,
-        legacy CRA, and OG-service consumers swap base URLs without
-        parsing changes.
+        (`pois`, `buildings`) when it was computed.
       required:
         - group_id
         - message_id
@@ -6378,12 +6963,14 @@ components:
       properties:
         group_id:
           type: string
-          description: Canonical primary key on the alerts table.
-          example: "1.2.3-NWS-WW.SAMPLE.CASE"
+          description: |
+            The alert's canonical id, stable across its updates (the NWS
+            id of its first message).
+          example: "urn:oid:2.49.0.1.840.0.d1e1a911ed0a8ca7b56a9e6a3c5d6ba0035c88fb.001.1"
         message_id:
           type: string
           description: NWS-issued message identifier (matches `Alert.id`).
-          example: "1.2.3-NWS-WW.SAMPLE.CASE"
+          example: "urn:oid:2.49.0.1.840.0.d1e1a911ed0a8ca7b56a9e6a3c5d6ba0035c88fb.001.1"
         status:
           type: string
           description: Alert lifecycle status (e.g., `Actual`, `Exercise`, `Test`).
@@ -6473,17 +7060,16 @@ components:
         event_ending_time:
           type: string
           description: |
-            Optional ending-time hint surfaced by the OG-share image
-            renderer. Currently always omitted by the pipeline; clients
+            Optional ending-time hint. Currently always omitted; clients
             should fall back to `expires`. Reserved for forward-compat.
         pois:
           type: object
           description: |
-            Civic POIs inside the alert polygon (`wx.estimate_polygon_pois`),
-            computed once when the alert is written and stored on the alert.
+            Civic POIs inside the alert polygon, computed once when the
+            alert is written and stored on the alert.
             Present only when the request includes `include=impact`.
             `features` are capped at 50. Omitted when unavailable
-            (null geometry, timeout, or function error) or when impact
+            (null geometry, timeout, or estimate error) or when impact
             was not requested. Empty `counts`/`features` means computed
             zero, not unknown.
           properties:
@@ -6506,14 +7092,14 @@ components:
           type: object
           description: |
             ACS housing units and Overture building-class counts inside
-            the alert polygon (`wx.estimate_polygon_buildings`), computed once
+            the alert polygon, computed once
             when the alert is written and stored on the alert.
             Present only when the request includes `include=impact`.
             `housing_unit` is ACS B25001, not residences. Class keys
             (`residential`, `commercial`, `industrial`, `civic`,
-            `other`) appear only when `gis.building_class` is loaded.
-            `features` is always empty this slice. Omitted when
-            unavailable (empty housing table, timeout, or function
+            `other`) appear only when building-class data is available.
+            `features` is currently always empty. Omitted when
+            unavailable (no housing data, timeout, or estimate
             error) or when impact was not requested.
             `counts.housing_unit: 0` is computed zero, not unknown.
           properties:
@@ -6666,8 +7252,7 @@ components:
             `610`, `814` and `wk34`, up to two for `monthly` (this month
             and next), and one per lead for `seasonal`. Ordered by period
             (`610`, `814`, `wk34`, `monthly`, `seasonal`), then
-            `valid_start`, then temperature before precipitation. Empty
-            outside the US.
+            `valid_start`, then temperature before precipitation.
           items:
             $ref: '#/components/schemas/ClimateOutlook'
         narrative:
@@ -6841,7 +7426,7 @@ components:
         as `application/geo+json` from `GET /v1/storm-tracks`.
 
         The schema below documents the stable subset of the wire
-        format. The reader pipeline may add new keys to
+        format. The data pipeline may add new keys to
         `properties` (e.g. richer `impact.*` sub-objects, additional
         cell-classification fields) without a sw-api release; clients
         should treat unknown keys as opaque additive data and never
@@ -6863,7 +7448,7 @@ components:
         GeoJSON FeatureCollection of recent NWS local storm reports.
         Returned as `application/geo+json` from `GET /v1/storm-reports`.
 
-        The reader pipeline emits at minimum a `valid_time` field on
+        The data pipeline emits at minimum a `valid_time` field on
         each feature's `properties`; additional event-type-specific
         keys (magnitude, narrative, county, etc.) may appear without a
         sw-api release. Treat unknown keys as opaque additive data.
@@ -7022,7 +7607,7 @@ components:
           example: stable
         cost_class:
           type: string
-          description: Cost class of the product's data calls (ADR 073).
+          description: Cost class of the product's data calls.
           example: data
         entitlement:
           type: [string, "null"]
@@ -7122,7 +7707,7 @@ components:
         name:
           type: string
           description: |
-            Stored variable name (the writer's OM variable); accepted as an
+            Stored variable name, as the data files name it; accepted as an
             alias of `standard_name` on `/v1/point` and `/v1/series`.
           example: tmp2m
         standard_name:
@@ -7511,8 +8096,9 @@ components:
       x-stability: experimental
       description: |
         Latest NHC tropical text product for one storm or basin. `storm_id`
-        is the writer key (`AT1` for TCD/TCP, `AT` for TWO). `atcf` is the
-        GIS join key (`AL01`) on storm products.
+        identifies the product's storm or basin (`AT1` for TCD/TCP, `AT` for
+        TWO). `atcf` is the ATCF storm id (`AL01`) that matches the storm on
+        the other tropical products.
       required: [storm_id, atcf, product_type, issued_at]
       properties:
         storm_id:
@@ -7571,7 +8157,7 @@ components:
       description: |
         Generic GeoJSON Feature with opaque geometry and a forward-compat
         property bag. Used by overlays (NEXRAD detections, tropical) whose
-        per-feature property schema is owned by the reader pipeline and
+        per-feature property schema is owned by the data pipeline and
         may evolve without a sw-api release. Treat `geometry` and all
         `properties` keys as opaque additive data.
       required: [type, geometry, properties]
@@ -7595,9 +8181,9 @@ components:
       type: object
       description: |
         Shared per-feature shape used by `StormReportsFeatureCollection`
-        and `RecordEventsFeatureCollection`. The reader emits
-        `geometry` as opaque GeoJSON (typically `Point`) and a
-        `properties` bag whose only stable key is `valid_time`.
+        and `RecordEventsFeatureCollection`. `geometry` is opaque GeoJSON
+        (typically `Point`), and the only stable `properties` key is
+        `valid_time`.
       required: [type, geometry, properties]
       properties:
         type:
@@ -7688,7 +8274,7 @@ components:
       properties:
         results:
           type: array
-          description: Match candidates, ordered by reader-side score.
+          description: Match candidates, ordered by match score (best first).
           items:
             $ref: '#/components/schemas/GeocodeAutosuggestResult'
         meta:
@@ -7702,10 +8288,9 @@ components:
     GeocodeAutosuggestResult:
       type: object
       description: |
-        Single forward-geocode candidate. Field shape mirrors the
-        reader's `AutosuggestResult` (most fields are nullable JSON
-        nulls when the underlying row lacks the column). `type` is
-        the reader's discriminator (`place`, `zip`, `address`, `poi`).
+        Single forward-geocode candidate. Most fields are JSON `null`
+        when the source record lacks them. `type` is the result kind
+        (`place`, `zip`, `address`, `poi`).
 
         Forward-compat: additional fields may appear without a
         sw-api release.
@@ -7751,7 +8336,7 @@ components:
         type:
           type: string
           description: |
-            Reader-side discriminator. Emitted values are
+            Result kind. Emitted values are
             `place`, `zip`, `address`, `poi`. Treat as opaque --
             new types may appear without a sw-api release.
           example: "place"
@@ -7765,7 +8350,7 @@ components:
           type: string
           description: |
             Stable row id for address and POI hits (and some place
-            rows). Omitted when the reader has no id.
+            rows). Omitted when the result has no id.
           example: "addr:123-main-st-naperville-il"
         title:
           type: string
@@ -7923,10 +8508,9 @@ components:
         data, political boundaries, population, timezone, and nearest
         NEXRAD radar site metadata.
 
-        Radar data URLs (wx-pipeline visual-products manifest, NEXRAD
-        ledger URLs) are **not** returned in the Phase 2 v1 response; they
-        require a public-CDN authentication model that is still being
-        designed. `/v1/radar/*` endpoints will land in Phase 5.
+        Radar data URLs (visual-products manifest, NEXRAD imagery) are
+        **not** returned in the v1 response. Radar imagery will ship later
+        as a separate `/v1/radar/*` family.
       required: [lat, lon, timezone]
       properties:
         lat:
@@ -7988,6 +8572,7 @@ components:
           type: number
           format: double
           minimum: 0
+          description: Great-circle distance from the requested point to the station, rounded to 0.1 km.
         elevation_m:
           type: [number, "null"]
 
@@ -7995,8 +8580,7 @@ components:
       type: object
       description: |
         Metadata for the nearest NEXRAD radar site. Data URLs are not
-        included here; Phase 5 `/v1/radar/*` endpoints will return the
-        URL contract.
+        included here; a later `/v1/radar/*` family will return them.
       required: [id, name, lat, lon, distance_km]
       properties:
         id:
@@ -8020,6 +8604,7 @@ components:
           type: number
           format: double
           minimum: 0
+          description: Great-circle distance from the requested point to the radar site, rounded to 0.1 km.
 
     Units:
       type: object
@@ -8068,16 +8653,16 @@ components:
           items:
             type: string
           example:
-            - "NOAA NBM"
+            - "NOAA/NWS"
+            - "NBM"
+            - "GFS"
             - "HRRR"
             - "RTMA"
             - "MRMS"
-            - "NWS"
-            - "JPL Ephemeris"
         notice:
           type: string
           description: Human-readable attribution notice.
-          example: "Weather data from NOAA/NWS. Astronomical calculations from JPL ephemerides."
+          example: "Data sourced from NOAA/NWS public products. Derived products produced by SmarterWeather."
 
     Meta:
       type: object
@@ -8089,10 +8674,11 @@ components:
         schema_version:
           type: string
           description: |
-            Response schema version, emitted as an ISO 8601 date. Increments
-            on every non-additive change. SDKs and caches can use this as a
-            stable cache key for response shape.
-          example: "2026-04-20"
+            Response schema version, a semver string (currently `1.0.0`).
+            The major part changes only with a non-additive change, which
+            follows the deprecation policy. Cache on it if you cache
+            response shapes.
+          example: "1.0.0"
         generated_at:
           type: string
           format: date-time
@@ -8139,8 +8725,33 @@ components:
           type: string
           description: |
             Stable machine-parseable warning code. Clients should branch on
-            `code`, not on `detail`. Additive set; new codes may be added
-            without a breaking-change announcement.
+            `code`, not on `detail`.
+
+            - `partial_fetch`: the section could not be fully fetched and is
+              missing or incomplete.
+            - `upstream_timeout`: an upstream weather source timed out, so
+              the section is missing or incomplete.
+            - `upstream_unavailable`: an upstream weather source was
+              unreachable, so the section is missing or incomplete.
+            - `coverage_limited`: the data does not cover this location
+              (for example no nearby station, or a product outside its
+              domain); retrying will not help.
+            - `geocode_ambiguous`: the place name matched more than one
+              location; the response uses the best match.
+            - `stale_response`: the section was served from a recent cached
+              copy because the upstream source failed.
+            - `stale_source`: one upstream product's latest data is older
+              than its source's freshness limit. `product_id` names the
+              product (its age is the `meta.freshness` entry with the same
+              `product_id`) and `fields` lists the fields in `section` it
+              leaves `null` (or omits, for optional fields such as
+              `aqi_category`). Unlike `stale_response`, the response was not
+              replayed from cache.
+            - `not_enabled`: the requested section is not enabled for this
+              API key.
+
+            New codes may be added without a breaking-change announcement;
+            treat an unknown code as informational.
           enum:
             - partial_fetch
             - upstream_timeout
@@ -8148,6 +8759,7 @@ components:
             - coverage_limited
             - geocode_ambiguous
             - stale_response
+            - stale_source
             - not_enabled
           example: "partial_fetch"
         section:
@@ -8160,6 +8772,21 @@ components:
         detail:
           type: string
           description: Human-readable explanation.
+        product_id:
+          type: string
+          description: |
+            Catalog product id (`GET /v1/catalog/{product_id}`) of the
+            upstream product the warning is about; the same id as the
+            product's `meta.freshness` entry. Set only for `stale_source`.
+          example: "airquality_combined"
+        fields:
+          type: array
+          items:
+            type: string
+          description: |
+            Response fields in `section` that this warning leaves `null` or
+            omits. Set only for `stale_source`.
+          example: ["aqi", "aqi_category", "pm25", "ozone", "pm10"]
 
     SourceFreshness:
       type: object
@@ -8198,9 +8825,8 @@ components:
         Rule-based narrative text for current and short-term conditions,
         generated deterministically from the blended forecast (not an LLM).
 
-        **Experimental.** Field shapes and prose styling may change during
-        Phase 2 closed beta without notice; the 90-day breaking-change
-        commitment applies at general availability per ADR 001.
+        **Experimental.** Field shapes and prose styling may change without
+        notice: excluded from the 90-day breaking-change commitment.
       properties:
         current:
           type: string
@@ -8230,9 +8856,8 @@ components:
         Deprecated. Prefer `include=guidance` (`guidance.mcds` /
         `guidance.afd`). Map polygons live on `GET /v1/guidance/mesoscale`.
 
-        **Experimental.** Field shapes may change during Phase 2 closed
-        beta without notice; the 90-day breaking-change commitment applies
-        at general availability per ADR 001.
+        **Experimental.** Field shapes may change without notice: excluded
+        from the 90-day breaking-change commitment.
       required: [mesoscale]
       properties:
         mesoscale:
@@ -8264,9 +8889,8 @@ components:
         Discussion per enabled desk (SPD/EPD/HI/CA/MRD/THR/ENS); omitted when empty.
         Distinct from `guidance.mpds` (WPC precipitation discussions).
 
-        **Experimental.** Field shapes may change during Phase 2 closed
-        beta without notice; the 90-day breaking-change commitment applies
-        at general availability per ADR 001.
+        **Experimental.** Field shapes may change without notice: excluded
+        from the 90-day breaking-change commitment.
       required: [active_mcds]
       properties:
         afd:
@@ -8288,7 +8912,7 @@ components:
           description: |
             SPC Mesoscale Discussions overlapping the location (structured
             fields plus raw `body`). Expired products are omitted. Cap 10
-            (newest first from the reader).
+            (newest first).
           items:
             $ref: '#/components/schemas/MCDGuidance'
         active_mpds:
@@ -8345,7 +8969,7 @@ components:
           description: Issuing Weather Forecast Office identifier.
         body:
           type: string
-          description: Full AFD bulletin text from S3 when fetched.
+          description: Full AFD bulletin text when available.
 
     NOWGuidance:
       type: object
@@ -8366,7 +8990,7 @@ components:
           description: Issuing Weather Forecast Office identifier.
         body:
           type: string
-          description: Full NOW bulletin text from S3 when fetched.
+          description: Full NOW bulletin text when available.
 
     HLSGuidance:
       type: object
@@ -8388,7 +9012,7 @@ components:
           description: Issuing Weather Forecast Office identifier.
         body:
           type: string
-          description: Full HLS bulletin text from S3 when fetched.
+          description: Full HLS bulletin text when available.
 
     HWOGuidance:
       type: object
@@ -8411,7 +9035,7 @@ components:
           format: date-time
         body:
           type: string
-          description: Full HWO bulletin text from S3 when fetched.
+          description: Full HWO bulletin text when available.
 
     MCDGuidance:
       type: object
@@ -8445,7 +9069,7 @@ components:
           description: Pipeline LLM summary when enrichment has run.
         body:
           type: string
-          description: Full MCD bulletin text from S3 when fetched.
+          description: Full MCD bulletin text when available.
 
     MPDGuidance:
       type: object
@@ -8496,7 +9120,7 @@ components:
           description: Pipeline LLM summary when enrichment has run.
         body:
           type: string
-          description: Full PMD bulletin text from S3 when fetched.
+          description: Full PMD bulletin text when available.
 
     # -----------------------------------------------------------------------
     # POST /v1/weather/batch
@@ -8601,7 +9225,7 @@ components:
       type: object
       description: |
         Batch response. `results[i]` corresponds to `locations[i]` from
-        the request body and carries either `weather` (a full F2 weather
+        the request body and carries either `weather` (a full weather
         payload) or `error` (a structured per-location failure).
       required: [results, meta]
       properties:
@@ -9023,8 +9647,9 @@ components:
           type: number
           format: double
           description: |
-            Great-circle distance from the requested point to the station.
-            The single number that says how much to trust this series.
+            Great-circle distance from the requested point to the station,
+            rounded to 0.1 km. The single number that says how much to trust
+            this series.
           example: 3.4
 
     ClimateNormalsMeta:
@@ -9469,12 +10094,13 @@ components:
             $ref: '#/components/schemas/Problem'
     Problem404:
       description: |
-        Resource not found. For `/v1/weather`, returned when the requested
-        location cannot be resolved (unknown ZIP, unrecognised free-text
-        location) or when no upstream data covers the location. A
-        location outside the 50 US states and DC returns type
-        `https://smarterweather.com/errors/outside-coverage`; both carry
-        `next_steps` (`recommended = coverage`).
+        Resource not found: a location that cannot be resolved (unknown
+        ZIP, unrecognised free-text location), no upstream data for the
+        location, or a missing resource. On a route that checks coverage
+        (its description says so), a location outside the 50 US states and
+        DC returns type `https://smarterweather.com/errors/outside-coverage`;
+        that and the location-not-found problem carry `next_steps`
+        (`recommended = coverage`).
       content:
         application/problem+json:
           schema:
@@ -9501,10 +10127,37 @@ components:
           $ref: '#/components/headers/RateLimitRemaining'
         RateLimit-Reset:
           $ref: '#/components/headers/RateLimitReset'
+        RateLimit-Policy:
+          $ref: '#/components/headers/RateLimitPolicy'
+        RateLimit-Daily-Limit:
+          $ref: '#/components/headers/RateLimitDailyLimit'
+        RateLimit-Daily-Remaining:
+          $ref: '#/components/headers/RateLimitDailyRemaining'
+        RateLimit-Daily-Reset:
+          $ref: '#/components/headers/RateLimitDailyReset'
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+          example:
+            type: https://smarterweather.com/errors/rate-limit-exceeded
+            title: Too Many Requests
+            status: 429
+            detail: "You have exceeded your API rate limit. Slow your request rate. Retry after the Retry-After / RateLimit-Reset headers."
+            next_steps:
+              recommended: upgrade
+              errors:
+                href: "https://developers.smarterweather.com/errors?utm_campaign=429&utm_medium=problem-json&utm_source=api"
+                description: "What every problem type means and what to do next."
+              pricing:
+                href: "https://developers.smarterweather.com/pricing?utm_campaign=429&utm_medium=problem-json&utm_source=api"
+                description: "Tiers, rate limits, daily and monthly quotas."
+              upgrade:
+                href: "https://developers.smarterweather.com/dashboard/billing?utm_campaign=429&utm_medium=problem-json&utm_source=api"
+                description: "Raise your rate limit and quota by upgrading the plan on this key's account."
+              usage:
+                href: "https://developers.smarterweather.com/dashboard/usage?utm_campaign=429&utm_medium=problem-json&utm_source=api"
+                description: "See this key's usage against its limits."
     TrialEnded:
       description: |
         Trial key free value ended (lifetime cap spent or key clock
@@ -9545,10 +10198,15 @@ components:
             $ref: '#/components/schemas/Problem'
     Problem503:
       description: |
-        Service unavailable. Typically returned when an upstream-reader
-        circuit breaker has tripped after repeated failures. Transient;
-        clients should retry with backoff and honor any `Retry-After`
-        header.
+        Service unavailable. An upstream dependency is unavailable or
+        shedding load (type `service-unavailable`). Transient; retry with
+        backoff and honor any `Retry-After` header.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying, when present.
+          schema:
+            type: integer
+            minimum: 0
       content:
         application/problem+json:
           schema:
