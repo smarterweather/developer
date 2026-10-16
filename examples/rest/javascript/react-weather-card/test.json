@@ -7,5 +7,5 @@
       "query": { "location": "Boston, MA", "include": "current,daily,alerts", "days": "1" }
     }
   ],
-  "stdout": ["^-?\\d+(\\.\\d+)?°F, \\S.*$", "^Today: \\S.*, high -?\\d.*°, low -?\\d.*°$", "^Sources: \\S.*$"]
+  "stdout": ["^(-?\\d+|--)°F$", "^Partly Cloudy$", "^Today: \\S.*, high (-?\\d+|--)°, low (-?\\d+|--)°$", "^Data: \\S.*$"]
 }

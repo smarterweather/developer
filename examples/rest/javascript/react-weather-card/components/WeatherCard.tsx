@@ -1,6 +1,7 @@
 "use client";
 
 import { useWeather } from "../hooks/useWeather";
+import { cardView } from "../lib/weather";
 
 type Props = { location: string; endpoint?: string };
 
@@ -10,35 +11,28 @@ type Props = { location: string; endpoint?: string };
 // app/api/weather/route.ts.
 export function WeatherCard({ location, endpoint }: Props) {
   const { data, error, loading } = useWeather(location, { endpoint });
-  const now = data?.current;
-  const today = data?.daily?.[0];
-  const alert = data?.alerts?.[0];
+  const view = data && cardView(data);
 
   return (
     <section aria-label={`Weather for ${location}`} style={styles.card}>
       <h2 style={styles.place}>{location}</h2>
       {loading && <p style={styles.muted}>Loading…</p>}
-      {error && <p role="alert">{error}</p>}
-      {data && (
-        <>
-          {now && (
-            <>
-              <p style={styles.temperature}>{degrees(now.temperature)}F</p>
-              <p style={styles.conditions}>{now.conditions}</p>
-            </>
-          )}
-          {today && (
-            <p>Today: {[today.conditions, `high ${degrees(today.high)}`, `low ${degrees(today.low)}`].filter(Boolean).join(", ")}</p>
-          )}
-          {alert && <p style={styles.alert}>{alert.event}</p>}
-          <p style={styles.muted}>Data: {data.attribution.sources.join(", ")}</p>
-        </>
+      {error && <p role="alert">{error.message}</p>}
+      {error?.nextStep && (
+        <p>
+          <a href={error.nextStep} style={styles.link}>
+            Next step
+          </a>
+        </p>
       )}
+      {view?.temperature && <p style={styles.temperature}>{view.temperature}</p>}
+      {view?.conditions && <p style={styles.conditions}>{view.conditions}</p>}
+      {view?.today && <p>{view.today}</p>}
+      {view?.alert && <p style={styles.alert}>{view.alert}</p>}
+      {view?.sources && <p style={styles.muted}>{view.sources}</p>}
     </section>
   );
 }
-
-const degrees = (value: number | null) => (value === null ? "--°" : `${Math.round(value)}°`);
 
 const styles = {
   card: {
@@ -56,4 +50,5 @@ const styles = {
   conditions: { margin: 0, fontSize: 18 },
   alert: { padding: "6px 10px", borderRadius: 8, background: "rgba(180, 30, 30, 0.85)" },
   muted: { fontSize: 12, opacity: 0.85 },
+  link: { color: "inherit" },
 } as const;

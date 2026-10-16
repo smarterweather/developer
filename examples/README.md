@@ -46,7 +46,7 @@ Coverage is the 50 US states and DC.
 
 | Example | Language | Run |
 | --- | --- | --- |
-| [A React weather card](./rest/javascript/react-weather-card/): a `useWeather` hook and `<WeatherCard location />`, with the key in a Next.js route | TypeScript (Node.js 22.12+) | `npm install && npm run dev` |
+| [A React weather card](./rest/javascript/react-weather-card/): a `useWeather` hook and `<WeatherCard location />`, with the key in a Next.js route | TypeScript (Node.js 22.22+) | `npm install && npm run dev` |
 
 ## Your key
 
