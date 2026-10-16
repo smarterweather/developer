@@ -42,6 +42,12 @@ Sources: NOAA NBM, HRRR, RTMA, MRMS, NWS, JPL Ephemeris
 
 Coverage is the 50 US states and DC.
 
+## Build on it
+
+| Example | Language | Run |
+| --- | --- | --- |
+| [A React weather card](./rest/javascript/react-weather-card/): a `useWeather` hook and `<WeatherCard location />`, with the key in a Next.js route | TypeScript (Node.js 22.12+) | `npm install && npm run dev` |
+
 ## Your key
 
 Get a free key at <https://developers.smarterweather.com/dashboard/api-keys>,
@@ -126,6 +132,11 @@ API and uses no secret. For REST examples (`kind: code`):
      start of the body, not a parse error.
 
 Every example gives up after 10 seconds.
+
+A web app runs the same five checks through its server route: its
+`test.json` runs a small client that starts the built app, calls the route
+the way the browser would, and prints what the page shows (see
+[react-weather-card](./rest/javascript/react-weather-card/)).
 
 For MCP configs (`kind: config`),
 [`_harness/check-mcp-config.mjs`](./_harness/check-mcp-config.mjs) applies

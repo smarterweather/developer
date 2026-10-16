@@ -1,0 +1,11 @@
+{
+  "run": ["node", "test/call-route.mjs"],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/v1/weather",
+      "query": { "location": "Boston, MA", "include": "current,daily,alerts", "days": "1" }
+    }
+  ],
+  "stdout": ["^-?\\d+(\\.\\d+)?°F, \\S.*$", "^Today: \\S.*, high -?\\d.*°, low -?\\d.*°$", "^Sources: \\S.*$"]
+}
