@@ -10,15 +10,18 @@ API_BASE = os.environ.get("SMARTERWEATHER_API_BASE") or "https://api.smarterweat
 
 def problem_text(res):
     """Errors are RFC 9457 problems (JSON) whose next_steps names a fix;
-    anything else, such as a proxy's HTML page, is shown as text."""
+    anything else, such as a gateway's HTML or JSON error, is shown as its
+    first 200 characters."""
     try:
         problem = res.json()
+        text = problem.get("detail") or problem.get("title")
         next_steps = problem.get("next_steps") or {}
         hint = (next_steps.get(next_steps.get("recommended")) or {}).get("href")
-        detail = problem.get("detail") or problem.get("title")
     except (ValueError, AttributeError):
+        text = None
+    if not isinstance(text, str):
         return res.text[:200]
-    return f"{detail}\nNext step: {hint}" if hint else str(detail)
+    return f"{text}\nNext step: {hint}" if hint else text
 
 
 res = requests.get(

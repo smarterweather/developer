@@ -8,6 +8,8 @@
 //   (none)     forward to the mock as sent
 //   /_noauth   forward without the Authorization header (the mock answers 401)
 //   /_502      answer 502 with an HTML body, as a broken gateway would
+//   /_504json  answer 504 with a JSON body that is not a problem, as an API
+//              gateway timeout would
 import { appendFileSync } from "node:fs";
 import http from "node:http";
 
@@ -16,8 +18,12 @@ const port = Number(process.env.PROXY_PORT ?? 4011);
 const log = process.env.SMARTERWEATHER_CI_LOG ?? "requests.jsonl";
 const envKey = process.env.SMARTERWEATHER_API_KEY;
 const PLACEHOLDER = "YOUR_SMARTERWEATHER_API_KEY";
-const ROUTES = ["/_noauth", "/_502"];
 const BAD_GATEWAY = "<html><head><title>502 Bad Gateway</title></head><body><h1>502 Bad Gateway</h1></body></html>\n";
+const STUBS = {
+  "/_502": { status: 502, type: "text/html", body: BAD_GATEWAY },
+  "/_504json": { status: 504, type: "application/json", body: '{"message":"Endpoint request timed out"}' },
+};
+const ROUTES = ["/_noauth", ...Object.keys(STUBS)];
 
 http
   .createServer((req, res) => {
@@ -40,10 +46,11 @@ http
         })}\n`,
       );
 
-    if (route === "/_502") {
-      record(502);
-      res.writeHead(502, { "content-type": "text/html" });
-      res.end(BAD_GATEWAY);
+    const stub = STUBS[route];
+    if (stub) {
+      record(stub.status);
+      res.writeHead(stub.status, { "content-type": stub.type });
+      res.end(stub.body);
       return;
     }
 

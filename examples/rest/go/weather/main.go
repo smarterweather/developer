@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 // Quick local try: paste your key below. Prefer the SMARTERWEATHER_API_KEY
@@ -21,7 +22,8 @@ func main() {
 		log.Fatal(err)
 	}
 	req.Header.Set("Authorization", "Bearer "+env("SMARTERWEATHER_API_KEY", apiKey))
-	res, err := http.DefaultClient.Do(req)
+	client := &http.Client{Timeout: 10 * time.Second}
+	res, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,14 +59,15 @@ func env(name, fallback string) string {
 }
 
 // problemText reads an RFC 9457 problem (JSON) and the next step it
-// recommends; anything else, such as a proxy's HTML page, is shown as text.
+// recommends; anything else, such as a gateway's HTML or JSON error, is shown
+// as its first 200 characters.
 func problemText(body []byte) string {
 	var problem struct {
 		Title     string                     `json:"title"`
 		Detail    string                     `json:"detail"`
 		NextSteps map[string]json.RawMessage `json:"next_steps"`
 	}
-	if json.Unmarshal(body, &problem) != nil {
+	if json.Unmarshal(body, &problem) != nil || problem.Detail+problem.Title == "" {
 		return string(body[:min(len(body), 200)])
 	}
 	text := problem.Detail

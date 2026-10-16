@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 // Checks examples/index.json and the tree it describes. Behaviour comes from
-// the data (kind, test, the schema's surface list), not from surface names:
+// the data (kind, test, the directory layout), never from surface or language
+// names, so a new surface or language needs no change here:
 // - the index matches index.schema.json and is unique on (id, surface, language);
 // - entries sharing an id share a title (the portal renders one page per id);
 // - each dir sits under its surface, has a README.md, and every example dir
-//   with a README.md is in the index;
+//   with a README.md is in the index (a top-level dir is a surface and may
+//   have its own README);
 // - `kind: code` entries carry the placeholder key constant;
 // - relative links in every README resolve, and every JSON file parses.
 import Ajv2020 from "ajv/dist/2020.js";
@@ -20,7 +22,6 @@ const errors = [];
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const index = readJson(join(examples, "index.json"));
 const schema = readJson(join(examples, "index.schema.json"));
-const surfaces = schema.$defs.example.properties.surface.enum;
 
 const ajv = new Ajv2020({ allErrors: true });
 if (!ajv.validate(schema, index)) {
@@ -62,7 +63,7 @@ for (const entry of entries) {
 const indexed = new Set(entries.map((e) => e.dir));
 for (const f of files.filter((f) => f.endsWith("README.md"))) {
   const dir = dirname(f);
-  if (dir === "." || surfaces.includes(dir) || dir.startsWith("_harness")) continue;
+  if (dir === "." || !dir.includes("/") || dir.startsWith("_harness")) continue;
   if (!indexed.has(dir)) errors.push(`${dir}: has a README.md but no index.json entry`);
 }
 

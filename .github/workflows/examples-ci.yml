@@ -3,18 +3,12 @@ name: examples-ci
 # behind a proxy that records each request, and checks the MCP configs
 # statically. No secrets and no call to the real API, so it runs the same on
 # forks. The repo-wide key scan is key-scan.yml. See examples/README.md.
+# No path filter: the checks read files across the repo (openapi.yaml, the
+# mcp-weather package, READMEs and links), and the job takes under a minute.
 on:
   pull_request:
-    paths:
-      - "examples/**"
-      - "openapi.yaml"
-      - ".github/workflows/examples-ci.yml"
   push:
     branches: [main]
-    paths:
-      - "examples/**"
-      - "openapi.yaml"
-      - ".github/workflows/examples-ci.yml"
 
 permissions:
   contents: read

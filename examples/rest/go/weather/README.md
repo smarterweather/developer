@@ -11,7 +11,9 @@ const apiKey = "YOUR_SMARTERWEATHER_API_KEY" // insert your key here
 ```
 
 The full program is [`main.go`](./main.go). On an error it prints the status,
-the problem's `detail` and its recommended next step, and exits 1.
+the problem's `detail` and its recommended next step (or the first 200
+characters of a body that is not a problem) and exits 1. The client gives up
+after 10 seconds.
 
 ## Run it
 

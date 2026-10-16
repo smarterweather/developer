@@ -14,7 +14,22 @@ import requests
 API_KEY = "YOUR_SMARTERWEATHER_API_KEY"  # insert your key here
 API_BASE = os.environ.get("SMARTERWEATHER_API_BASE") or "https://api.smarterweather.com"
 
-# problem_text(res): the error's detail and next step, see weather.py
+
+def problem_text(res):
+    """Errors are RFC 9457 problems (JSON) whose next_steps names a fix;
+    anything else, such as a gateway's HTML or JSON error, is shown as its
+    first 200 characters."""
+    try:
+        problem = res.json()
+        text = problem.get("detail") or problem.get("title")
+        next_steps = problem.get("next_steps") or {}
+        hint = (next_steps.get(next_steps.get("recommended")) or {}).get("href")
+    except (ValueError, AttributeError):
+        text = None
+    if not isinstance(text, str):
+        return res.text[:200]
+    return f"{text}\nNext step: {hint}" if hint else text
+
 
 res = requests.get(
     f"{API_BASE}/v1/weather",
@@ -46,7 +61,8 @@ Sources: NOAA NBM, HRRR, RTMA, MRMS, NWS, JPL Ephemeris
 ```
 
 On an error it prints the status, the problem's `detail` and its recommended
-next step, then exits 1. `weather` holds the whole response: `weather["hourly"]`, `weather["daily"]`
+next step (or the first 200 characters of a body that is not a problem), then
+exits 1. `weather` holds the whole response: `weather["hourly"]`, `weather["daily"]`
 and `weather["alerts"]` are already there.
 
 - Route: [`GET /v1/weather`](https://developers.smarterweather.com/api/weather/)
