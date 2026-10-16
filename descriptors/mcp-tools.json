@@ -520,7 +520,7 @@
     {
       "name": "get_air_quality",
       "title": "Get air quality",
-      "description": "AirNow air quality at a location (CONUS): current overall AQI plus per-pollutant detail (PM2.5, ozone, PM10 concentrations) and the AirNow AQI forecast. AQI scale: 0-50 good, 51-100 moderate, 101-150 unhealthy for sensitive groups, 151-200 unhealthy, 201-300 very unhealthy, 301+ hazardous. pollutants=[\"aqi\"] (default) is the cheap headline call; add pollutant keys or include_forecast=true when the user digs in. Example: {\"location\": \"Boise\", \"pollutants\": [\"aqi\", \"pm25\"], \"include_forecast\": true}.",
+      "description": "AirNow air quality at a location (CONUS): current overall AQI plus per-pollutant AQI sub-indices (PM2.5, ozone, PM10) and the AirNow AQI forecast. AQI scale: 0-50 good, 51-100 moderate, 101-150 unhealthy for sensitive groups, 151-200 unhealthy, 201-300 very unhealthy, 301+ hazardous. pollutants=[\"aqi\"] (default) is the cheap headline call; add pollutant keys or include_forecast=true when the user digs in. Example: {\"location\": \"Boise\", \"pollutants\": [\"aqi\", \"pm25\"], \"include_forecast\": true}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -610,6 +610,11 @@
                     "type": "string"
                   }
                 },
+                "units": {
+                  "type": "string",
+                  "const": "AQI",
+                  "description": "Every value is an AQI or AQI sub-index, not a concentration."
+                },
                 "data": {
                   "type": "object",
                   "additionalProperties": {
@@ -626,6 +631,7 @@
               "required": [
                 "dataset_id",
                 "valid_times",
+                "units",
                 "data"
               ],
               "additionalProperties": false
@@ -645,6 +651,11 @@
                     "type": "string"
                   }
                 },
+                "units": {
+                  "type": "string",
+                  "const": "AQI",
+                  "description": "Every value is an AQI or AQI sub-index, not a concentration."
+                },
                 "data": {
                   "type": "object",
                   "additionalProperties": {
@@ -661,6 +672,7 @@
               "required": [
                 "dataset_id",
                 "valid_times",
+                "units",
                 "data"
               ],
               "additionalProperties": false

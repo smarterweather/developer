@@ -5703,7 +5703,9 @@ components:
           format: double
         aqi:
           type: [integer, "null"]
-          description: Air-quality index (US EPA scale, 0-500).
+          description: |
+            Air-quality index (US EPA scale): usually 0-500, can exceed 500
+            in extreme events ("Beyond the AQI").
         aqi_category:
           type: string
           description: |
@@ -5713,15 +5715,30 @@ components:
         pm25:
           type: [number, "null"]
           format: double
-          description: PM2.5 concentration (µg/m³).
+          description: |
+            AirNow AQI sub-index for PM2.5, on the same scale as `aqi`:
+            usually 0-500, can exceed 500 in extreme events. Integer-valued
+            at the source; a value may show a small fractional error, so
+            round to a whole number. Not a concentration: the field name
+            names the pollutant and is kept for compatibility.
         ozone:
           type: [number, "null"]
           format: double
-          description: Ozone concentration (ppb).
+          description: |
+            AirNow AQI sub-index for ozone, on the same scale as `aqi`:
+            usually 0-500, can exceed 500 in extreme events. Integer-valued
+            at the source; a value may show a small fractional error, so
+            round to a whole number. Not a concentration: the field name
+            names the pollutant and is kept for compatibility.
         pm10:
           type: [number, "null"]
           format: double
-          description: PM10 concentration (µg/m³).
+          description: |
+            AirNow AQI sub-index for PM10, on the same scale as `aqi`:
+            usually 0-500, can exceed 500 in extreme events. Integer-valued
+            at the source; a value may show a small fractional error, so
+            round to a whole number. Not a concentration: the field name
+            names the pollutant and is kept for compatibility.
         precip_rate:
           type: [number, "null"]
           format: double
