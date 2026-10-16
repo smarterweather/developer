@@ -6534,6 +6534,11 @@ components:
         uv_index_max:
           type: [number, "null"]
           format: double
+          description: |
+            The day's maximum UV index. Often an estimate from the solar-noon
+            UV index and forecast cloud cover rather than a maximum of hourly
+            values; today's value can change during the day. Null when it
+            can't be determined.
         cape_max:
           type: [number, "null"]
           format: double
