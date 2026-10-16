@@ -39,5 +39,8 @@
       "JPL Ephemeris"
     ],
     "notice": "Weather data from NOAA/NWS. Astronomical calculations from JPL ephemerides."
+  },
+  "meta": {
+    "generated_at": "2026-10-16T22:21:40Z"
   }
 }

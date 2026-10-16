@@ -1,12 +1,20 @@
 // node --test examples/_harness/
-// The rain-next-hour fixtures must be shapes the API can return: 12
-// five-minute points from generated_at + 5 min, and a summary that follows
-// the API's documented rule from those points (openapi.yaml, NowcastSummary):
-// the onset is the first of two wet steps in a row; one dry step inside an
-// episode does not end it, two do; already_occurring is the onset being the
-// first step; ends_at is the end of the last wet step; peak_intensity covers
-// the onset to the episode's end only; type is the onset's. Fields that do
-// not apply are omitted, never null or false.
+// The rain-next-hour fixtures must be shapes the API can return. Their points
+// are leads on one grid after nowcast.generated_at (a lead may be missing),
+// interval_seconds is the smallest gap between points, and the summary is
+// what the API's documented rule (openapi.yaml, NowcastSummary) gives for
+// those points at the request time in meta.generated_at:
+// - the onset is the first of two consecutive wet points; a missing lead is
+//   not wet, so wet points either side of it are not consecutive;
+// - the episode ends at two consecutive dry steps after the onset, a missing
+//   lead counting as dry; one dry step does not end it;
+// - ends_at is the last wet point's time plus the interval, and
+//   duration_minutes runs from starts_at to it; both are omitted while the
+//   episode runs to the end of the window;
+// - already_occurring: the onset is points[0] and points[0].time is at or
+//   before the request time; omitted otherwise;
+// - peak_intensity covers the onset to the episode's end; type is the onset's;
+// - with no onset the summary is just { type: "none", peak_intensity: "none" }.
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -17,37 +25,47 @@ const dir = join(EXAMPLES, "rest/_fixtures/rain-next-hour");
 const RANK = { none: 0, light: 1, moderate: 2, heavy: 3 };
 const at = (ms) => new Date(ms).toISOString().replace(".000Z", "Z");
 
-// The API omits a field rather than sending null or false.
-function summarize(points, step) {
+function intervalOf(times) {
+  const gaps = times.slice(1).map((t, i) => t - times[i]).filter((gap) => gap > 0);
+  return gaps.length ? Math.min(...gaps) : 300_000;
+}
+
+function summarize(points, now) {
+  const times = points.map((p) => Date.parse(p.time));
+  const step = intervalOf(times);
+  const missing = (a, b) => Math.max(Math.floor((b - a + step / 2) / step) - 1, 0);
   const wet = points.map((p) => p.intensity !== "none");
-  const onset = wet.findIndex((w, i) => w && wet[i + 1]);
+  const onset = wet.findIndex((w, i) => w && wet[i + 1] && missing(times[i], times[i + 1]) === 0);
   if (onset < 0) return { type: "none", peak_intensity: "none" };
-  let peak = points[onset].intensity;
-  let end = null;
-  for (let i = onset, dry = 0; i < points.length; i++) {
-    if (wet[i]) {
+  const summary = { starts_at: points[onset].time, type: points[onset].type, peak_intensity: points[onset].intensity };
+  if (onset === 0 && times[0] <= now) summary.already_occurring = true;
+  let last = onset;
+  let ended = false;
+  for (let i = onset + 1, dry = 0; i < points.length && !ended; i++) {
+    dry += missing(times[i - 1], times[i]);
+    if (dry >= 2) ended = true;
+    else if (wet[i]) {
       dry = 0;
-      if (RANK[points[i].intensity] > RANK[peak]) peak = points[i].intensity;
-    } else if (++dry >= 2) {
-      end = i - 2;
-      break;
-    }
+      last = i;
+      if (RANK[points[i].intensity] > RANK[summary.peak_intensity]) summary.peak_intensity = points[i].intensity;
+    } else ended = ++dry >= 2;
   }
-  const summary = { starts_at: points[onset].time, type: points[onset].type, peak_intensity: peak };
-  if (onset === 0) summary.already_occurring = true;
-  if (end !== null) {
-    summary.ends_at = at(Date.parse(points[end].time) + step);
-    summary.duration_minutes = (Date.parse(summary.ends_at) - Date.parse(summary.starts_at)) / 60_000;
+  if (ended) {
+    summary.ends_at = at(times[last] + step);
+    summary.duration_minutes = (times[last] + step - times[onset]) / 60_000;
   }
   return summary;
 }
 
 for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
   test(`${file} is a nowcast the API can return`, () => {
-    const { nowcast } = JSON.parse(readFileSync(join(dir, file), "utf8"));
-    const step = nowcast.interval_seconds * 1000;
-    assert.equal(nowcast.points.length, 12);
-    nowcast.points.forEach((p, i) => assert.equal(p.time, at(Date.parse(nowcast.generated_at) + (i + 1) * step), `point ${i}`));
-    assert.deepEqual(nowcast.summary, summarize(nowcast.points, step));
+    const { nowcast, meta } = JSON.parse(readFileSync(join(dir, file), "utf8"));
+    const times = nowcast.points.map((p) => Date.parse(p.time));
+    const step = intervalOf(times);
+    assert.equal(nowcast.interval_seconds * 1000, step, "interval_seconds is the smallest gap between points");
+    const leads = times.map((t) => (t - Date.parse(nowcast.generated_at)) / step);
+    assert.ok(leads.every((n, i) => Number.isInteger(n) && n >= 1 && n <= 12 && (i === 0 || n > leads[i - 1])), `leads ${leads}`);
+    assert.ok(meta?.generated_at, "meta.generated_at (the request time) is set");
+    assert.deepEqual(nowcast.summary, summarize(nowcast.points, Date.parse(meta.generated_at)));
   });
 }
