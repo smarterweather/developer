@@ -1,9 +1,12 @@
 // node --test examples/_harness/
 // The rain-next-hour fixtures must be shapes the API can return: 12
 // five-minute points from generated_at + 5 min, and a summary that follows
-// the API's rule from those points (onset: the first of two wet steps in a
-// row; already_occurring: the onset is the first step; ends_at: the end of
-// the last wet step, set only once two dry steps follow, else null).
+// the API's documented rule from those points (openapi.yaml, NowcastSummary):
+// the onset is the first of two wet steps in a row; one dry step inside an
+// episode does not end it, two do; already_occurring is the onset being the
+// first step; ends_at is the end of the last wet step; peak_intensity covers
+// the onset to the episode's end only; type is the onset's. Fields that do
+// not apply are omitted, never null or false.
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,10 +17,11 @@ const dir = join(EXAMPLES, "rest/_fixtures/rain-next-hour");
 const RANK = { none: 0, light: 1, moderate: 2, heavy: 3 };
 const at = (ms) => new Date(ms).toISOString().replace(".000Z", "Z");
 
+// The API omits a field rather than sending null or false.
 function summarize(points, step) {
   const wet = points.map((p) => p.intensity !== "none");
   const onset = wet.findIndex((w, i) => w && wet[i + 1]);
-  if (onset < 0) return { type: "none", peak_intensity: "none", already_occurring: false };
+  if (onset < 0) return { type: "none", peak_intensity: "none" };
   let peak = points[onset].intensity;
   let end = null;
   for (let i = onset, dry = 0; i < points.length; i++) {
@@ -29,16 +33,13 @@ function summarize(points, step) {
       break;
     }
   }
-  const startsAt = points[onset].time;
-  const endsAt = end === null ? null : at(Date.parse(points[end].time) + step);
-  return {
-    starts_at: startsAt,
-    ends_at: endsAt,
-    duration_minutes: endsAt && (Date.parse(endsAt) - Date.parse(startsAt)) / 60_000,
-    type: points[onset].type,
-    peak_intensity: peak,
-    already_occurring: onset === 0,
-  };
+  const summary = { starts_at: points[onset].time, type: points[onset].type, peak_intensity: peak };
+  if (onset === 0) summary.already_occurring = true;
+  if (end !== null) {
+    summary.ends_at = at(Date.parse(points[end].time) + step);
+    summary.duration_minutes = (Date.parse(summary.ends_at) - Date.parse(summary.starts_at)) / 60_000;
+  }
+  return summary;
 }
 
 for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {

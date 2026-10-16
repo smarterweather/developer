@@ -26,11 +26,11 @@
     ],
     "summary": {
       "starts_at": "2026-10-16T22:20:00Z",
-      "ends_at": "2026-10-16T22:50:00Z",
-      "duration_minutes": 30,
       "type": "snow",
       "peak_intensity": "light",
-      "already_occurring": true
+      "already_occurring": true,
+      "ends_at": "2026-10-16T22:50:00Z",
+      "duration_minutes": 30
     }
   },
   "attribution": {

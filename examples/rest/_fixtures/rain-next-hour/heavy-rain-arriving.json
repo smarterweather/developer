@@ -26,11 +26,8 @@
     ],
     "summary": {
       "starts_at": "2026-10-16T23:00:00Z",
-      "ends_at": null,
-      "duration_minutes": null,
       "type": "rain",
-      "peak_intensity": "heavy",
-      "already_occurring": false
+      "peak_intensity": "heavy"
     }
   },
   "attribution": {

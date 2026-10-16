@@ -15,6 +15,8 @@
     { "body": "../../_fixtures/rain-next-hour/heavy-rain-arriving.json", "stdout": ["^Heavy rain starting around 4:00 PM\\.$"] },
     { "body": "../../_fixtures/rain-next-hour/mix-all-hour.json", "stdout": ["^Moderate wintry mix now\\.$"] },
     { "body": "../../_fixtures/rain-next-hour/snow-ending.json", "stdout": ["^Light snow now, ending around 3:50 PM\\.$"] },
-    { "body": "../../_fixtures/rain-next-hour/no-timezone.json", "stdout": ["^Light rain starting around \\d{1,2}:\\d{2} [AP]M, ending around \\d{1,2}:\\d{2} [AP]M\\.$"] }
+    { "body": "../../_fixtures/rain-next-hour/no-timezone.json", "stdout": ["^Light rain starting around \\d{1,2}:\\d{2} [AP]M, ending around \\d{1,2}:\\d{2} [AP]M\\.$"] },
+    { "body": "../../_fixtures/rain-next-hour/one-dry-gap.json", "stdout": ["^Light rain now, ending around 4:00 PM\\.$"] },
+    { "body": "../../_fixtures/rain-next-hour/boston-reference.json", "stdout": ["^Heavy rain now, ending around 11:35 AM\\.$"] }
   ]
 }

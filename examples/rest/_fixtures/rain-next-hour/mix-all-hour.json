@@ -26,8 +26,6 @@
     ],
     "summary": {
       "starts_at": "2026-10-16T22:20:00Z",
-      "ends_at": null,
-      "duration_minutes": null,
       "type": "wintry_mix",
       "peak_intensity": "moderate",
       "already_occurring": true

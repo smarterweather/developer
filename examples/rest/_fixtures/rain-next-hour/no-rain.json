@@ -26,8 +26,7 @@
     ],
     "summary": {
       "type": "none",
-      "peak_intensity": "none",
-      "already_occurring": false
+      "peak_intensity": "none"
     }
   },
   "attribution": {
