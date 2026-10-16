@@ -78,8 +78,8 @@ info:
     | `alerts`    | yes     | stable    | Active NWS alerts for the location.               |
     | `outlooks`  | yes     | stable    | SPC convective outlooks for the location.         |
     | `astro`     | yes     | stable    | Sunrise/sunset/moon phase, etc.                   |
-    | `location`  | no      | stable    | Echo of the resolved location (lat/lon/name/tz).  |
-    | `gis`       | no      | stable    | Geographic metadata (population, timezone, nearest radar site). |
+    | `location`  | always  | stable    | Echo of the resolved location (lat/lon/name/tz).  |
+    | `gis`       | always  | stable    | Geographic metadata (population, timezone, nearest radar site). |
     | `narrations`| no      | experimental | LLM-generated narrative text for current/short-term conditions. |
     | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/NOW/HLS/MCD/MPD/PMD). Canonical for new clients. |
     | `discussions` | no    | experimental | Deprecated. Prefer `include=guidance` (`guidance.mcds` / `guidance.afd`). |
@@ -87,6 +87,12 @@ info:
     | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
     | `climate`     | no    | experimental | NCEI day-of-year normals for the location, plus per-day departure from normal on `daily[]`. |
     | `metar`       | no    | experimental | Nearest METAR sky layers and present weather for the photoreal canvas. |
+
+    `location` and `gis` are valid tokens, but every 200 response carries
+    them whether or not `include` names them. Any `include` value replaces
+    the default set: `include=current` returns `current` plus `location`,
+    `gis`, `units`, `attribution` and `meta`, and `include=location`
+    returns only `location`, `gis`, `units`, `attribution` and `meta`.
 
     `radar` and `products` (wx visual-products manifest) are **not** in the
     v1 token set. They will land in Phase 5 alongside a separate
@@ -4773,17 +4779,15 @@ components:
 
   examples:
     WeatherBoston:
-      summary: Composite weather response for Boston, MA (default include, imperial).
+      summary: Composite weather response for a point in Boston, MA (lat/lon input, default include, imperial).
       value:
         location:
           lat: 42.3601
           lon: -71.0589
           name: "Boston"
           region: "MA"
-          country: "US"
           timezone: "America/New_York"
           county: "Suffolk"
-          zip: "02108"
         current:
           time: "2026-04-20T15:00:00Z"
           temperature: 58.4
@@ -4869,6 +4873,28 @@ components:
           moon_phase_name: "Waxing Crescent"
           moon_illumination: 0.22
           polar: null
+        gis:
+          lat: 42.3601
+          lon: -71.0589
+          city: "Boston"
+          state: "MA"
+          county: "Suffolk"
+          population: null
+          timezone: "America/New_York"
+          nearest_radar:
+            id: "BOX"
+            name: "Boston"
+            lat: 41.9558
+            lon: -71.1369
+            distance_km: 45.4
+          nearest_station:
+            id: "KBOS"
+            name: "Boston Logan International Airport"
+            state: "MA"
+            lat: 42.3656
+            lon: -71.0096
+            distance_km: 4.1
+            elevation_m: 6
         units:
           temperature: "F"
           wind_speed: "mph"
@@ -4877,15 +4903,15 @@ components:
           precip_amount: "in"
         attribution:
           sources:
-            - "NOAA NBM"
+            - "NOAA/NWS"
+            - "NBM"
+            - "GFS"
             - "HRRR"
             - "RTMA"
             - "MRMS"
-            - "NWS"
-            - "JPL Ephemeris"
-          notice: "Weather data from NOAA/NWS. Astronomical calculations from JPL ephemerides."
+          notice: "Data sourced from NOAA/NWS public products. Derived products produced by SmarterWeather."
         meta:
-          schema_version: "2026-04-20"
+          schema_version: "1.0.0"
           generated_at: "2026-04-20T15:00:04Z"
           freshness:
             - source: "rtma"
@@ -5245,15 +5271,15 @@ components:
       type: object
       description: |
         Composite blended weather payload returned by `GET /v1/weather`.
-        Section presence is controlled by the `include` query parameter.
-        With the default `view=detailed` and no `fields`, every section
+        Section presence is controlled by the `include` query parameter;
+        `location` and `gis` are always present. With the default `view=detailed` and no `fields`, every section
         that is present is the complete shape documented below. `view=concise`
         and `fields` project the members of `hourly[]` and `daily[]` rows
         (every other section stays complete), and `hourly_step` thins
         `hourly[]` rows; see "Response density, sampling and sparse
         fieldsets" on `GET /v1/weather`. A shaped body is always a
         key-subset of the detailed body for the same request.
-      required: [meta, attribution]
+      required: [location, gis, meta, attribution]
       properties:
         location:
           $ref: '#/components/schemas/Location'
@@ -5560,7 +5586,10 @@ components:
           maximum: 180
         name:
           type: string
-          description: Human-readable place name (city or nearest city).
+          description: |
+            Human-readable place name, usually without the state; see
+            `region`. The resolved place name, else the city, else the
+            nearest city. Empty when none is known.
           example: "Boston"
         region:
           type: string
@@ -8168,16 +8197,16 @@ components:
           items:
             type: string
           example:
-            - "NOAA NBM"
+            - "NOAA/NWS"
+            - "NBM"
+            - "GFS"
             - "HRRR"
             - "RTMA"
             - "MRMS"
-            - "NWS"
-            - "JPL Ephemeris"
         notice:
           type: string
           description: Human-readable attribution notice.
-          example: "Weather data from NOAA/NWS. Astronomical calculations from JPL ephemerides."
+          example: "Data sourced from NOAA/NWS public products. Derived products produced by SmarterWeather."
 
     Meta:
       type: object
@@ -8189,10 +8218,11 @@ components:
         schema_version:
           type: string
           description: |
-            Response schema version, emitted as an ISO 8601 date. Increments
-            on every non-additive change. SDKs and caches can use this as a
-            stable cache key for response shape.
-          example: "2026-04-20"
+            Response schema version, a semver string (currently `1.0.0`).
+            The major part changes only with a non-additive change, which
+            follows the deprecation policy. Cache on it if you cache
+            response shapes.
+          example: "1.0.0"
         generated_at:
           type: string
           format: date-time
