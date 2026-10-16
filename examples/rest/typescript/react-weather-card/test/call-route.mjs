@@ -18,8 +18,8 @@ const origin = await new Promise((resolve, reject) => {
   let out = "";
   app.stdout.setEncoding("utf8").on("data", (chunk) => {
     out += chunk;
-    const match = /http:\/\/127\.0\.0\.1:\d+/.exec(out);
-    if (match) resolve(match[0]);
+    const match = /(http:\/\/127\.0\.0\.1:\d+)\s/.exec(out);
+    if (match) resolve(match[1]);
   });
   app.on("exit", (code) => reject(new Error(`next start exited ${code} before it listened:\n${out}`)));
 });
@@ -34,7 +34,7 @@ if ("error" in result) {
 } else {
   for (const line of Object.values(cardView(result.data))) if (line) console.log(line);
 }
-process.exit();
+app.kill(); // the process then exits on its own, after stdout drains
 
 // Retries while the app is still starting (connection refused), up to 30 s.
 async function retry(call) {

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // Renders <WeatherCard /> through the real route handler against the mock
 // (run through _harness/with-mock.sh), then checks the error states, the
-// route's failure handling and the hook's ordering with stubbed responses.
+// missing-data states and the hook's requests with stubbed responses. The
+// route's own failure handling is in route.test.ts.
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { existsSync, readFileSync } from "node:fs";
 import { afterEach, expect, test, vi } from "vitest";
@@ -78,6 +79,28 @@ test("shows the first alert, a missing reading as --, and skips absent sections"
   expect(screen.queryByText(/^Data:/)).toBeNull();
 });
 
+test("today is the relative_day 0 row, not the overnight row before it", async () => {
+  const body = {
+    daily: [
+      { relative_day: -1, high: null, low: 38, conditions: "Clear" },
+      { relative_day: 0, high: 61, low: 45, conditions: "Partly Cloudy" },
+    ],
+  };
+  vi.stubGlobal("fetch", async () => Response.json(body));
+  render(<WeatherCard location="Boston, MA" />);
+  expect(await screen.findByText("Today: Partly Cloudy, high 61°, low 45°")).toBeTruthy();
+});
+
+test.each(["", "   "])("an empty location (%j) stays idle and asks nothing", async (location) => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  render(<WeatherCard location={location} />);
+  await act(async () => {});
+  expect(fetch).not.toHaveBeenCalled();
+  expect(screen.queryByText("Loading…")).toBeNull();
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
 test("a response for an old location never replaces the current one", async () => {
   const pending = new Map<string, (r: Response) => void>();
   vi.stubGlobal("fetch", (input: string) => new Promise((resolve) => pending.set(new URL(input, "http://x").searchParams.get("location")!, resolve)));
@@ -101,36 +124,15 @@ test("asks the endpoint it is given for the location it is given", async () => {
   expect(calls).toEqual(["/my/weather?location=Denver%2C+CO"]);
 });
 
-test.each([
-  [new DOMException("The operation was aborted due to timeout", "TimeoutError"), 504, "The weather API did not answer within 10 seconds."],
-  [new TypeError("fetch failed"), 502, "Could not reach the weather API."],
-])("the route answers %s with a %i problem", async (thrown, status, detail) => {
-  vi.stubGlobal("fetch", async () => {
-    throw thrown;
+test("adds the location to an endpoint that already has a query", async () => {
+  const calls: string[] = [];
+  vi.stubGlobal("fetch", async (input: string) => {
+    calls.push(input);
+    return new Response("{}", { status: 500 });
   });
-  const res = await GET(new Request("http://localhost/api/weather?location=Boston"));
-  expect(res.status).toBe(status);
-  expect(res.headers.get("content-type")).toBe("application/problem+json");
-  expect(await res.json()).toMatchObject({ status, detail });
-});
-
-test("the route passes on the auth challenge and rate-limit headers, and no others", async () => {
-  const headers = {
-    "content-type": "application/problem+json",
-    "www-authenticate": 'Bearer realm="smarterweather"',
-    "retry-after": "30",
-    "ratelimit-limit": "60",
-    "ratelimit-remaining": "0",
-    "ratelimit-reset": "30",
-    "ratelimit-daily-remaining": "900",
-    "x-amzn-requestid": "abc",
-    "set-cookie": "a=b",
-  };
-  vi.stubGlobal("fetch", async () => new Response('{"detail":"Slow down."}', { status: 429, headers }));
-  const res = await GET(new Request("http://localhost/api/weather?location=Boston"));
-  expect(res.status).toBe(429);
-  const { "x-amzn-requestid": _id, "set-cookie": _cookie, ...forwarded } = headers;
-  expect(Object.fromEntries(res.headers)).toEqual(forwarded);
+  render(<WeatherCard location="Denver, CO" endpoint="/my/weather?units=metric" />);
+  await screen.findByRole("alert");
+  expect(calls).toEqual(["/my/weather?units=metric&location=Denver%2C+CO"]);
 });
 
 test("the hook, the card and lib/weather.ts import nothing from Next.js", () => {

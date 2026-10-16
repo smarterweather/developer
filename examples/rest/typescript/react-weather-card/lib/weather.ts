@@ -6,7 +6,7 @@
 // reading can be null. The full shape: https://developers.smarterweather.com/api/weather/
 export type Weather = {
   current?: { temperature: number | null; conditions: string };
-  daily?: { high: number | null; low: number | null; conditions?: string }[];
+  daily?: { relative_day?: number; high: number | null; low: number | null; conditions?: string }[];
   alerts?: { event: string }[];
   attribution?: { sources?: string[] };
 };
@@ -38,7 +38,9 @@ export type CardView = { temperature?: string; conditions?: string; today?: stri
 // high 61°, low 45°", the first alert, "Data: <sources>". A missing section
 // leaves its line out; a missing reading shows as --.
 export function cardView({ current, daily, alerts, attribution }: Weather): CardView {
-  const today = daily?.[0];
+  // Today is relative_day 0: before 6 AM local, yesterday's overnight row
+  // (relative_day -1) comes first. A row without relative_day counts as today.
+  const today = daily?.find((day) => (day.relative_day ?? 0) === 0);
   return {
     temperature: current && `${degrees(current.temperature)}F`,
     conditions: current?.conditions,

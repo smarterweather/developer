@@ -62,8 +62,8 @@
       "kind": "code",
       "level": "build",
       "tags": ["weather", "current-conditions", "react", "nextjs", "alerts"],
-      "dir": "rest/javascript/react-weather-card",
-      "runtime": "Node.js 22, Next.js 16, React 19",
+      "dir": "rest/typescript/react-weather-card",
+      "runtime": "Node.js 22.22, Next.js 16, React 19",
       "test": "npm ci --silent && npm test --silent"
     },
     {
