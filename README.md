@@ -45,8 +45,10 @@ specification for `api.smarterweather.com`.
   walkthroughs. Auth via OAuth (browser callback).
 - **Client SDKs** -- TypeScript and Python first; Go to follow. Not yet
   shipped; call the REST API directly in the meantime.
-- **Examples and cookbooks** -- runnable apps, agent integrations, and
-  end-to-end recipes.
+- **Examples** -- [`examples/`](./examples/): the first call in curl,
+  JavaScript, Python and Go, and MCP client setups, each one run against a
+  mock of the API in CI. Listed in
+  [`examples/index.json`](./examples/index.json).
 - **Agent Plugins** -- [`plugins/smarterweather/`](./plugins/smarterweather/)
   is the long-lived [Agent Plugins 1.0](https://agent-plugins.org/) package
   (weather MCP + playbooks).
@@ -136,7 +138,8 @@ artifacts as each one ships.
 | 2b | First-party migration of the Smarter Weather web and iOS apps onto the public API | shipped |
 | 3  | Public MCP server (`sw-mcp`) at `mcp.smarterweather.com` + `@smarterweather/mcp-weather` | shipped |
 | 4  | Onboarding MCP server (`sw-onboarding`) + `@smarterweather/mcp-onboarding` | shipped |
-| 5  | SDKs, expanded examples, registry distribution, community growth | in progress |
+| 5a | Expanded examples ([`examples/`](./examples/)), checked against a mock of the API in CI | shipped |
+| 5b | SDKs, registry distribution, community growth | in progress |
 
 The roadmap is published for transparency, not as a commitment. Dates are
 intentionally omitted -- watch this repository for releases.

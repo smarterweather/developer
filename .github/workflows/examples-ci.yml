@@ -1,0 +1,49 @@
+name: examples-ci
+# Runs every example under examples/ against a Prism mock of openapi.yaml,
+# behind a proxy that records each request. No secrets and no call to the
+# real API, so it runs the same on forks. See examples/README.md.
+on:
+  pull_request:
+    paths:
+      - "examples/**"
+      - "openapi.yaml"
+      - ".github/workflows/examples-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "examples/**"
+      - "openapi.yaml"
+      - ".github/workflows/examples-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  examples:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: examples/_harness
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: examples/**/package-lock.json
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: examples/rest/go/weather/go.mod
+          cache: false
+      - name: Install the harness (Prism 5.14.2, ajv)
+        run: npm ci
+      - name: Validate index.json, links and the key constant
+        run: npm run validate
+      - name: Scan for key-shaped strings
+        run: npm run scan
+      - name: Run every example against the mock
+        run: npm test

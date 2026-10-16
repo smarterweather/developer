@@ -8,3 +8,4 @@ dist/
 coverage/
 .npm/
 .cache/
+__pycache__/

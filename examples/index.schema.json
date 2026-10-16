@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/smarterweather/developer/blob/main/examples/index.schema.json",
+  "title": "Smarter Weather examples index",
+  "description": "One entry per example and language. An example in several languages is several entries sharing one id; (id, language) is unique, which the validator checks.",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "title", "summary", "surface", "language", "level", "tags", "dir"],
+    "properties": {
+      "id": {
+        "description": "URL slug, shared by every language of the same example.",
+        "type": "string",
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+        "maxLength": 60
+      },
+      "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+      "summary": { "type": "string", "minLength": 1, "maxLength": 200 },
+      "surface": {
+        "description": "rest: plain HTTP calls. mcp: an MCP client wired to the weather server. sdk: reserved for when an SDK ships.",
+        "enum": ["rest", "mcp", "sdk"]
+      },
+      "language": { "enum": ["curl", "javascript", "typescript", "python", "go", "json"] },
+      "level": { "enum": ["start", "build", "ship"] },
+      "tags": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }
+      },
+      "dir": {
+        "description": "Directory under examples/, starting with the surface.",
+        "type": "string",
+        "pattern": "^(rest|mcp|sdk)(/[a-z0-9]+(-[a-z0-9]+)*)+$"
+      },
+      "runtime": {
+        "description": "What it runs on, e.g. \"Node.js 20\".",
+        "type": "string",
+        "minLength": 1
+      },
+      "portal_guide": {
+        "description": "Playground guide slug on developers.smarterweather.com, when one matches.",
+        "type": "string",
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+      },
+      "test": {
+        "description": "Shell command CI runs in dir against the mock (see _harness/).",
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

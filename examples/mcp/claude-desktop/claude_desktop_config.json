@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "smarterweather": {
+      "command": "npx",
+      "args": ["-y", "@smarterweather/mcp-weather@latest"],
+      "env": {
+        "SMARTERWEATHER_ENV_FILE": "/absolute/path/to/your/project/.env"
+      }
+    }
+  }
+}
