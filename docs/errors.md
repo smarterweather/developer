@@ -40,13 +40,13 @@ the recommended one shortened to their `href`):
 HTTP/1.1 429 Too Many Requests
 Content-Type: application/problem+json
 RateLimit-Daily-Limit: 1000
-RateLimit-Daily-Remaining: 969
+RateLimit-Daily-Remaining: 970
 RateLimit-Daily-Reset: 21600
 RateLimit-Limit: 30
 RateLimit-Policy: 30;w=30
 RateLimit-Remaining: 0
-RateLimit-Reset: 31
-Retry-After: 2
+RateLimit-Reset: 30
+Retry-After: 1
 
 {
   "type": "https://smarterweather.com/errors/rate-limit-exceeded",
@@ -251,12 +251,12 @@ A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only
 | ------ | ------- | ------- |
 | `RateLimit-Limit` | `30` | Burst size: requests you can send back to back. |
 | `RateLimit-Remaining` | `29` | Requests left in the burst right now. |
-| `RateLimit-Reset` | `2` | Seconds until the burst is fully refilled. |
+| `RateLimit-Reset` | `1` | Seconds until the burst is fully refilled. |
 | `RateLimit-Policy` | `30;w=30` | Burst and refill window as limit;w=seconds. The sustained rate is limit x 60 / w per minute. |
 | `RateLimit-Daily-Limit` | `1000` | Requests per UTC day for this key. |
 | `RateLimit-Daily-Remaining` | `999` | Requests left today. |
 | `RateLimit-Daily-Reset` | `21600` | Seconds until the daily count resets at UTC midnight. |
-| `Retry-After` | `2` (from a 429) | 429 only: seconds to wait before the next request. |
+| `Retry-After` | `1` (from a 429) | 429 only: seconds to wait before the next request. |
 
 <!-- /generated -->
 
