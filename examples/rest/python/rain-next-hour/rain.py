@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import requests
@@ -27,31 +27,23 @@ def problem_text(res):
     return f"{text}\nNext step: {hint}" if hint else text
 
 
-def parse(timestamp):
-    return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-
-
-def clock(time, tz):
-    """A UTC datetime -> 3:40 PM, in the location's time zone."""
-    return time.astimezone(ZoneInfo(tz) if tz else None).strftime("%I:%M %p").lstrip("0")
+def clock(timestamp, tz):
+    """2026-10-16T22:40:00Z -> 3:40 PM, in the location's time zone."""
+    time = datetime.fromisoformat(timestamp).astimezone(ZoneInfo(tz) if tz else None)
+    return time.strftime("%I:%M %p").lstrip("0")
 
 
 def answer(weather):
     """One sentence from nowcast.summary: the radar's next 60 minutes."""
-    nowcast = weather.get("nowcast") or {}
-    summary = nowcast.get("summary")
+    summary = (weather.get("nowcast") or {}).get("summary")
     if summary is None:
         return "No radar nowcast for this location right now."
     if not summary.get("starts_at"):
         return "No rain expected in the next 60 minutes."
     tz = (weather.get("location") or {}).get("timezone")
-    radar_time = parse(nowcast["generated_at"]) if nowcast.get("generated_at") else datetime.now(timezone.utc)
-    step = timedelta(seconds=nowcast.get("interval_seconds") or 300)
-    starts = parse(summary["starts_at"])
     what = f"{summary['peak_intensity']} {PRECIP.get(summary['type'], 'precipitation')}".capitalize()
-    when = "now" if starts <= radar_time else f"starting around {clock(starts, tz)}"
-    # ends_at is the start of the last wet step, so it stops about a step later.
-    until = f", ending around {clock(parse(summary['ends_at']) + step, tz)}" if summary.get("ends_at") else ""
+    when = "now" if summary.get("already_occurring") else f"starting around {clock(summary['starts_at'], tz)}"
+    until = f", ending around {clock(summary['ends_at'], tz)}" if summary.get("ends_at") else ""
     return f"{what} {when}{until}."
 
 

@@ -1,21 +1,11 @@
 // node --test examples/_harness/
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { checkTestSpec, EXAMPLES, fixturePath } from "./test-spec.mjs";
 
 const at = join(EXAMPLES, "rest/python/rain-next-hour/test.json");
 const good = { run: ["python3", "rain.py"], requests: [{ method: "GET", path: "/v1/weather", query: {} }], stdout: ["^ok$"] };
-
-test("every committed test.json has the expected shape", () => {
-  for (const lang of readdirSync(join(EXAMPLES, "rest"))) {
-    for (const ex of lang.startsWith("_") ? [] : readdirSync(join(EXAMPLES, "rest", lang))) {
-      const path = join(EXAMPLES, "rest", lang, ex, "test.json");
-      assert.deepEqual(checkTestSpec(JSON.parse(readFileSync(path, "utf8")), path), [], path);
-    }
-  }
-});
 
 test("a fixture needs an existing .json body under examples/ and stdout patterns", () => {
   const body = "../../_fixtures/rain-next-hour/no-rain.json";

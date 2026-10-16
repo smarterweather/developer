@@ -22,20 +22,17 @@ function answer({ nowcast, location }) {
   const summary = nowcast?.summary;
   if (!summary) return "No radar nowcast for this location right now.";
   if (!summary.starts_at) return "No rain expected in the next 60 minutes.";
-  const radarTime = nowcast.generated_at ? Date.parse(nowcast.generated_at) : Date.now();
-  const step = (nowcast.interval_seconds || 300) * 1000;
-  const starts = Date.parse(summary.starts_at);
+  const timeZone = location?.timezone || undefined;
   const what = `${summary.peak_intensity} ${PRECIP[summary.type] ?? "precipitation"}`;
-  const when = starts <= radarTime ? "now" : `starting around ${clock(starts, location?.timezone)}`;
-  // ends_at is the start of the last wet step, so it stops about a step later.
-  const until = summary.ends_at ? `, ending around ${clock(Date.parse(summary.ends_at) + step, location?.timezone)}` : "";
+  const when = summary.already_occurring ? "now" : `starting around ${clock(summary.starts_at, timeZone)}`;
+  const until = summary.ends_at ? `, ending around ${clock(summary.ends_at, timeZone)}` : "";
   return `${what[0].toUpperCase()}${what.slice(1)} ${when}${until}.`;
 }
 
-// Milliseconds since the epoch -> 3:40 PM, in the location's time zone.
-function clock(time, timeZone) {
-  const text = new Date(time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone });
-  return text.replace("\u202f", " ");
+// 2026-10-16T22:40:00Z -> 3:40 PM, in the location's time zone.
+function clock(timestamp, timeZone) {
+  const time = new Date(timestamp).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone });
+  return time.replace("\u202f", " ");
 }
 
 // Errors are RFC 9457 problems (JSON) whose next_steps names a fix; anything

@@ -14,8 +14,8 @@
 //              URL-encoded as one segment (an example's test.json fixtures)
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import http from "node:http";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { EXAMPLES, jsonInsideExamples } from "./test-spec.mjs";
 
 const upstream = new URL(process.env.PRISM_URL ?? "http://127.0.0.1:4010");
 const port = Number(process.env.PROXY_PORT ?? 4011);
@@ -28,18 +28,17 @@ const STUBS = {
   "/_504json": { status: 504, type: "application/json", body: '{"message":"Endpoint request timed out"}' },
 };
 const ROUTES = ["/_noauth", ...Object.keys(STUBS)];
-const EXAMPLES = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 // /_fixture/<encoded path>/v1/... -> the route, and the JSON file it names
 // (null when it is missing, not .json or outside examples/).
 function fixtureRoute(pathname) {
   const match = /^\/_fixture\/([^/]+)/.exec(pathname);
   if (!match) return null;
-  let file = null;
+  let rel = null;
   try {
-    const rel = relative(EXAMPLES, resolve(EXAMPLES, decodeURIComponent(match[1])));
-    if (!rel.startsWith("..") && !isAbsolute(rel) && rel.endsWith(".json") && existsSync(join(EXAMPLES, rel))) file = join(EXAMPLES, rel);
-  } catch {}
+    rel = jsonInsideExamples(decodeURIComponent(match[1]));
+  } catch {} // a malformed %-escape
+  const file = rel && existsSync(join(EXAMPLES, rel)) ? join(EXAMPLES, rel) : null;
   return { route: match[0], file };
 }
 

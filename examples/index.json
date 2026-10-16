@@ -89,7 +89,7 @@
       "level": "build",
       "tags": ["nowcast", "precipitation", "radar"],
       "dir": "rest/python/rain-next-hour",
-      "runtime": "Python 3.10",
+      "runtime": "Python 3.11",
       "test": "python3 -m pip install --quiet --disable-pip-version-check -r requirements.txt && node ../../../_harness/expect-run.mjs"
     },
     {

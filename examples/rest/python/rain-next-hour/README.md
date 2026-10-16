@@ -6,7 +6,7 @@ the radar nowcast, in the location's local time.
 
 ```python
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import requests
@@ -34,31 +34,23 @@ def problem_text(res):
     return f"{text}\nNext step: {hint}" if hint else text
 
 
-def parse(timestamp):
-    return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-
-
-def clock(time, tz):
-    """A UTC datetime -> 3:40 PM, in the location's time zone."""
-    return time.astimezone(ZoneInfo(tz) if tz else None).strftime("%I:%M %p").lstrip("0")
+def clock(timestamp, tz):
+    """2026-10-16T22:40:00Z -> 3:40 PM, in the location's time zone."""
+    time = datetime.fromisoformat(timestamp).astimezone(ZoneInfo(tz) if tz else None)
+    return time.strftime("%I:%M %p").lstrip("0")
 
 
 def answer(weather):
     """One sentence from nowcast.summary: the radar's next 60 minutes."""
-    nowcast = weather.get("nowcast") or {}
-    summary = nowcast.get("summary")
+    summary = (weather.get("nowcast") or {}).get("summary")
     if summary is None:
         return "No radar nowcast for this location right now."
     if not summary.get("starts_at"):
         return "No rain expected in the next 60 minutes."
     tz = (weather.get("location") or {}).get("timezone")
-    radar_time = parse(nowcast["generated_at"]) if nowcast.get("generated_at") else datetime.now(timezone.utc)
-    step = timedelta(seconds=nowcast.get("interval_seconds") or 300)
-    starts = parse(summary["starts_at"])
     what = f"{summary['peak_intensity']} {PRECIP.get(summary['type'], 'precipitation')}".capitalize()
-    when = "now" if starts <= radar_time else f"starting around {clock(starts, tz)}"
-    # ends_at is the start of the last wet step, so it stops about a step later.
-    until = f", ending around {clock(parse(summary['ends_at']) + step, tz)}" if summary.get("ends_at") else ""
+    when = "now" if summary.get("already_occurring") else f"starting around {clock(summary['starts_at'], tz)}"
+    until = f", ending around {clock(summary['ends_at'], tz)}" if summary.get("ends_at") else ""
     return f"{what} {when}{until}."
 
 
@@ -78,7 +70,7 @@ print("Sources:", ", ".join(weather["attribution"]["sources"]))
 
 ## Run it
 
-Needs Python 3.10 or later.
+Needs Python 3.11 or later.
 
 ```bash
 python3 -m pip install -r requirements.txt   # in a venv
@@ -96,19 +88,18 @@ Other answers look like `No rain expected in the next 60 minutes.`,
 or `Moderate wintry mix now.`
 
 It reads `nowcast.summary`, which the API computes from the radar's next 60
-minutes in 5-minute steps (`nowcast.points`), and two fields beside it:
+minutes in 5-minute steps (`nowcast.points`):
 
 | Field | Used for |
 | --- | --- |
-| `summary.starts_at` | The first of two wet steps in a row; absent when nothing falls in the hour. At or before `generated_at` means it is falling now |
-| `summary.ends_at` | The start of the last wet step, when it stops inside the hour, so it stops about one step (`interval_seconds`) later; absent when it runs past the hour |
-| `summary.peak_intensity` | `light`, `moderate` or `heavy`, the strongest in the event |
-| `summary.type` | `rain`, `snow`, `freezing_rain` or `wintry_mix` |
-| `generated_at` | The radar frame the nowcast starts from, the "now" the answer is relative to |
-| `interval_seconds` | The step length, 300 |
+| `starts_at` | When it starts: the first of two wet steps in a row. Absent when nothing falls in the hour |
+| `already_occurring` | `true` when it is falling now (the event starts at the first step) |
+| `ends_at` | When it stops: the end of the last wet step. `null` while it continues past the hour |
+| `peak_intensity` | `light`, `moderate` or `heavy`, the strongest in the event |
+| `type` | `rain`, `snow`, `freezing_rain` or `wintry_mix` |
 
-Times print in the location's time zone, `location.timezone`, which
-`include=location` adds. `include` replaces the default sections, so the
+Times print in the location's time zone, `location.timezone` (the
+machine's when it is missing), which `include=location` adds. `include` replaces the default sections, so the
 response carries only the nowcast, the location and the attribution. The
 nowcast covers the contiguous US; elsewhere, or when the radar has no frame
 for the point, `nowcast` is absent and the script says so.

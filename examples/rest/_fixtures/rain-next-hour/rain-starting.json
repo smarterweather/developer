@@ -10,12 +10,27 @@
   "nowcast": {
     "interval_seconds": 300,
     "generated_at": "2026-10-16T22:15:00Z",
+    "points": [
+      {"time": "2026-10-16T22:20:00Z", "type": "none", "intensity_dbz": 0.0, "intensity": "none"},
+      {"time": "2026-10-16T22:25:00Z", "type": "none", "intensity_dbz": 0.0, "intensity": "none"},
+      {"time": "2026-10-16T22:30:00Z", "type": "none", "intensity_dbz": 0.0, "intensity": "none"},
+      {"time": "2026-10-16T22:35:00Z", "type": "none", "intensity_dbz": 0.0, "intensity": "none"},
+      {"time": "2026-10-16T22:40:00Z", "type": "rain", "intensity_dbz": 22.5, "intensity": "light"},
+      {"time": "2026-10-16T22:45:00Z", "type": "rain", "intensity_dbz": 22.5, "intensity": "light"},
+      {"time": "2026-10-16T22:50:00Z", "type": "rain", "intensity_dbz": 22.5, "intensity": "light"},
+      {"time": "2026-10-16T22:55:00Z", "type": "rain", "intensity_dbz": 22.5, "intensity": "light"},
+      {"time": "2026-10-16T23:00:00Z", "type": "rain", "intensity_dbz": 22.5, "intensity": "light"},
+      {"time": "2026-10-16T23:05:00Z", "type": "rain", "intensity_dbz": 22.5, "intensity": "light"},
+      {"time": "2026-10-16T23:10:00Z", "type": "none", "intensity_dbz": 0.0, "intensity": "none"},
+      {"time": "2026-10-16T23:15:00Z", "type": "none", "intensity_dbz": 0.0, "intensity": "none"}
+    ],
     "summary": {
       "starts_at": "2026-10-16T22:40:00Z",
-      "ends_at": "2026-10-16T23:05:00Z",
-      "duration_minutes": 25,
+      "ends_at": "2026-10-16T23:10:00Z",
+      "duration_minutes": 30,
       "type": "rain",
-      "peak_intensity": "light"
+      "peak_intensity": "light",
+      "already_occurring": false
     }
   },
   "attribution": {

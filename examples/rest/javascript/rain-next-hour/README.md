@@ -29,20 +29,17 @@ function answer({ nowcast, location }) {
   const summary = nowcast?.summary;
   if (!summary) return "No radar nowcast for this location right now.";
   if (!summary.starts_at) return "No rain expected in the next 60 minutes.";
-  const radarTime = nowcast.generated_at ? Date.parse(nowcast.generated_at) : Date.now();
-  const step = (nowcast.interval_seconds || 300) * 1000;
-  const starts = Date.parse(summary.starts_at);
+  const timeZone = location?.timezone || undefined;
   const what = `${summary.peak_intensity} ${PRECIP[summary.type] ?? "precipitation"}`;
-  const when = starts <= radarTime ? "now" : `starting around ${clock(starts, location?.timezone)}`;
-  // ends_at is the start of the last wet step, so it stops about a step later.
-  const until = summary.ends_at ? `, ending around ${clock(Date.parse(summary.ends_at) + step, location?.timezone)}` : "";
+  const when = summary.already_occurring ? "now" : `starting around ${clock(summary.starts_at, timeZone)}`;
+  const until = summary.ends_at ? `, ending around ${clock(summary.ends_at, timeZone)}` : "";
   return `${what[0].toUpperCase()}${what.slice(1)} ${when}${until}.`;
 }
 
-// Milliseconds since the epoch -> 3:40 PM, in the location's time zone.
-function clock(time, timeZone) {
-  const text = new Date(time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone });
-  return text.replace("\u202f", " ");
+// 2026-10-16T22:40:00Z -> 3:40 PM, in the location's time zone.
+function clock(timestamp, timeZone) {
+  const time = new Date(timestamp).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone });
+  return time.replace("\u202f", " ");
 }
 
 // Errors are RFC 9457 problems (JSON) whose next_steps names a fix; anything
@@ -80,19 +77,18 @@ Other answers look like `No rain expected in the next 60 minutes.`,
 or `Moderate wintry mix now.`
 
 It reads `nowcast.summary`, which the API computes from the radar's next 60
-minutes in 5-minute steps (`nowcast.points`), and two fields beside it:
+minutes in 5-minute steps (`nowcast.points`):
 
 | Field | Used for |
 | --- | --- |
-| `summary.starts_at` | The first of two wet steps in a row; absent when nothing falls in the hour. At or before `generated_at` means it is falling now |
-| `summary.ends_at` | The start of the last wet step, when it stops inside the hour, so it stops about one step (`interval_seconds`) later; absent when it runs past the hour |
-| `summary.peak_intensity` | `light`, `moderate` or `heavy`, the strongest in the event |
-| `summary.type` | `rain`, `snow`, `freezing_rain` or `wintry_mix` |
-| `generated_at` | The radar frame the nowcast starts from, the "now" the answer is relative to |
-| `interval_seconds` | The step length, 300 |
+| `starts_at` | When it starts: the first of two wet steps in a row. Absent when nothing falls in the hour |
+| `already_occurring` | `true` when it is falling now (the event starts at the first step) |
+| `ends_at` | When it stops: the end of the last wet step. `null` while it continues past the hour |
+| `peak_intensity` | `light`, `moderate` or `heavy`, the strongest in the event |
+| `type` | `rain`, `snow`, `freezing_rain` or `wintry_mix` |
 
-Times print in the location's time zone, `location.timezone`, which
-`include=location` adds. `include` replaces the default sections, so the
+Times print in the location's time zone, `location.timezone` (the
+machine's when it is missing), which `include=location` adds. `include` replaces the default sections, so the
 response carries only the nowcast, the location and the attribution. The
 nowcast covers the contiguous US; elsewhere, or when the radar has no frame
 for the point, `nowcast` is absent and the script says so.

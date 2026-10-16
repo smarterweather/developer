@@ -46,7 +46,7 @@ Coverage is the 50 US states and DC.
 
 | Example | Language | Run |
 | --- | --- | --- |
-| [Will it rain in the next hour?](./rest/python/rain-next-hour/): one sentence from the radar nowcast | Python 3.10+, [JavaScript](./rest/javascript/rain-next-hour/) (Node.js 20+) | `python3 rain.py`, `node rain.mjs` |
+| [Will it rain in the next hour?](./rest/python/rain-next-hour/): one sentence from the radar nowcast | Python 3.11+, [JavaScript](./rest/javascript/rain-next-hour/) (Node.js 20+) | `python3 rain.py`, `node rain.mjs` |
 
 ## Your key
 
@@ -139,7 +139,9 @@ API and uses no secret. For REST examples (`kind: code`):
      answers the mock's one example body cannot give: it has no radar
      nowcast, for instance.
 
-Every example gives up after 10 seconds.
+Every example waits at most 10 seconds for the API: for the whole call in
+curl, JavaScript and Go, and for the connection and each read in Python
+(`requests`' `timeout` applies per step, not to the whole call).
 
 For MCP configs (`kind: config`),
 [`_harness/check-mcp-config.mjs`](./_harness/check-mcp-config.mjs) applies
@@ -166,7 +168,7 @@ request and push to `main`. It checks every file git tracks for API keys
 tickets (`sw_claim_`). A documented fake can carry `log-scrubber-allow` on
 the same line.
 
-Run the same thing locally (Node.js 20+, plus Python 3.10+, Go and jq for
+Run the same thing locally (Node.js 20+, plus Python 3.11+, Go and jq for
 those examples):
 
 ```bash

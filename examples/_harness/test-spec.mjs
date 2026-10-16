@@ -39,8 +39,14 @@ export function checkTestSpec(spec, path) {
   return errors;
 }
 
-/** A fixture body as a path relative to examples/, or null if it points outside it. */
-export function fixturePath(testJson, body) {
-  const rel = relative(EXAMPLES, resolve(dirname(testJson), body));
+/** path (absolute, or relative to examples/) as a path relative to examples/,
+ * or null unless it is a .json file inside examples/. */
+export function jsonInsideExamples(path) {
+  const rel = relative(EXAMPLES, resolve(EXAMPLES, path));
   return rel.startsWith("..") || isAbsolute(rel) || !rel.endsWith(".json") ? null : rel;
+}
+
+/** A fixture body, given relative to its test.json, as a path relative to examples/ (or null). */
+export function fixturePath(testJson, body) {
+  return jsonInsideExamples(resolve(dirname(testJson), body));
 }
