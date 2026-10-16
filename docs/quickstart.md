@@ -31,6 +31,11 @@ Call the API before you have a key. The response tells you what to do:
 curl -sS -D - 'https://api.smarterweather.com/v1/weather?lat=41.66&lon=-91.53'
 ```
 
+The answer (links other than the recommended one shortened to their
+`href`):
+
+<!-- generated:example 401 -->
+
 ```http
 HTTP/1.1 401 Unauthorized
 Content-Type: application/problem+json
@@ -45,27 +50,62 @@ WWW-Authenticate: Bearer realm="api.smarterweather.com"
   "next_steps": {
     "recommended": "device_flow",
     "device_flow": {
-      "href": "https://developers.smarterweather.com/quickstart?utm_…#device-flow",
-      "description": "Human present: run command. It writes SMARTERWEATHER_API_KEY to ./.env and prints only a key prefix.",
+      "href": "https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api#device-flow",
+      "description": "Human present: run the `command` below. It shows the human a verification URL and code, writes SMARTERWEATHER_API_KEY to ./.env (0600, gitignored), and prints only a key prefix. Without Node: device grant at the endpoints below, then POST api_keys_endpoint and write only the response's key field to .env as a SMARTERWEATHER_API_KEY= line (e.g. pipe through jq -r .key). Never print the key or access token.",
       "command": "npx -y @smarterweather/mcp-onboarding@latest login",
       "client_id": "k2h05BUoTP393zcD",
       "device_authorization_endpoint": "https://clerk.smarterweather.com/oauth/device_authorization",
       "token_endpoint": "https://clerk.smarterweather.com/oauth/token",
       "api_keys_endpoint": "https://api.smarterweather.com/developer/keys"
     },
-    "get_key": { "href": "https://developers.smarterweather.com/dashboard/api-keys?utm_…", "description": "Sign in (free, no card) and mint an API key. …" },
-    "quickstart": { "href": "…", "description": "…" },
-    "agents": { "href": "…", "description": "…" },
-    "onboarding_mcp": { "href": "…", "description": "…" },
-    "keyless_x402": { "href": "…", "description": "…" },
-    "key_handling": { "href": "…", "description": "…" },
-    "errors": { "href": "…", "description": "…" }
+    "agents": {
+      "href": "https://developers.smarterweather.com/llms.txt?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+    },
+    "errors": {
+      "href": "https://developers.smarterweather.com/errors?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+    },
+    "get_key": {
+      "href": "https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+    },
+    "key_handling": {
+      "href": "https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#key-handling"
+    },
+    "keyless_x402": {
+      "href": "https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#x402"
+    },
+    "onboarding_mcp": {
+      "href": "https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+    },
+    "quickstart": {
+      "href": "https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+    }
   }
 }
 ```
 
+<!-- /generated -->
+
+<!-- generated:example 401-trial-delta -->
+
+When trial keys are enabled, the 401's `next_steps` also carries `if_no_human_present` and `trial` (`if_no_human_present` names the link an agent with no human present should take):
+
+```json
+{
+  "if_no_human_present": "trial",
+  "trial": {
+    "href": "https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#trial",
+    "description": "No human present: run the `command` below. It mints a trial key, writes SMARTERWEATHER_API_KEY to ./.env (0600, gitignored), prints only a key prefix and claim link. Without Node: GET challenge_endpoint, solve the SHA-256 proof-of-work, then POST mint_endpoint with the JSON body {\"challenge_token\": \"<from the challenge>\", \"solution\": \"<decimal string>\", \"accept_terms\": <true only once the terms are accepted>, \"client\": {\"name\": \"<your app name>\"}}. Set accept_terms to true only after reading the terms at https://developers.smarterweather.com/legal/terms (newer challenge responses carry them as terms_url, plus a request_example whose accept_terms stays false until you change it). Its api_key field is the bearer; write only that field to .env as a SMARTERWEATHER_API_KEY= line and never print it. Claim into a free account before claim_expires_at.",
+    "command": "npx -y @smarterweather/mcp-onboarding@latest trial",
+    "challenge_endpoint": "https://api.smarterweather.com/developer/keys/trial/challenge",
+    "mint_endpoint": "https://api.smarterweather.com/developer/keys/trial"
+  }
+}
+```
+
+<!-- /generated -->
+
 `next_steps.recommended` names the link to take first. Every `401`,
-`403`, and `429` carries this block (see [`errors.md`](./errors.md)), so
+`402`, `403`, and `429` carries this block (see [`errors.md`](./errors.md)), so
 an agent never has to guess where to go.
 
 ## 1. Get an API key
@@ -171,14 +211,22 @@ overlap.
 
 ## 4. Handle rate limits
 
-Every response includes three rate-limit headers:
+<!-- generated:example rate-limit-headers -->
 
-| Header                 | Meaning                                          |
-| ---------------------- | ------------------------------------------------ |
-| `RateLimit-Limit`      | Requests per minute allowed at your tier.        |
-| `RateLimit-Remaining`  | Requests remaining in the current minute window. |
-| `RateLimit-Reset`      | Seconds until the bucket refills.                |
-| `RateLimit-Policy`     | Window + burst, e.g. `60;w=60;burst=60`.         |
+A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only when the key has a daily cap). A response to a request without a valid key, such as a `401`, carries none, and neither does one for a first-party key that is exempt from rate limiting. The examples are a free key after its first call; `Retry-After` is from a `429`:
+
+| Header | Example | Meaning |
+| ------ | ------- | ------- |
+| `RateLimit-Limit` | `30` | Burst size: requests you can send back to back. |
+| `RateLimit-Remaining` | `29` | Requests left in the burst right now. |
+| `RateLimit-Reset` | `2` | Seconds until the burst is fully refilled. |
+| `RateLimit-Policy` | `30;w=30` | Burst and refill window as limit;w=seconds. The sustained rate is limit x 60 / w per minute. |
+| `RateLimit-Daily-Limit` | `1000` | Requests per UTC day for this key. |
+| `RateLimit-Daily-Remaining` | `999` | Requests left today. |
+| `RateLimit-Daily-Reset` | `21600` | Seconds until the daily count resets at UTC midnight. |
+| `Retry-After` | `2` (from a 429) | 429 only: seconds to wait before the next request. |
+
+<!-- /generated -->
 
 When you exceed the limit the API returns **HTTP 429** with a
 `Retry-After` header (seconds) and a `next_steps` block whose
@@ -199,10 +247,12 @@ if (res.status === 429) {
 
 If you're integrating with Cursor, Claude Desktop, Claude Code, or any
 MCP-compatible client, the same key works on the hosted weather MCP at
-`https://mcp.smarterweather.com`. For clients that only speak stdio:
+`https://mcp.smarterweather.com`. For clients that only speak stdio, run
+the bridge from the project whose `.env` holds the key. It reads
+`SMARTERWEATHER_API_KEY`, then `SMARTERWEATHER_ENV_FILE`, then `./.env`:
 
 ```bash
-SMARTERWEATHER_API_KEY=sw_live_... npx -y @smarterweather/mcp-weather
+npx -y @smarterweather/mcp-weather@latest
 ```
 
 See [`mcp-weather.md`](./mcp-weather.md) for client-specific

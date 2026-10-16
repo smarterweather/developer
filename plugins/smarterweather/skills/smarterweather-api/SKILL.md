@@ -189,13 +189,22 @@ up what happened.
 
 ### Rate limits
 
-Every authenticated response carries the IETF draft `RateLimit-*` headers:
+<!-- generated:example rate-limit-headers -->
 
-- `RateLimit-Limit` / `RateLimit-Remaining` / `RateLimit-Reset` — the
-  per-minute window
-- `RateLimit-Policy` — window + burst policy, e.g. `60;w=60;burst=60`
-- `RateLimit-Daily-Limit` / `RateLimit-Daily-Remaining` /
-  `RateLimit-Daily-Reset` — per-day quota
+A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only when the key has a daily cap). A response to a request without a valid key, such as a `401`, carries none, and neither does one for a first-party key that is exempt from rate limiting. The examples are a free key after its first call; `Retry-After` is from a `429`:
+
+| Header | Example | Meaning |
+| ------ | ------- | ------- |
+| `RateLimit-Limit` | `30` | Burst size: requests you can send back to back. |
+| `RateLimit-Remaining` | `29` | Requests left in the burst right now. |
+| `RateLimit-Reset` | `2` | Seconds until the burst is fully refilled. |
+| `RateLimit-Policy` | `30;w=30` | Burst and refill window as limit;w=seconds. The sustained rate is limit x 60 / w per minute. |
+| `RateLimit-Daily-Limit` | `1000` | Requests per UTC day for this key. |
+| `RateLimit-Daily-Remaining` | `999` | Requests left today. |
+| `RateLimit-Daily-Reset` | `21600` | Seconds until the daily count resets at UTC midnight. |
+| `Retry-After` | `2` (from a 429) | 429 only: seconds to wait before the next request. |
+
+<!-- /generated -->
 
 On `429`, respect `Retry-After` (seconds) if present; otherwise use
 exponential backoff starting at 1 second with jitter, capped at 5
