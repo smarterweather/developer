@@ -8,3 +8,5 @@ dist/
 coverage/
 .npm/
 .cache/
+__pycache__/
+.venv/

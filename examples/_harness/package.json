@@ -1,0 +1,20 @@
+{
+  "name": "smarterweather-examples-harness",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Runs every example against a Prism mock of openapi.yaml; validates index.json; scans the repo for keys.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "validate": "node validate-index.mjs",
+    "scan": "node scan-keys.mjs",
+    "test:unit": "node --test",
+    "test": "./with-mock.sh node run-all.mjs"
+  },
+  "devDependencies": {
+    "@stoplight/prism-cli": "5.14.2",
+    "ajv": "8.20.0"
+  }
+}

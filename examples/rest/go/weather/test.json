@@ -1,0 +1,5 @@
+{
+  "run": ["go", "run", "."],
+  "requests": [{ "method": "GET", "path": "/v1/weather", "query": { "lat": "39.74", "lon": "-104.99" } }],
+  "stdout": ["^-?\\d+(\\.\\d+)?°F, \\S.*$", "^Sources: \\S.*$"]
+}

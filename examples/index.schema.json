@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/smarterweather/developer/blob/main/examples/index.schema.json",
+  "title": "Smarter Weather examples index",
+  "description": "One entry per example, surface and language. An example in several languages, or on several surfaces (REST and an SDK), is several entries sharing one id; (id, surface, language) is unique, which the validator checks. Growth is additive: readers ignore fields they do not know and render a surface or language they do not know as plain text, so a new field, surface or language keeps a file valid for every version-1 reader. `version` changes only when an existing field changes meaning.",
+  "type": "object",
+  "required": ["version", "examples"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "examples": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/example" }
+    }
+  },
+  "$defs": {
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "example": {
+      "type": "object",
+      "required": ["id", "title", "summary", "surface", "language", "kind", "level", "tags", "dir"],
+      "properties": {
+        "id": {
+          "description": "URL slug (developers.smarterweather.com/examples/<id>/), shared by every surface and language of the same example.",
+          "type": "string",
+          "$ref": "#/$defs/slug",
+          "maxLength": 60
+        },
+        "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "surface": {
+          "description": "The top-level directory the example lives in. An open list so a new surface is additive; in use: rest (plain HTTP calls), mcp (an MCP client wired to the weather server), sdk (reserved for when an SDK ships).",
+          "$ref": "#/$defs/slug",
+          "examples": ["rest", "mcp", "sdk"]
+        },
+        "language": {
+          "description": "An open list; in use: curl, javascript, typescript, python, go, json.",
+          "$ref": "#/$defs/slug",
+          "examples": ["curl", "javascript", "typescript", "python", "go", "json"]
+        },
+        "kind": {
+          "description": "What the harness checks. code: a program that calls the API and opens with the placeholder key constant. config: a client config that holds no key at all. A closed list, because a new kind needs new checks.",
+          "enum": ["code", "config"]
+        },
+        "level": { "description": "A fixed ladder.", "enum": ["start", "build", "ship"] },
+        "tags": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/slug" } },
+        "dir": {
+          "description": "Directory under examples/, starting with the surface.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+(-[a-z0-9]+)*)+$"
+        },
+        "runtime": { "description": "What it runs on, e.g. \"Node.js 20\".", "type": "string", "minLength": 1 },
+        "portal_guide": { "description": "Playground guide slug on developers.smarterweather.com, when one matches.", "$ref": "#/$defs/slug" },
+        "test": {
+          "description": "Shell command CI runs in dir (see _harness/). Entries without one are listed but not run.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

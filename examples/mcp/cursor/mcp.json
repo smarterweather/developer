@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "smarterweather": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@smarterweather/mcp-weather@latest"],
+      "envFile": "${workspaceFolder}/.env"
+    }
+  }
+}

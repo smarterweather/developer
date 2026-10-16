@@ -44,9 +44,13 @@ their own agent runtime.
 
 Every Smarter Weather request needs an API key. Hard rules:
 
-- **Never** hard-code keys in source files. Read from
-  `process.env.SMARTERWEATHER_API_KEY` (Node), `os.environ` (Python), or
-  the equivalent for the language at hand.
+- **Never** commit a real key or hard-code one in code you ship. Read
+  `SMARTERWEATHER_API_KEY` from the environment
+  (`process.env.SMARTERWEATHER_API_KEY` in Node, `os.environ` in Python,
+  the equivalent elsewhere). The examples in
+  [`examples/`](https://github.com/smarterweather/developer/tree/main/examples)
+  do exactly that, with a placeholder constant (`YOUR_SMARTERWEATHER_API_KEY`)
+  as the fallback for a quick local try; the placeholder is not a key.
 - **Never** paste a key into a chat message, prompt, or commit.
 - **Never** commit a key, even on a private branch — Smarter Weather
   participates in GitHub's secret-scanning partner program and will
@@ -193,7 +197,8 @@ runs server-side.
 
 ## Anti-patterns to avoid
 
-1. **Hard-coding API keys.** Always read from env vars.
+1. **Hard-coding API keys.** Always read from env vars (a placeholder
+   fallback, as in `examples/`, is fine; a real key never is).
 2. **Calling `/v1/weather` in a tight loop.** Cache responses for 60-300
    seconds for current conditions; longer for forecasts.
 3. **Treating 5xx as terminal.** Retry server errors; only treat 4xx as

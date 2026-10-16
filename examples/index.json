@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "examples": [
+    {
+      "id": "weather",
+      "title": "Current weather in one call",
+      "summary": "Call /v1/weather with your key and print the temperature, the conditions and the data sources.",
+      "surface": "rest",
+      "language": "curl",
+      "kind": "code",
+      "level": "start",
+      "tags": ["weather", "current-conditions", "quickstart"],
+      "dir": "rest/curl/weather",
+      "runtime": "bash, curl, jq",
+      "test": "node ../../../_harness/expect-run.mjs"
+    },
+    {
+      "id": "weather",
+      "title": "Current weather in one call",
+      "summary": "Call /v1/weather with fetch and print the temperature, the conditions and the data sources.",
+      "surface": "rest",
+      "language": "javascript",
+      "kind": "code",
+      "level": "start",
+      "tags": ["weather", "current-conditions", "quickstart"],
+      "dir": "rest/javascript/weather",
+      "runtime": "Node.js 20",
+      "test": "npm ci --silent && npm test --silent"
+    },
+    {
+      "id": "weather",
+      "title": "Current weather in one call",
+      "summary": "Call /v1/weather with requests and print the temperature, the conditions and the data sources.",
+      "surface": "rest",
+      "language": "python",
+      "kind": "code",
+      "level": "start",
+      "tags": ["weather", "current-conditions", "quickstart"],
+      "dir": "rest/python/weather",
+      "runtime": "Python 3.10",
+      "test": "python3 -m pip install --quiet --disable-pip-version-check -r requirements.txt && node ../../../_harness/expect-run.mjs"
+    },
+    {
+      "id": "weather",
+      "title": "Current weather in one call",
+      "summary": "Call /v1/weather with net/http and print the temperature, the conditions and the data sources.",
+      "surface": "rest",
+      "language": "go",
+      "kind": "code",
+      "level": "start",
+      "tags": ["weather", "current-conditions", "quickstart"],
+      "dir": "rest/go/weather",
+      "runtime": "Go 1.22",
+      "test": "go vet ./... && node ../../../_harness/expect-run.mjs"
+    },
+    {
+      "id": "claude-desktop",
+      "title": "Weather tools in Claude Desktop",
+      "summary": "Add the weather MCP server to Claude Desktop with the key in a .env file, then ask for the best window for a bike ride.",
+      "surface": "mcp",
+      "language": "json",
+      "kind": "config",
+      "level": "start",
+      "tags": ["mcp", "claude-desktop", "find-best-window"],
+      "dir": "mcp/claude-desktop",
+      "runtime": "Claude Desktop, Node.js 20",
+      "test": "node ../../_harness/check-mcp-config.mjs claude_desktop_config.json"
+    },
+    {
+      "id": "cursor",
+      "title": "Weather tools in Cursor",
+      "summary": "Add the weather MCP server to a Cursor project that reads the key from .env, then ask for the best window for a bike ride.",
+      "surface": "mcp",
+      "language": "json",
+      "kind": "config",
+      "level": "start",
+      "tags": ["mcp", "cursor", "find-best-window"],
+      "dir": "mcp/cursor",
+      "runtime": "Cursor, Node.js 20",
+      "test": "node ../../_harness/check-mcp-config.mjs mcp.json"
+    }
+  ]
+}

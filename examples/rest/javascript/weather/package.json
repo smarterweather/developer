@@ -1,0 +1,12 @@
+{
+  "name": "smarterweather-example-weather",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node weather.mjs",
+    "test": "node ../../../_harness/expect-run.mjs"
+  }
+}
