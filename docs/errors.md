@@ -273,7 +273,9 @@ status per tool call, so key on `type`, then `status`.
 
 - Argument errors (a value that fails the tool's input schema, or a
   precondition such as an ambiguous place name) are `bad-request` with the
-  reason in `detail`; an unknown tool is `not-found`.
+  reason in `detail`; an unknown tool is `not-found`. An ambiguous place
+  name adds `candidates`, an array of `{name}` objects to offer the user
+  (names only, no coordinates).
 - A `400` or `404` problem from the API behind a tool reaches you as the
   API sent it, `next_steps` included (for example `outside-coverage`).
 - Every `5xx` carries a fixed, generic `detail`.

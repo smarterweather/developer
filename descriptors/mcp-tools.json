@@ -7,7 +7,7 @@
     {
       "name": "compare_locations",
       "title": "Compare locations",
-      "description": "Compare forecast variables across multiple locations side-by-side in one batched call. Returns a distilled per-location series matrix for direct comparison -- prefer this over N sequential forecast calls. Locations accept place names directly. Example: {\"locations\": [{\"location\": \"Denver\"}, {\"location\": \"Boulder, CO\"}], \"variables\": [\"temperature_2m\", \"precipitation_probability\"], \"hours\": 48}.",
+      "description": "Compare forecast variables across multiple locations side-by-side in one batched call. Returns a distilled per-location series matrix for direct comparison -- prefer this over N sequential forecast calls. Locations accept place names directly. Example: {\"locations\": [{\"location\": \"Denver, CO\"}, {\"location\": \"Boulder, CO\"}], \"variables\": [\"temperature_2m\", \"precipitation_probability\"], \"hours\": 48}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -18,7 +18,7 @@
               "properties": {
                 "location": {
                   "type": "string",
-                  "description": "Place name, ZIP, or \"lat,lon\" (e.g. \"Denver\", \"Boulder, CO\")."
+                  "description": "\"City, ST\", ZIP, or \"lat,lon\" (e.g. \"Boulder, CO\")."
                 },
                 "lat": {
                   "type": "number",
@@ -257,7 +257,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -279,7 +279,7 @@
               "si"
             ],
             "default": "imperial",
-            "description": "Unit system for all values in the request and response: imperial (°F, mph, inches), metric (°C, km/h, mm), or si (K, m/s, mm). Defaults to imperial."
+            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric."
           },
           "criteria": {
             "type": "object",
@@ -520,7 +520,7 @@
     {
       "name": "get_air_quality",
       "title": "Get air quality",
-      "description": "AirNow air quality at a location (CONUS): current overall AQI plus per-pollutant AQI sub-indices (PM2.5, ozone, PM10) and the AirNow AQI forecast. AQI scale: 0-50 good, 51-100 moderate, 101-150 unhealthy for sensitive groups, 151-200 unhealthy, 201-300 very unhealthy, 301+ hazardous. pollutants=[\"aqi\"] (default) is the cheap headline call; add pollutant keys or include_forecast=true when the user digs in. Example: {\"location\": \"Boise\", \"pollutants\": [\"aqi\", \"pm25\"], \"include_forecast\": true}.",
+      "description": "AirNow air quality at a location (CONUS): current overall AQI plus per-pollutant AQI sub-indices (PM2.5, ozone, PM10) and the AirNow AQI forecast. AQI scale: 0-50 good, 51-100 moderate, 101-150 unhealthy for sensitive groups, 151-200 unhealthy, 201-300 very unhealthy, 301+ hazardous. pollutants=[\"aqi\"] (default) is the cheap headline call; add pollutant keys or include_forecast=true when the user digs in. Example: {\"location\": \"Boise, ID\", \"pollutants\": [\"aqi\", \"pm25\"], \"include_forecast\": true}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -528,7 +528,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -758,7 +758,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -927,10 +927,16 @@
     {
       "name": "get_climate_normals",
       "title": "Get climate normals",
-      "description": "Day-of-year climate normals (NCEI 1991-2020 30-year averages) for a US location, from the nearest station with a record. Returns normal high, normal low, and normal mean for each date in the window, plus the station and how far away it is. Use this whenever a question needs a baseline rather than a forecast: \"is this warm for October?\", \"what is a typical high here in January?\", \"how does this week compare to normal?\". Pair it with get_forecast to say how far above or below normal the coming days run. Covers dates by day of year, so it answers for any date, past or future -- these are long-period averages, not a forecast and not observed history for a specific year.",
+      "description": "Day-of-year climate normals (NCEI 1991-2020 30-year averages) for a US location, from the nearest station with a record: normal high, low and mean per date, plus the station and its distance. Use this whenever a question needs a baseline rather than a forecast: \"is this warm for October?\", \"what is a typical high here in January?\", \"how does this week compare to normal?\". Pair it with get_forecast to say how far above or below normal the coming days run. Answers for any date, past or future: long-period averages, not a forecast or one year's observations.",
       "inputSchema": {
         "type": "object",
         "properties": {
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+          },
           "lat": {
             "type": "number",
             "minimum": -90,
@@ -959,19 +965,23 @@
             "maximum": 366,
             "description": "Range length in days when start/end are omitted; the window opens today (default 14)."
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "description": "imperial (default; °F) or metric."
+          },
           "unit": {
             "type": "string",
             "enum": [
               "imperial",
               "metric"
             ],
-            "description": "Unit system for the normals. Default imperial (°F)."
+            "description": "Deprecated: use units."
           }
         },
-        "required": [
-          "lat",
-          "lon"
-        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
@@ -984,6 +994,17 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
@@ -1072,7 +1093,7 @@
     {
       "name": "get_current_conditions",
       "title": "Get current conditions",
-      "description": "Current weather right now at a location from two independent sources in one call: the RTMA gridded analysis (exact-point values, updated sub-hourly) and the nearest METAR station observation (ground truth with raw METAR, flight category). Use the analysis for point-accurate values and the station for verification. Analysis fields: temperature_2m, dew_point_2m, relative_humidity_2m (derived here from temperature and dew point; listed in analysis.derived), wind_speed_10m, wind_direction_10m, wind_gusts_10m, surface_pressure (station pressure at ground level, not sea-level pressure), visibility, cloud_cover, cloud_ceiling. Analysis values are SI by default; pass units \"imperial\" or \"metric\" to convert them (labels in analysis.unit_labels; get_forecast defaults to imperial). nearest_station is the station's own report, unconverted. For a forecast, use get_forecast. Example: {\"location\": \"Pella, IA\"}.",
+      "description": "Current weather right now at a location from two independent sources in one call: the RTMA gridded analysis (exact-point values, updated sub-hourly) and the nearest METAR station observation (ground truth with raw METAR, flight category). Use the analysis for point-accurate values and the station for verification. Analysis fields: temperature_2m, dew_point_2m, relative_humidity_2m (derived here from temperature and dew point; listed in analysis.derived), wind_speed_10m, wind_direction_10m, wind_gusts_10m, surface_pressure (station pressure at ground level, not sea-level pressure), visibility, cloud_cover, cloud_ceiling, in units (labels in analysis.unit_labels). nearest_station is the station's own report, unconverted. For a forecast, use get_forecast. Example: {\"location\": \"Pella, IA\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1080,7 +1101,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1101,8 +1122,8 @@
               "metric",
               "si"
             ],
-            "default": "si",
-            "description": "Unit system for the analysis values: si (default; K, m/s, Pa, m, as RTMA serves them), imperial (°F, mph, inHg, mi, ft) or metric (°C, km/h, hPa, km, m). Unlike get_forecast, which defaults to imperial. Does not apply to nearest_station."
+            "default": "imperial",
+            "description": "imperial (default; °F, mph, inHg, mi, ft) or metric (°C, km/h, hPa, km, m); si returns K, m/s, Pa, m. si is deprecated and will be removed; use metric. Not applied to nearest_station."
           }
         },
         "additionalProperties": false,
@@ -1257,7 +1278,7 @@
     {
       "name": "get_forecast",
       "title": "Get forecast",
-      "description": "Complete weather overview for a location: current conditions, daily forecast (SPC threats, severity; view \"detailed\" adds CAPE, UV, full day/night periods), active alerts, and outlooks in one call. Pre-aggregated across NBM, HRRR, GFS, RTMA, and SPC and unit-converted server-side. Primary weather tool; reach for lower-level tools only when you need raw observations or a specific dataset. Times are UTC ISO 8601; quote daily[].astro.local to users, not UTC. If forecast.location.timezone_resolved is false, zone unknown: state times as UTC, never as local. Accepts a place name directly. Examples: {\"location\": \"Denver\"} or {\"location\": \"Portland, OR\", \"days\": 5} or {\"lat\": 41.4, \"lon\": -92.9}.",
+      "description": "Complete weather overview for a location: current conditions, daily forecast (SPC threats, severity; view \"detailed\" adds CAPE, UV, full day/night periods), active alerts, and outlooks in one call. Pre-aggregated across NBM, HRRR, GFS, RTMA, and SPC and unit-converted server-side. Primary weather tool; reach for lower-level tools only when you need raw observations or a specific dataset. Times are UTC ISO 8601; quote daily[].astro.local to users, not UTC. If forecast.location.timezone_resolved is false, zone unknown: state times as UTC, never as local. Accepts a place name directly. Examples: {\"location\": \"Denver, CO\"} or {\"location\": \"Portland, OR\", \"days\": 5} or {\"lat\": 41.4, \"lon\": -92.9}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1265,7 +1286,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1294,7 +1315,7 @@
               "si"
             ],
             "default": "imperial",
-            "description": "Unit system for all values in the request and response: imperial (°F, mph, inches), metric (°C, km/h, mm), or si (K, m/s, mm). Defaults to imperial."
+            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric."
           },
           "include": {
             "type": "string",
@@ -1435,7 +1456,7 @@
     {
       "name": "get_forecast_discussion",
       "title": "Get forecast discussion",
-      "description": "Expert forecaster text products. type=afd: Area Forecast Discussion. type=hwo: Hazardous Weather Outlook. type=now: WFO short-term NOW. type=fwf/hls/esf: local fire weather / hurricane local statement / hydrologic discussion. type=mcd: SPC Mesoscale Discussion. type=mpd: WPC Mesoscale Precipitation Discussion (flash flood). type=swo/fwd/ero: national outlook discussions. type=tcd/tcp/tcm/twd/two: NHC tropical text (type=two is the text TWO, not GIS nhc_two). type=pmd: WPC/CPC desk discussion (pass awips_id for a specific desk, e.g. PMDSPD). type=pwo: SPC public weather outlook. National types (swo/fwd/ero/tcd/tcp/tcm/twd/two/pmd/pwo) need no location; `day` selects the outlook day for swo and fwd. summary_only=true returns the pipeline LLM summary without the full body. Examples: {\"location\": \"Des Moines\", \"type\": \"afd\"} or {\"type\": \"swo\", \"day\": 2, \"summary_only\": true}.",
+      "description": "Expert forecaster text products. type=afd: Area Forecast Discussion. type=hwo: Hazardous Weather Outlook. type=now: WFO short-term NOW. type=fwf/hls/esf: local fire weather / hurricane local statement / hydrologic discussion. type=mcd: SPC Mesoscale Discussion. type=mpd: WPC Mesoscale Precipitation Discussion (flash flood). type=swo/fwd/ero: national outlook discussions. type=tcd/tcp/tcm/twd/two: NHC tropical text (type=two is the text TWO, not GIS nhc_two). type=pmd: WPC/CPC desk discussion (pass awips_id for a specific desk, e.g. PMDSPD). type=pwo: SPC public weather outlook. National types (swo/fwd/ero/tcd/tcp/tcm/twd/two/pmd/pwo) need no location; `day` selects the outlook day for swo and fwd. summary_only=true returns an AI-written summary, not the full body. Examples: {\"location\": \"Des Moines, IA\", \"type\": \"afd\"} or {\"type\": \"swo\", \"day\": 2, \"summary_only\": true}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1443,7 +1464,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1580,7 +1601,7 @@
     {
       "name": "get_forecast_distribution",
       "title": "Get forecast distribution",
-      "description": "NBM probabilistic guidance for one weather aspect: percentiles (p10-p90), exceedance probabilities and ensemble spread. Use this for any question about odds, ranges, potential or confidence (\"how much could we get\", \"range of possible highs\", \"how sure is this\") -- a deterministic forecast value cannot answer one. Reading the percentiles: p50 is the most likely outcome, p90 is the reasonable worst case when the risk is the high end (snow totals, wind, rainfall), and p10 when the risk is the low end (cold, visibility, ceiling). A single percentile is not the forecast -- report the likely value with the tail that matters, and label which is which. Aspects: precip (PoP, QPF + percentiles), snow (accumulation percentiles, >1/2/4in probabilities, snow level, snow-type probability), ice (ice accretion, freezing-rain / ice-pellet probabilities), temperature (`daily` high/low p10/p50/p90: the NBM value -/+ 1.28 stddev; hourly temp + stddev), wind (speed/gust percentiles), severe (thunderstorm probability plus NBM CWASP, a severe-environment index, both in percent: severe_weather_prob_p50 is the median CWASP value and severe_weather_prob_above_75 the probability CWASP exceeds 75; NBM has no tornado, hail or damaging-wind odds; SPC's: get_outlooks (guidance) hazard=severe), aviation (LIFR/IFR/MVFR visibility + ceiling odds), confidence (ensemble stddev; low = settled, high = details still in play). Labels in unit_labels. Example: {\"location\": \"Denver\", \"aspect\": \"snow\", \"hours\": 72}.",
+      "description": "NBM probabilistic guidance for one weather aspect: percentiles (p10-p90), exceedance probabilities and ensemble spread. Use this for any question about odds, ranges, potential or confidence (\"how much could we get\", \"range of possible highs\", \"how sure is this\") -- a deterministic forecast value cannot answer one. Reading the percentiles: p50 is the most likely outcome, p90 is the reasonable worst case when the risk is the high end (snow totals, wind, rainfall), and p10 when the risk is the low end (cold, visibility, ceiling). A single percentile is not the forecast -- report the likely value with the tail that matters, and label which is which. Aspects: precip (PoP, QPF + percentiles), snow (accumulation percentiles, >1/2/4in probabilities, snow level, snow-type probability), ice (ice accretion, freezing-rain / ice-pellet probabilities), temperature (`daily` high/low p10/p50/p90: the NBM value -/+ 1.28 stddev; hourly temp + stddev), wind (speed/gust percentiles), severe (thunderstorm probability plus NBM CWASP, a severe-environment index, both in percent: severe_weather_prob_p50 is the median CWASP value and severe_weather_prob_above_75 the probability CWASP exceeds 75; NBM has no tornado, hail or damaging-wind odds; SPC's: get_outlooks (guidance) hazard=severe), aviation (LIFR/IFR/MVFR visibility + ceiling odds), confidence (ensemble stddev; low = settled, high = details still in play). Labels in unit_labels. Example: {\"location\": \"Denver, CO\", \"aspect\": \"snow\", \"hours\": 72}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1588,7 +1609,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1630,7 +1651,7 @@
               "si"
             ],
             "default": "imperial",
-            "description": "imperial (default: °F, mph, in), metric, or si (NBM native: K, m/s, mm)."
+            "description": "imperial (default; °F, mph, in) or metric. si is deprecated and will be removed; use metric."
           }
         },
         "required": [
@@ -1861,7 +1882,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -1896,6 +1917,14 @@
             "type": "string",
             "description": "Ask for a track record measured only under particular conditions, as a comma-separated preference chain, most specific first, e.g. \"SCN1:WINDY,SEA:JJA\". SEA: is the meteorological season (DJF, MAM, JJA, SON); SCN1: is a forecast-conditioned scenario (WINDY, WET, QUIET — mutually exclusive within the family); JC1: is a circulation pattern. The most specific tier with enough observations answers and the unconditioned record is the last resort, so this never empties a result the way truth does -- it degrades. Read the regime field on each entry to see which tier actually answered. Pass this when the question is conditional (\"is it worse in winter\", \"how does it do when the model shows windy\"); omit it otherwise, since conditioned tiers are thinner and slower to earn numbers."
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "description": "Error units: imperial (default) or metric."
+          },
           "unit": {
             "type": "string",
             "enum": [
@@ -1903,7 +1932,7 @@
               "metric",
               "si"
             ],
-            "description": "Units for the error magnitudes. Default imperial (bias/MAE/RMSE in °F, mph, in)."
+            "description": "Deprecated: use units. si is deprecated and will be removed; use metric."
           }
         },
         "additionalProperties": false,
@@ -2285,7 +2314,7 @@
       "_meta": {
         "smarterweather.dev/input_examples": [
           {
-            "location": "Denver",
+            "location": "Denver, CO",
             "variable": "temperature_2m",
             "lead_hours": 72
           },
@@ -2299,12 +2328,12 @@
             "lead_hours": 24
           },
           {
-            "location": "Chicago",
+            "location": "Chicago, IL",
             "variable": "temperature_2m",
             "regime": "SEA:DJF"
           },
           {
-            "location": "Houston",
+            "location": "Houston, TX",
             "variable": "precipitation_gt_0p254mm",
             "lead_hours": 24
           }
@@ -2323,7 +2352,7 @@
     {
       "name": "get_forecast_skill_map",
       "title": "Get forecast skill map",
-      "description": "Measured forecast skill as a map of res-4 hexes inside a bounding box, sliced from the public skill map. Use this when the question is spatial (\"where is NBM temperature skill weak across Colorado\"), not \"how good is the forecast at this point\" — that is get_forecast_skill. Requires model, variable, lead_hours, and bbox {west,south,east,north}. lead_hours selects the containing published bucket (20 → NBM 24); a lead we have not published returns no slices rather than a nearby one. A hex is included when its center is inside the box; edge-overlapping hexes are dropped. The box cannot wrap the dateline. Each cell is [h3, samples, skill_score]; skill_score is unitless (fraction of climatological variance explained) and already gated at n ≥ 30. withheld lists hexes still accumulating. Do not compare slices across models or truths. This is CELL# only — never treat a hex as a person.",
+      "description": "Measured forecast skill as a map of ~50 km hexes inside a bounding box, sliced from the public skill map. Use this when the question is spatial (\"where is NBM temperature skill weak across Colorado\"), not \"how good is the forecast at this point\" — that is get_forecast_skill. Requires model, variable, lead_hours, and bbox {west,south,east,north}. lead_hours selects the containing published bucket (20 → NBM 24); a lead we have not published returns no slices rather than a nearby one. A hex is included when its center is inside the box; edge-overlapping hexes are dropped. The box cannot wrap the dateline. Each cell is [h3, samples, skill_score]; skill_score is unitless (fraction of climatological variance explained) and already gated at n ≥ 30. withheld lists hexes still accumulating. Do not compare slices across models or truths. Cells are areas; never treat a hex as a person.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2524,10 +2553,16 @@
     {
       "name": "get_growing_degree_days",
       "title": "Get growing degree days",
-      "description": "Growing Degree Units (GDU / GDD) for a US location (CONUS, Alaska, Hawaii), computed from daily max/min temperatures. Pass a crop id (e.g. \"corn\", \"soybean\", \"wheat\") to use calibrated base/upper thresholds, or crop=\"custom\" with base_temp_c (and optional upper_temp_c / method). Without season_start you get per-day GDU across the forecast horizon; WITH season_start (YYYY-MM-DD) you get the cumulative season-to-date total (observed history + today + forecast) plus a per-day cumulative series -- the number a grower tracks against crop milestones. Answers \"how many growing degree days has my corn accumulated since May 1?\" and \"what's the GDU forecast this week?\".",
+      "description": "Growing Degree Units (GDU / GDD) for a US location, computed from daily max/min temperatures. crop picks calibrated base/upper thresholds; crop=\"custom\" takes base_temp_c (and optional upper_temp_c / method). Without season_start you get per-day GDU across the forecast horizon; WITH season_start you get the cumulative season-to-date total (observed history + today + forecast) plus a per-day cumulative series -- the number a grower tracks against crop milestones. Answers \"how many growing degree days has my corn accumulated since May 1?\" and \"what's the GDU forecast this week?\".",
       "inputSchema": {
         "type": "object",
         "properties": {
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+          },
           "lat": {
             "type": "number",
             "minimum": -90,
@@ -2542,12 +2577,12 @@
           },
           "crop": {
             "type": "string",
-            "description": "Crop id from the catalog (e.g. \"corn\", \"soybean\", \"wheat\") or \"custom\" to supply your own thresholds via base_temp_c."
+            "description": "Crop id from the catalog (e.g. \"corn\", \"soybean\", \"wheat\"), or \"custom\" with base_temp_c."
           },
           "season_start": {
             "type": "string",
             "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-            "description": "Season/planting start as YYYY-MM-DD (local date). Presence switches the response to a cumulative season-to-date GDU total. Must be within the ~180-day observed window."
+            "description": "Season/planting start, YYYY-MM-DD local, within the last ~180 days."
           },
           "days": {
             "type": "integer",
@@ -2563,13 +2598,21 @@
             ],
             "description": "Daily boundary: \"nws\" (default; NBM MaxT/MinT period extremes) or \"local_calendar\" (midnight-to-midnight local day)."
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "description": "imperial (default; °F-days) or metric."
+          },
           "unit": {
             "type": "string",
             "enum": [
               "imperial",
               "metric"
             ],
-            "description": "Unit system for GDU + temps. Default imperial (°F-days)."
+            "description": "Deprecated: use units."
           },
           "base_temp_c": {
             "type": "number",
@@ -2577,7 +2620,7 @@
           },
           "upper_temp_c": {
             "type": "number",
-            "description": "Custom upper cutoff in °C (enables the modified method). Optional."
+            "description": "Custom upper cutoff in °C (enables the modified method)."
           },
           "method": {
             "type": "string",
@@ -2589,12 +2632,10 @@
           },
           "include_milestones": {
             "type": "boolean",
-            "description": "Include the crop's growth-stage GDU milestones in the response."
+            "description": "Add the crop's growth-stage GDU milestones."
           }
         },
         "required": [
-          "lat",
-          "lon",
           "crop"
         ],
         "additionalProperties": false,
@@ -2609,12 +2650,23 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/required_one_of": [
+          [
+            "location"
+          ],
+          [
+            "lat",
+            "lon"
+          ]
+        ]
       }
     },
     {
       "name": "get_hourly_forecast",
       "title": "Get hourly forecast",
-      "description": "Blended hourly forecast: temperature, feels-like, humidity, wind, precipitation probability/amount, conditions, and icon per hour. Snapped to the current hour so hourly[0] is \"now\". Timestamps are UTC ISO 8601; convert to the local timezone before presenting. Ask for the days you need up front -- one call with days: 4 beats four calls. ALWAYS check hourly_coverage before answering about a specific hour: it reports first_time and last_time (the window the rows actually span), sample_interval_hours (past the first day rows are every 2-3h, not every hour), and truncated: true when upstream returned less than you asked for. If the hour the user cares about is after last_time, say the forecast does not reach that far yet rather than answering from the nearest row you do have. For one stretch of time ask for that stretch with hours_from/hours_to: it comes back hour by hour even where the full range would be sampled. Accepts a place name or coordinates. Examples: {\"location\": \"Portland, OR\", \"days\": 2} or {\"lat\": 41.88, \"lon\": -87.63, \"hours_from\": 36, \"hours_to\": 48}.",
+      "description": "Blended hourly forecast: temperature, feels-like, humidity, wind, precipitation probability/amount, conditions, and icon per hour. hourly[0] is the current or next hour; hourly_coverage.first_time says which. Timestamps are UTC ISO 8601; convert to the local timezone before presenting. Ask for the days you need up front -- one call with days: 4 beats four calls. ALWAYS check hourly_coverage before answering about a specific hour: it reports first_time and last_time (the window the rows actually span), sample_interval_hours (past the first day rows are every 2-3h, not every hour), and truncated: true when upstream returned less than you asked for. If the hour the user cares about is after last_time, say the forecast does not reach that far yet rather than answering from the nearest row you do have. For one stretch of time ask for that stretch with hours_from/hours_to: it comes back hour by hour even where the full range would be sampled. Accepts a place name or coordinates. Examples: {\"location\": \"Portland, OR\", \"days\": 2} or {\"lat\": 41.88, \"lon\": -87.63, \"hours_from\": 36, \"hours_to\": 48}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2622,7 +2674,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -2663,7 +2715,7 @@
               "si"
             ],
             "default": "imperial",
-            "description": "Unit system for all values in the request and response: imperial (°F, mph, inches), metric (°C, km/h, mm), or si (K, m/s, mm). Defaults to imperial."
+            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric."
           },
           "view": {
             "type": "string",
@@ -2799,7 +2851,7 @@
     {
       "name": "get_lightning_activity",
       "title": "Get lightning activity",
-      "description": "Real-time lightning near a location: GLM satellite flash count (30km/10min) and MRMS ground-truth lightning density + 30-minute probability. The summary field is ready-to-use. A zero flash count means no lightning inside that window -- report it as a quiet observation scoped to the window in `scope`, never as a data gap. Only call when storms may be active or the user asks about lightning. Example: {\"location\": \"Tampa\"}.",
+      "description": "Real-time lightning near a location: GLM satellite flash count (30km/10min) and MRMS ground-truth lightning density + 30-minute probability. The summary field is ready-to-use. A zero flash count means no lightning inside that window -- report it as a quiet observation scoped to the window in `scope`, never as a data gap. Only call when storms may be active or the user asks about lightning. Example: {\"location\": \"Tampa, FL\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2807,7 +2859,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -2904,7 +2956,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -2995,7 +3047,7 @@
     {
       "name": "get_observations",
       "title": "Get station observations",
-      "description": "METAR surface observations from weather stations: temperature, wind, visibility, ceiling, flight category, raw METAR. Nearest mode (default) returns the closest N stations to a location; station mode returns history for a specific ICAO identifier. Examples: {\"location\": \"Denver\", \"n\": 3} or {\"station\": \"KJFK\", \"hours\": 6}.",
+      "description": "METAR surface observations from weather stations: temperature, wind, visibility, ceiling, flight category, raw METAR. Nearest mode (default) returns the closest N stations to a location; station mode returns history for a specific ICAO identifier. Examples: {\"location\": \"Denver, CO\", \"n\": 3} or {\"station\": \"KJFK\", \"hours\": 6}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3003,7 +3055,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -3116,7 +3168,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -3159,7 +3211,7 @@
               "si"
             ],
             "default": "imperial",
-            "description": "Unit system for all values in the request and response: imperial (°F, mph, inches), metric (°C, km/h, mm), or si (K, m/s, mm). Defaults to imperial."
+            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric."
           },
           "at": {
             "type": "string",
@@ -3442,7 +3494,7 @@
     {
       "name": "get_outlooks",
       "title": "Get hazard outlooks",
-      "description": "Hazard outlooks affecting a location. severe: SPC convective (day 1-8 categorical + tornado/wind/hail probabilities); fire: SPC fire weather; rain: WPC Excessive Rainfall (days 1-3); heat: NWS HeatRisk index (0-4, days 1-3); temperature/precipitation: CPC 6-10 day, 8-14 day, week 3-4 and monthly outlooks (favored category + probability bin; period=seasonal: 3-month leads). include_narrative=true adds the forecaster discussion (SWO, FWD, QPFERD, or the period's CPC PMD). Empty means no outlook covers the point, not a failure. Examples: {\"location\": \"Moore, OK\", \"hazard\": \"severe\", \"include_narrative\": true} or {\"location\": \"Denver\", \"hazard\": \"temperature\"}.",
+      "description": "Hazard outlooks affecting a location. severe: SPC convective (day 1-8 categorical + tornado/wind/hail probabilities); fire: SPC fire weather; rain: WPC Excessive Rainfall (days 1-3); heat: NWS HeatRisk index (0-4, days 1-3); temperature/precipitation: CPC 6-10 day, 8-14 day, week 3-4 and monthly outlooks (favored category + probability bin; period=seasonal: 3-month leads). include_narrative=true adds the forecaster discussion (SWO, FWD, QPFERD, or the period's CPC PMD). Empty means no outlook covers the point, not a failure. Examples: {\"location\": \"Moore, OK\", \"hazard\": \"severe\", \"include_narrative\": true} or {\"location\": \"Denver, CO\", \"hazard\": \"temperature\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3450,7 +3502,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -3598,7 +3650,7 @@
     {
       "name": "get_path_exposure",
       "title": "Get path exposure",
-      "description": "Civic POIs (schools, hospitals, airports, …) inside a caller-supplied GeoJSON Polygon or MultiPolygon. Not enabled for every caller: when off it returns 403 flag-disabled. Clip first; not a CONUS HeatRisk dissolve. Optional classes filters the civic allowlist. Example: {\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[-88.15,41.77],[-88.14,41.77],[-88.14,41.78],[-88.15,41.78],[-88.15,41.77]]]},\"classes\":[\"school\"]}.",
+      "description": "Civic POIs (schools, hospitals, airports, …) inside a caller-supplied GeoJSON Polygon or MultiPolygon. Not enabled for every caller: when off it returns 403 flag-disabled. Clip first; it does not derive HeatRisk areas. Optional classes filters the civic allowlist. Example: {\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[-88.15,41.77],[-88.14,41.77],[-88.14,41.78],[-88.15,41.78],[-88.15,41.77]]]},\"classes\":[\"school\"]}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3699,7 +3751,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -3764,7 +3816,7 @@
               "si"
             ],
             "default": "imperial",
-            "description": "Unit system for all values in the request and response: imperial (°F, mph, inches), metric (°C, km/h, mm), or si (K, m/s, mm). Defaults to imperial."
+            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric."
           },
           "dataset_id": {
             "type": "string",
@@ -4139,7 +4191,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4238,7 +4290,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4252,14 +4304,21 @@
             "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "description": "Axis: imperial (default; °F) or metric (°C)."
+          },
           "unit": {
             "type": "string",
             "enum": [
               "fahrenheit",
               "celsius"
             ],
-            "default": "fahrenheit",
-            "description": "Temperature axis display unit"
+            "description": "Deprecated: use units."
           },
           "scale": {
             "type": "number",
@@ -4305,7 +4364,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4417,7 +4476,7 @@
     {
       "name": "get_storm_reports",
       "title": "Get storm reports",
-      "description": "Recent NWS Local Storm Reports (LSRs) -- verified reports of tornadoes, hail, damaging winds, flooding near a location. Use to confirm severe weather occurrence or assess reported damage. valid_time is event occurrence (UTC); cite in local time. Example: {\"location\": \"Wichita\", \"hours\": 12, \"type\": \"H\"}.",
+      "description": "Recent NWS Local Storm Reports (LSRs) -- verified reports of tornadoes, hail, damaging winds, flooding near a location. Use to confirm severe weather occurrence or assess reported damage. valid_time is event occurrence (UTC); cite in local time. Example: {\"location\": \"Wichita, KS\", \"hours\": 12, \"type\": \"H\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -4425,7 +4484,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4524,7 +4583,7 @@
     {
       "name": "get_time_context",
       "title": "Get time context",
-      "description": "Complete temporal context for a location: local time, timezone, 14-day calendar with day names and Today/Tomorrow offsets, sunrise/sunset/solar times (from the weather pipeline's astro product), and moon phase. Use whenever you need to reason about dates, times, or daylight for a location -- including \"what time is sunset?\", \"is it dark there now?\", or \"what day of the week is the 4th-day forecast?\". If current_time.timezone_resolved is false, zone unknown: state times as UTC, never as local. Accepts a place name directly. Example: {\"location\": \"Seattle\"}.",
+      "description": "Complete temporal context for a location: local time, timezone, 14-day calendar with day names and Today/Tomorrow offsets, sunrise/sunset/solar times (from the weather pipeline's astro product), and moon phase. Use whenever you need to reason about dates, times, or daylight for a location -- including \"what time is sunset?\", \"is it dark there now?\", or \"what day of the week is the 4th-day forecast?\". If current_time.timezone_resolved is false, zone unknown: state times as UTC, never as local. Accepts a place name directly. Example: {\"location\": \"Seattle, WA\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -4532,7 +4591,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4775,7 +4834,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
@@ -4931,7 +4990,7 @@
     {
       "name": "query_dataset",
       "title": "Query dataset",
-      "description": "Raw time series from a specific dataset for specific variables at a point. Power-user access to any gridded product (NBM, HRRR, RRFS, GFS, RTMA, MRMS, air quality, ...). Time modes: hours (next N hours, default 24), time_start+time_end (explicit ISO-8601 window), or latest=true (single most-recent value). reference_time pins a specific model run, and each returned series reports the run that served it (reference_time, or reference_times when a series mixes runs) — check it before comparing two runs, since a run older than about 48 hours may no longer be available. For blended forecasts use get_forecast instead. Examples: {\"location\": \"Denver\", \"dataset_id\": \"rrfs_surface\", \"variables\": [\"temperature_2m\"], \"hours\": 18} or {\"lat\": 41.4, \"lon\": -92.9, \"dataset_id\": \"rtma_conus\", \"variables\": [\"temperature_2m\"], \"latest\": true}.",
+      "description": "Raw time series from a specific dataset for specific variables at a point. Power-user access to any gridded product (NBM, HRRR, RRFS, GFS, RTMA, MRMS, air quality, ...). Time modes: hours (next N hours, default 24), time_start+time_end (explicit ISO-8601 window), or latest=true (single most-recent value). reference_time pins a specific model run, and each returned series reports the run that served it (reference_time, or reference_times when a series mixes runs) — check it before comparing two runs, since a run older than about 48 hours may no longer be available. For blended forecasts use get_forecast instead. Examples: {\"location\": \"Denver, CO\", \"dataset_id\": \"rrfs_surface\", \"variables\": [\"temperature_2m\"], \"hours\": 18} or {\"lat\": 41.4, \"lon\": -92.9, \"dataset_id\": \"rtma_conus\", \"variables\": [\"temperature_2m\"], \"latest\": true}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -4939,7 +4998,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 200,
-            "description": "Free-text place: city (\"Denver\"), city+state (\"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
           "lat": {
             "type": "number",
