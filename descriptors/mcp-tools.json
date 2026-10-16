@@ -1245,7 +1245,7 @@
     {
       "name": "get_forecast",
       "title": "Get forecast",
-      "description": "Complete weather overview for a location: current conditions, daily forecast (day/night periods, SPC threats, severity, CAPE, UV), active alerts, and convective outlooks in one call. Data is pre-aggregated across NBM, HRRR, GFS, RTMA, and SPC and unit-converted server-side. This is the primary weather tool; reach for lower-level tools only when you need raw observations or a specific dataset. Times are UTC ISO 8601; quote daily[].astro.local to users, not UTC. If forecast.location.timezone_resolved is false, zone unknown: state times as UTC, never as local. Accepts a place name directly. Examples: {\"location\": \"Denver\"} or {\"location\": \"Portland, OR\", \"days\": 5} or {\"lat\": 41.4, \"lon\": -92.9}.",
+      "description": "Complete weather overview for a location: current conditions, daily forecast (SPC threats, severity; view \"detailed\" adds CAPE, UV, full day/night periods), active alerts, and outlooks in one call. Pre-aggregated across NBM, HRRR, GFS, RTMA, and SPC and unit-converted server-side. Primary weather tool; reach for lower-level tools only when you need raw observations or a specific dataset. Times are UTC ISO 8601; quote daily[].astro.local to users, not UTC. If forecast.location.timezone_resolved is false, zone unknown: state times as UTC, never as local. Accepts a place name directly. Examples: {\"location\": \"Denver\"} or {\"location\": \"Portland, OR\", \"days\": 5} or {\"lat\": 41.4, \"lon\": -92.9}.",
       "inputSchema": {
         "type": "object",
         "properties": {
