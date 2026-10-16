@@ -28,7 +28,7 @@ response.
 Call the API before you have a key. The response tells you what to do:
 
 ```bash
-curl -sS -D - 'https://api.smarterweather.com/v1/weather?lat=41.66&lon=-91.53'
+curl -sS -D - 'https://api.smarterweather.com/v1/weather?lat=42.3601&lon=-71.0589'
 ```
 
 The answer (links other than the recommended one shortened to their
@@ -162,15 +162,15 @@ rejected with `401` (whose `next_steps` will tell you so).
 curl -sS https://api.smarterweather.com/v1/weather \
   -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
   --get \
-  --data-urlencode "lat=40.7128" \
-  --data-urlencode "lon=-74.0060"
+  --data-urlencode "lat=42.3601" \
+  --data-urlencode "lon=-71.0589"
 ```
 
 ### TypeScript (Node 20+ / fetch)
 
 ```ts
 const res = await fetch(
-  `https://api.smarterweather.com/v1/weather?lat=40.7128&lon=-74.0060`,
+  `https://api.smarterweather.com/v1/weather?lat=42.3601&lon=-71.0589`,
   {
     headers: {
       Authorization: `Bearer ${process.env.SMARTERWEATHER_API_KEY!}`,
@@ -191,7 +191,7 @@ import os, requests
 
 res = requests.get(
     "https://api.smarterweather.com/v1/weather",
-    params={"lat": 40.7128, "lon": -74.0060},
+    params={"lat": 42.3601, "lon": -71.0589},
     headers={
         "Authorization": f"Bearer {os.environ['SMARTERWEATHER_API_KEY']}"
     },

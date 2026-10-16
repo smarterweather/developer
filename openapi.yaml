@@ -5376,7 +5376,7 @@ components:
           example: KORD
         distance_km:
           type: number
-          description: Great-circle distance from the requested point to the station.
+          description: Great-circle distance from the requested point to the station, rounded to 0.1 km.
         observed_at:
           type: string
           format: date-time
@@ -8134,6 +8134,7 @@ components:
           type: number
           format: double
           minimum: 0
+          description: Great-circle distance from the requested point to the station, rounded to 0.1 km.
         elevation_m:
           type: [number, "null"]
 
@@ -8166,6 +8167,7 @@ components:
           type: number
           format: double
           minimum: 0
+          description: Great-circle distance from the requested point to the radar site, rounded to 0.1 km.
 
     Units:
       type: object
@@ -9170,8 +9172,9 @@ components:
           type: number
           format: double
           description: |
-            Great-circle distance from the requested point to the station.
-            The single number that says how much to trust this series.
+            Great-circle distance from the requested point to the station,
+            rounded to 0.1 km. The single number that says how much to trust
+            this series.
           example: 3.4
 
     ClimateNormalsMeta:
