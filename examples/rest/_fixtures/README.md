@@ -19,13 +19,14 @@ Each fixture is a nowcast the API can return, with the request time in
 - `starts_at` is the first of two consecutive wet points, and `type` is that
   point's type (`unknown` for an unrecognized radar code).
 - A missing lead is not wet: wet points on either side of it are not
-  consecutive, and it counts as dry toward the end.
+  consecutive, and it counts as dry toward the end, including the leads after
+  the last point up to the window's end (`generated_at` + 60 minutes).
 - The episode ends at two consecutive dry steps; one does not end it.
-  `ends_at` is the last wet point's time plus `interval_seconds` (the
-  smallest gap between points), and `duration_minutes` runs from `starts_at`
+  `ends_at` is the last wet point's time plus `interval_seconds` (the most
+  common gap between points), and `duration_minutes` runs from `starts_at`
   to it. Both are omitted while it runs to the end of the window.
-- `already_occurring` is `true` when the onset is the first point and that
-  point's time is at or before the request time. Otherwise it is omitted.
+- `already_occurring` is `true` when `starts_at` is at or before the request
+  time. Otherwise it is omitted.
 - `peak_intensity` covers the onset to the episode's end; a later episode
   does not count.
 - With no onset the summary is just `{"type": "none", "peak_intensity": "none"}`.
@@ -46,4 +47,6 @@ checks every fixture against that rule.
 | `request-before-first-point.json` | light rain 22:20Z-22:45Z; request at 22:17Z | Light rain starting around 3:20 PM, ending around 3:50 PM. |
 | `dropped-points.json` | wet 22:20Z, 22:25Z missing, light rain 22:30Z-22:40Z, 22:45Z missing, dry, heavy rain 22:55Z-23:00Z | Light rain starting around 3:30 PM, ending around 3:45 PM. |
 | `unknown-type.json` | `unknown` type, moderate, 22:35Z-22:50Z | Moderate precipitation starting around 3:35 PM, ending around 3:55 PM. |
+| `started-after-first-point.json` | dry 22:20Z, light rain 22:25Z-22:45Z; request at 22:27Z | Light rain now, ending around 3:50 PM. |
+| `trailing-missing.json` | light rain 22:50Z-23:05Z, then the 23:10Z and 23:15Z leads missing | Light rain starting around 3:50 PM, ending around 4:10 PM. |
 | `boston-reference.json` | the API's `WeatherNowcastRain` example, verbatim (Boston; frame 15:00Z, request 15:06:40Z) | Heavy rain now, ending around 11:35 AM. |
