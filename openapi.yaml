@@ -5705,7 +5705,15 @@ components:
           type: [integer, "null"]
           description: |
             Air-quality index (US EPA scale): usually 0-500, can exceed 500
-            in extreme events ("Beyond the AQI").
+            in extreme events ("Beyond the AQI"). `null` when AirNow has no
+            value at the point, or when its latest observation is older than
+            the source's freshness limit (currently 3 hours for AirNow). The
+            stale case also adds a `stale_source` warning to `meta.warnings`
+            (`section: current`, `product_id: airquality_combined`), which
+            tells the two apart. The product's age is the `meta.freshness`
+            entry with the same `product_id`. A reported 0 is currently also
+            served as `null`: AirNow stores cells outside its coverage as 0,
+            so a 0 cannot yet be told from no data.
         aqi_category:
           type: string
           description: |
@@ -5720,7 +5728,11 @@ components:
             usually 0-500, can exceed 500 in extreme events. Integer-valued
             at the source; a value may show a small fractional error, so
             round to a whole number. Not a concentration: the field name
-            names the pollutant and is kept for compatibility.
+            names the pollutant and is kept for compatibility. `null` when
+            AirNow has no value at the point, when its latest hour is stale
+            (reported by a `stale_source` warning, see `aqi`), or when the
+            reported value is 0 (currently indistinguishable from no data,
+            see `aqi`).
         ozone:
           type: [number, "null"]
           format: double
@@ -5729,7 +5741,11 @@ components:
             usually 0-500, can exceed 500 in extreme events. Integer-valued
             at the source; a value may show a small fractional error, so
             round to a whole number. Not a concentration: the field name
-            names the pollutant and is kept for compatibility.
+            names the pollutant and is kept for compatibility. `null` when
+            AirNow has no value at the point, when its latest hour is stale
+            (reported by a `stale_source` warning, see `aqi`), or when the
+            reported value is 0 (currently indistinguishable from no data,
+            see `aqi`).
         pm10:
           type: [number, "null"]
           format: double
@@ -5738,7 +5754,11 @@ components:
             usually 0-500, can exceed 500 in extreme events. Integer-valued
             at the source; a value may show a small fractional error, so
             round to a whole number. Not a concentration: the field name
-            names the pollutant and is kept for compatibility.
+            names the pollutant and is kept for compatibility. `null` when
+            AirNow has no value at the point, when its latest hour is stale
+            (reported by a `stale_source` warning, see `aqi`), or when the
+            reported value is 0 (currently indistinguishable from no data,
+            see `aqi`).
         precip_rate:
           type: [number, "null"]
           format: double
@@ -8301,6 +8321,14 @@ components:
             Stable machine-parseable warning code. Clients should branch on
             `code`, not on `detail`. Additive set; new codes may be added
             without a breaking-change announcement.
+
+            `stale_source`: one upstream product's latest data is older than
+            its source's freshness limit. `product_id` names the product
+            (its age is the `meta.freshness` entry with the same
+            `product_id`) and `fields` lists the fields in `section` it
+            leaves `null` (or omits, for optional fields such as
+            `aqi_category`). Unlike `stale_response`, the response was not
+            replayed from cache.
           enum:
             - partial_fetch
             - upstream_timeout
@@ -8308,6 +8336,7 @@ components:
             - coverage_limited
             - geocode_ambiguous
             - stale_response
+            - stale_source
             - not_enabled
           example: "partial_fetch"
         section:
@@ -8320,6 +8349,21 @@ components:
         detail:
           type: string
           description: Human-readable explanation.
+        product_id:
+          type: string
+          description: |
+            Catalog product id (`GET /v1/catalog/{product_id}`) of the
+            upstream product the warning is about; the same id as the
+            product's `meta.freshness` entry. Set only for `stale_source`.
+          example: "airquality_combined"
+        fields:
+          type: array
+          items:
+            type: string
+          description: |
+            Response fields in `section` that this warning leaves `null` or
+            omits. Set only for `stale_source`.
+          example: ["aqi", "aqi_category", "pm25", "ozone", "pm10"]
 
     SourceFreshness:
       type: object
