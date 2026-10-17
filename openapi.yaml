@@ -566,6 +566,8 @@ paths:
               examples:
                 boston:
                   $ref: '#/components/examples/WeatherBoston'
+                nowcast_rain:
+                  $ref: '#/components/examples/WeatherNowcastRain'
         '400':
           $ref: '#/components/responses/Problem400'
         '401':
@@ -5320,6 +5322,125 @@ components:
               age_seconds: 3604
           warnings: []
 
+    WeatherNowcastRain:
+      summary: Radar nowcast for a point in Boston, MA with rain already falling (include=nowcast, imperial).
+      description: |
+        `GET /v1/weather?lat=42.3601&lon=-71.0589&include=nowcast`, sent at
+        15:06:40 (`meta.generated_at`) against the 15:00 frame. The first
+        two points are wet, so the onset is `points[0]` at 15:05: that is
+        `starts_at`, and since it is before the request time,
+        `already_occurring` is true. The last wet point is 15:30, so
+        `ends_at` is 15:35 (its end) and `duration_minutes` is 30.
+        `peak_intensity` is the heaviest point of the episode.
+      value:
+        location:
+          lat: 42.3601
+          lon: -71.0589
+          name: "Boston"
+          region: "MA"
+          timezone: "America/New_York"
+          county: "Suffolk"
+        nowcast:
+          interval_seconds: 300
+          generated_at: "2026-04-20T15:00:00Z"
+          summary:
+            starts_at: "2026-04-20T15:05:00Z"
+            ends_at: "2026-04-20T15:35:00Z"
+            duration_minutes: 30
+            type: "rain"
+            peak_intensity: "heavy"
+            already_occurring: true
+          points:
+            - time: "2026-04-20T15:05:00Z"
+              type: "rain"
+              intensity_dbz: 22.1
+              intensity: "light"
+            - time: "2026-04-20T15:10:00Z"
+              type: "rain"
+              intensity_dbz: 31.4
+              intensity: "moderate"
+            - time: "2026-04-20T15:15:00Z"
+              type: "rain"
+              intensity_dbz: 38.2
+              intensity: "moderate"
+            - time: "2026-04-20T15:20:00Z"
+              type: "rain"
+              intensity_dbz: 44.6
+              intensity: "heavy"
+            - time: "2026-04-20T15:25:00Z"
+              type: "rain"
+              intensity_dbz: 29.8
+              intensity: "moderate"
+            - time: "2026-04-20T15:30:00Z"
+              type: "rain"
+              intensity_dbz: 16.3
+              intensity: "light"
+            - time: "2026-04-20T15:35:00Z"
+              type: "none"
+              intensity_dbz: 4.2
+              intensity: "none"
+            - time: "2026-04-20T15:40:00Z"
+              type: "none"
+              intensity_dbz: 1.7
+              intensity: "none"
+            - time: "2026-04-20T15:45:00Z"
+              type: "none"
+              intensity_dbz: -2.3
+              intensity: "none"
+            - time: "2026-04-20T15:50:00Z"
+              type: "none"
+              intensity_dbz: -4.1
+              intensity: "none"
+            - time: "2026-04-20T15:55:00Z"
+              type: "none"
+              intensity_dbz: -5.8
+              intensity: "none"
+            - time: "2026-04-20T16:00:00Z"
+              type: "none"
+              intensity_dbz: -6.0
+              intensity: "none"
+        gis:
+          lat: 42.3601
+          lon: -71.0589
+          city: "Boston"
+          state: "MA"
+          county: "Suffolk"
+          population: null
+          timezone: "America/New_York"
+          nearest_radar:
+            id: "BOX"
+            name: "Boston"
+            lat: 41.9558
+            lon: -71.1369
+            distance_km: 45.4
+          nearest_station:
+            id: "KBOS"
+            name: "Boston Logan International Airport"
+            state: "MA"
+            lat: 42.3656
+            lon: -71.0096
+            distance_km: 4.1
+            elevation_m: 6
+        units:
+          temperature: "F"
+          wind_speed: "mph"
+          pressure: "inHg"
+          visibility: "mi"
+          precip_amount: "in"
+        attribution:
+          sources:
+            - "NOAA/NWS"
+            - "NBM"
+            - "GFS"
+            - "HRRR"
+            - "RTMA"
+            - "MRMS"
+          notice: "Data sourced from NOAA/NWS public products. Derived products produced by SmarterWeather."
+        meta:
+          schema_version: "1.0.0"
+          generated_at: "2026-04-20T15:06:40Z"
+          warnings: []
+
     WeatherBatchRequestTwoLocations:
       summary: Two locations (one by lat/lon, one by ZIP) with shared `include`.
       value:
@@ -5829,6 +5950,9 @@ components:
       properties:
         interval_seconds:
           type: integer
+          description: |
+            Length of each step, in seconds: the most common spacing
+            between the frame's lead times (300 today).
           example: 300
         generated_at:
           type: string
@@ -5843,22 +5967,78 @@ components:
 
     NowcastSummary:
       type: object
+      description: |
+        Server-computed headline for the first precipitation episode in the
+        nowcast window, derived from the frame's steps. Each step covers one
+        `interval_seconds` interval starting at its `time`. The frame's
+        first lead is `generated_at` + 5 minutes today, and the window runs
+        to the last lead's `time` + one interval.
+
+        A step is wet when its `intensity` is not `none`. Precipitation
+        starts at the first of two consecutive wet steps; a lone wet step
+        is not an onset. The episode ends at the first two consecutive dry
+        steps after the onset (one dry step inside the episode does not
+        end it).
+
+        A lead the radar frame has no value for is a missing step: it is
+        left out of `points` but keeps its place in the window and counts
+        as dry. So wet points either side of a missing step are not
+        consecutive, and missing steps count toward the two dry steps that
+        end an episode, including missing leads at the end of the window.
+        When leading leads are missing, `points[0]` is later than
+        `generated_at` + 5 minutes.
+
+        With no onset, the summary is `type: none`, `peak_intensity: none`,
+        and `starts_at`, `ends_at`, `duration_minutes` and
+        `already_occurring` are omitted.
+
+        The summary is computed from the latest nowcast frame and the
+        request time; `generated_at` says how old that frame is.
       properties:
         starts_at:
           type: string
           format: date-time
+          description: |
+            `time` of the onset step: the first of two consecutive wet
+            steps. Omitted when there is no onset.
         ends_at:
           type: [string, "null"]
           format: date-time
+          description: |
+            End of the last wet step of the episode: that step's `time`
+            plus `interval_seconds`. Omitted while precipitation continues
+            to the end of the window (no two consecutive dry or missing
+            steps after the onset), and when there is no onset.
         duration_minutes:
           type: [integer, "null"]
+          description: |
+            Minutes from `starts_at` to `ends_at`, so a multiple of the step
+            length (at least 10 for a two-step episode). Omitted whenever
+            `ends_at` is omitted.
         type:
           type: string
+          description: |
+            Precipitation type of the onset step, as on `points[].type`
+            (`rain`, `snow`, `freezing_rain`, `wintry_mix`, or `unknown` for
+            an unrecognized radar type code), or `none` when there is no
+            onset.
         peak_intensity:
           type: string
           enum: [none, light, moderate, heavy]
+          description: |
+            Highest `intensity` across the episode, from the onset to its
+            end (or to the end of the window while it continues). Later
+            episodes in the window are not counted. `none` when there is no
+            onset.
         already_occurring:
           type: boolean
+          description: |
+            True when `starts_at` is at or before the request time: the
+            onset step has begun. A lone wet step is not an onset, so it
+            never sets this. The first lead is `generated_at` + 5 minutes,
+            so a request in the first minutes after a frame sees false here
+            with `starts_at` still ahead. Omitted when false, and when
+            there is no onset.
 
     NowcastPoint:
       type: object
@@ -5869,6 +6049,10 @@ components:
           format: date-time
         type:
           type: string
+          description: |
+            Radar precipitation type at this step: `none`, `rain`, `snow`,
+            `freezing_rain`, `wintry_mix`, `no_coverage` (outside radar
+            coverage), or `unknown` for an unrecognized radar type code.
         intensity_dbz:
           type: number
           format: double
