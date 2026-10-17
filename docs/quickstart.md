@@ -1,6 +1,6 @@
 # Smarter Weather Developer Platform - Quickstart
 
-Three requests from zero to a live weather call. Nothing to install.
+Three requests from zero to a live forecast call. Nothing to install for REST.
 Works for a person with a terminal and for a coding agent acting on
 their behalf; agents should also read
 [`llms.txt`](https://developers.smarterweather.com/llms.txt) (served
@@ -105,7 +105,7 @@ When trial keys are enabled, the 401's `next_steps` also carries `if_no_human_pr
 <!-- /generated -->
 
 `next_steps.recommended` names the link to take first. Every `401`,
-`402`, `403`, and `429` carries this block (see [`errors.md`](./errors.md)), so
+`402`, `403`, and `429` carries this block (see [errors](https://developers.smarterweather.com/errors)), so
 an agent never has to guess where to go.
 
 ## 1. Get an API key
@@ -119,7 +119,9 @@ Pick one:
 - **No human present.**
   `npx -y @smarterweather/mcp-onboarding@latest trial` (or stdio
   `start_trial`) — same sink; named by `next_steps.trial.command` when
-  trial is advertised.
+  trial is advertised. Its terms (calls, rate, claim window) are in
+  [`llms.txt`](https://developers.smarterweather.com/llms.txt) and on
+  the [quickstart page](https://developers.smarterweather.com/quickstart).
 - **Dashboard.** Sign in at
   <https://developers.smarterweather.com/dashboard/api-keys> (free, no
   card) and click **New key**. Write the shown-once value straight to
@@ -128,10 +130,10 @@ Pick one:
   `https://mcp.developers.smarterweather.com`; after OAuth, via the stdio
   bridge `create_api_key` sinks into `.env`. Call `configure_mcp` for
   paste-ready Cursor (`envFile`) / Claude Desktop configs. See
-  [`mcp-onboarding.md`](./mcp-onboarding.md).
+  [the onboarding MCP](https://developers.smarterweather.com/agents).
 - **Wallet, no account.** Agents holding USDC on Base can pay per call
-  on the weather MCP via x402; see
-  <https://developers.smarterweather.com/agents#x402>.
+  on the weather MCP via x402 (MCP-only; the REST API always needs a
+  key); see <https://developers.smarterweather.com/agents#x402>.
 - **Raw HTTP (curl / conformance only).** `POST /developer/keys` and
   `POST /developer/keys/trial` return the bearer in the body (`key` /
   `api_key`) — write only that field to `.env` as
@@ -154,11 +156,15 @@ Every request carries your key as an HTTP Bearer token in the
 `Authorization` header. The base URL is
 `https://api.smarterweather.com`. The `X-API-Key` header is **not**
 supported — requests that send it instead of `Authorization` are
-rejected with `401` (whose `next_steps` will tell you so).
+rejected with `401` (whose `next_steps` will tell you so). Each sample
+reads `SMARTERWEATHER_API_KEY` from the environment and shows how to
+load it from `.env`.
 
 ### curl
 
 ```bash
+# Read only the key from .env (never `source` it as shell).
+export SMARTERWEATHER_API_KEY="$(sed -n 's/^\(export \)\{0,1\}SMARTERWEATHER_API_KEY=//p' .env | tail -n 1 | tr -d "\r\"' ")"
 curl -sS https://api.smarterweather.com/v1/weather \
   -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
   --get \
@@ -166,14 +172,15 @@ curl -sS https://api.smarterweather.com/v1/weather \
   --data-urlencode "lon=-71.0589"
 ```
 
-### TypeScript (Node 20+ / fetch)
+### JavaScript (Node 20.6+ / fetch)
 
-```ts
+```js
+// Save as app.mjs; run: node --env-file=.env app.mjs
 const res = await fetch(
   `https://api.smarterweather.com/v1/weather?lat=42.3601&lon=-71.0589`,
   {
     headers: {
-      Authorization: `Bearer ${process.env.SMARTERWEATHER_API_KEY!}`,
+      Authorization: `Bearer ${process.env.SMARTERWEATHER_API_KEY}`,
     },
   },
 );
@@ -187,7 +194,11 @@ console.log(weather);
 ### Python (requests)
 
 ```python
+# pip install requests python-dotenv
 import os, requests
+from dotenv import load_dotenv
+
+load_dotenv(".env")  # ./.env in the current directory; variables already set are kept
 
 res = requests.get(
     "https://api.smarterweather.com/v1/weather",
@@ -203,8 +214,9 @@ print(res.json())
 
 ## 3. Understand the response shape
 
-Every success response is `Content-Type: application/json` with a
-schema documented in [`openapi.yaml`](./openapi.yaml). The shape is
+Every success response is JSON (`application/json`, or
+`application/geo+json` on the routes that return map features) with a
+schema documented in [`openapi.yaml`](https://developers.smarterweather.com/openapi.yaml). The shape is
 stable within a major version; breaking changes bump the version
 prefix (`/v1/...` -> `/v2/...`) and run on an at-least-12-month
 overlap.
@@ -255,13 +267,13 @@ the bridge from the project whose `.env` holds the key. It reads
 npx -y @smarterweather/mcp-weather@latest
 ```
 
-See [`mcp-weather.md`](./mcp-weather.md) for client-specific
-configuration snippets and [`mcp-onboarding.md`](./mcp-onboarding.md)
+See the [MCP setup guide](https://developers.smarterweather.com/mcp-server/setup) for client-specific
+configuration snippets and [the onboarding MCP](https://developers.smarterweather.com/agents)
 for the agent-driven signup path.
 
 ## Next steps
 
-- Error model and recovery: [`errors.md`](./errors.md).
-- Full REST reference: [`rest-api.md`](./rest-api.md).
-- SDKs: [`sdks.md`](./sdks.md).
-- Agent framework integrations: [`agent-integration.md`](./agent-integration.md).
+- Error model and recovery: [developers.smarterweather.com/errors](https://developers.smarterweather.com/errors).
+- Full REST reference: [developers.smarterweather.com/api](https://developers.smarterweather.com/api).
+- SDKs: [`sdks.md`](https://github.com/smarterweather/developer/blob/main/docs/sdks.md).
+- Agent framework integrations: [`agent-integration.md`](https://github.com/smarterweather/developer/blob/main/docs/agent-integration.md).

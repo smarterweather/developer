@@ -95,8 +95,7 @@ may be added; ignore unknown ones. Every `href` carries
 `utm_source=api&utm_medium=problem-json&utm_campaign=<status>`. Grant
 endpoints on `device_flow` do not get UTM. When a trial key's free value
 ends, the response is `402` with `next_steps.recommended = claim` (see
-[ADR 071](../developer/adr/071-agent-first-developer-onboarding.md)); the
-per-key claim href uses a claim ticket in the URL fragment
+ADR 071); the per-key claim href uses a claim ticket in the URL fragment
 (`https://developers.smarterweather.com/claim#ticket=<ticket>`).
 The raw trial mint (`POST /developer/keys/trial`) also carries
 `next_steps` on its `400` (`recommended = trial`, the exact mint recipe),
