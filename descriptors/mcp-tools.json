@@ -3494,7 +3494,7 @@
     {
       "name": "get_outlooks",
       "title": "Get hazard outlooks",
-      "description": "Hazard outlooks affecting a location. severe: SPC convective (day 1-8 categorical + tornado/wind/hail probabilities); fire: SPC fire weather; rain: WPC Excessive Rainfall (days 1-3); heat: NWS HeatRisk index (0-4, days 1-3); temperature/precipitation: CPC 6-10 day, 8-14 day, week 3-4 and monthly outlooks (favored category + probability bin; period=seasonal: 3-month leads). include_narrative=true adds the forecaster discussion (SWO, FWD, QPFERD, or the period's CPC PMD). Empty means no outlook covers the point, not a failure. Examples: {\"location\": \"Moore, OK\", \"hazard\": \"severe\", \"include_narrative\": true} or {\"location\": \"Denver, CO\", \"hazard\": \"temperature\"}.",
+      "description": "Hazard outlooks affecting a location. severe: SPC convective (day 1-8 categorical + tornado/wind/hail probabilities); fire: SPC fire weather; rain: WPC Excessive Rainfall (days 1-3); heat: NWS HeatRisk index (0-4, days 1-7); temperature/precipitation: CPC 6-10 day, 8-14 day, week 3-4 and monthly outlooks (favored category + probability bin; period=seasonal: 3-month leads). include_narrative=true adds the forecaster discussion (SWO, FWD, QPFERD, or the period's CPC PMD). Empty means no outlook covers the point, not a failure. Examples: {\"location\": \"Moore, OK\", \"hazard\": \"severe\", \"include_narrative\": true} or {\"location\": \"Denver, CO\", \"hazard\": \"temperature\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3601,8 +3601,28 @@
             "type": "array",
             "items": {
               "type": "object",
-              "additionalProperties": {}
+              "properties": {
+                "day": {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "current": {
+                  "type": "array",
+                  "items": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "additionalProperties": true
             }
+          },
+          "heat_risk_note": {
+            "type": "string"
           },
           "narrative": {
             "anyOf": [

@@ -3839,9 +3839,13 @@ paths:
       operationId: getPointValue
       summary: Curated point value(s) for allowlisted stored data.
       description: |
-        Returns the latest value of allowlisted stored data sampled at a point,
-        with friendly output (canonical `unit`, an optional `category` label,
-        `observed_at`, and a staleness flag).
+        Returns the value in effect now of allowlisted stored data sampled at
+        a point: the latest frame of an analysis, or the forecast frame whose
+        period contains now, from the newest run that has one (HeatRisk:
+        today's level; `unavailable` when no frame covers now). Output is
+        friendly (canonical `unit`, an optional `category` label,
+        `observed_at`, and a staleness flag). The other days of a forecast
+        are on `GET /v1/series`.
 
         This is the one curated point lookup over stored data: it serves
         only the `(product, var)` pairs on a server-side **allowlist**, so the
@@ -3892,7 +3896,9 @@ paths:
 
         `approximate` is `true` when the value is older than the product's update
         cadence allows (e.g. a SPoRT-LIS daily analysis older than ~36 h, an
-        MRMS hourly accumulation older than ~3 h).
+        MRMS hourly accumulation older than ~3 h). A forecast's age is that of
+        the run it is served from: HeatRisk is `approximate` when that run is
+        older than ~36 h.
 
         ### Caching
 
