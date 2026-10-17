@@ -42,6 +42,12 @@ Sources: NOAA NBM, HRRR, RTMA, MRMS, NWS, JPL Ephemeris
 
 Coverage is the 50 US states and DC.
 
+## Build on it
+
+| Example | Language | Run |
+| --- | --- | --- |
+| [A React weather card](./rest/typescript/react-weather-card/): a `useWeather` hook and `<WeatherCard location />`, with the key in a Next.js route | TypeScript (Node.js 22.22+) | `npm install && npm run dev` |
+
 ## Your key
 
 Get a free key at <https://developers.smarterweather.com/dashboard/api-keys>,
@@ -127,6 +133,11 @@ API and uses no secret. For REST examples (`kind: code`):
 
 Every example gives up after 10 seconds.
 
+A web app runs the same five checks through its server route: its
+`test.json` runs a small client that starts the built app, calls the route
+the way the browser would, and prints what the page shows (see
+[react-weather-card](./rest/typescript/react-weather-card/)).
+
 For MCP configs (`kind: config`),
 [`_harness/check-mcp-config.mjs`](./_harness/check-mcp-config.mjs) applies
 the rules of the client the directory is named after, with no network call:
@@ -151,8 +162,9 @@ request and push to `main`. It checks every file git tracks for API keys
 tickets (`sw_claim_`). A documented fake can carry `log-scrubber-allow` on
 the same line.
 
-Run the same thing locally (Node.js 20+, plus Python 3.10+, Go and jq for
-those examples):
+Run the same thing locally with Node.js 22.22+ (the React example's tests
+need it for type stripping and jsdom 30; the other examples run on Node.js
+20+), plus Python 3.10+, Go and jq for those examples:
 
 ```bash
 cd examples/_harness

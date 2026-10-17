@@ -54,6 +54,19 @@
       "test": "go vet ./... && node ../../../_harness/expect-run.mjs"
     },
     {
+      "id": "react-weather-card",
+      "title": "A React weather card",
+      "summary": "A useWeather hook and a <WeatherCard location /> component, served by a Next.js route that keeps the key on the server.",
+      "surface": "rest",
+      "language": "typescript",
+      "kind": "code",
+      "level": "build",
+      "tags": ["weather", "current-conditions", "react", "nextjs", "alerts"],
+      "dir": "rest/typescript/react-weather-card",
+      "runtime": "Node.js 22.22, Next.js 16, React 19",
+      "test": "npm ci --silent && npm test --silent"
+    },
+    {
       "id": "claude-desktop",
       "title": "Weather tools in Claude Desktop",
       "summary": "Add the weather MCP server to Claude Desktop with the key in a .env file, then ask for the best window for a bike ride.",
