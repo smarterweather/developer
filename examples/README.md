@@ -46,6 +46,7 @@ Coverage is the 50 US states and DC.
 
 | Example | Language | Run |
 | --- | --- | --- |
+| [A React weather card](./rest/typescript/react-weather-card/): a `useWeather` hook and `<WeatherCard location />`, with the key in a Next.js route | TypeScript (Node.js 22.22+) | `npm install && npm run dev` |
 | [Will it rain in the next hour?](./rest/python/rain-next-hour/): one sentence from the radar nowcast | Python 3.11+, [JavaScript](./rest/javascript/rain-next-hour/) (Node.js 20+) | `python3 rain.py`, `node rain.mjs` |
 
 ## Your key
@@ -143,6 +144,11 @@ Every example waits at most 10 seconds for the API: for the whole call in
 curl, JavaScript and Go, and for the connection and each read in Python
 (`requests`' `timeout` applies per step, not to the whole call).
 
+A web app runs the same five checks through its server route: its
+`test.json` runs a small client that starts the built app, calls the route
+the way the browser would, and prints what the page shows (see
+[react-weather-card](./rest/typescript/react-weather-card/)).
+
 For MCP configs (`kind: config`),
 [`_harness/check-mcp-config.mjs`](./_harness/check-mcp-config.mjs) applies
 the rules of the client the directory is named after, with no network call:
@@ -168,8 +174,9 @@ request and push to `main`. It checks every file git tracks for API keys
 tickets (`sw_claim_`). A documented fake can carry `log-scrubber-allow` on
 the same line.
 
-Run the same thing locally (Node.js 20+, plus Python 3.11+, Go and jq for
-those examples):
+Run the same thing locally with Node.js 22.22+ (the React example's tests
+need it for type stripping and jsdom 30; the other examples run on Node.js
+20+), plus Python 3.11+, Go and jq for those examples:
 
 ```bash
 cd examples/_harness

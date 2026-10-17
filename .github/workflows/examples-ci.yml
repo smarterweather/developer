@@ -4,7 +4,9 @@ name: examples-ci
 # statically. No secrets and no call to the real API, so it runs the same on
 # forks. The repo-wide key scan is key-scan.yml. See examples/README.md.
 # No path filter: the checks read files across the repo (openapi.yaml, the
-# mcp-weather package, READMEs and links), and the job takes under a minute.
+# mcp-weather package, READMEs and links), and the job takes about a minute
+# (61 s on 2026-10-16; about 25 s of that is the React example's install,
+# next build and five next start runs).
 on:
   pull_request:
   push:

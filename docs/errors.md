@@ -4,7 +4,7 @@ The Smarter Weather REST API returns errors as [RFC 9457
 `application/problem+json`](https://www.rfc-editor.org/rfc/rfc9457)
 documents (RFC 9457 obsoletes RFC 7807 with the same wire format). This
 doc covers the canonical `Problem` shape, the `next_steps` extension
-that tells you what to do about a `401`, `403`, or `429`, the stable
+that tells you what to do about a `401`, `402`, `403`, or `429`, the stable
 error `type` URIs the platform emits, and how clients should react to
 each class.
 
@@ -24,25 +24,56 @@ Extension members beyond these five may appear (RFC 9457 §3.2); today
 `401`, `402`, `403`, and `429` carry `next_steps` (below). Ignore members you
 do not understand.
 
-The `Content-Type` header on any error response is
-**`application/problem+json`**, never `application/json`. Test
-harnesses that sniff on `Content-Type` must accept both.
+Errors sw-api itself returns are **`application/problem+json`**.
+Responses that never reach it (an unknown route, a wrong method, a
+gateway or throttling error in front of it) can be `text/plain` or
+`application/json`, so accept both: branch on the HTTP status, then
+parse the body as a problem when `Content-Type` says
+`application/problem+json`.
 
-Example:
+Example, a key over its per-minute limit (`next_steps` links other than
+the recommended one shortened to their `href`):
+
+<!-- generated:example 429-rpm -->
 
 ```http
 HTTP/1.1 429 Too Many Requests
 Content-Type: application/problem+json
-Retry-After: 12
+RateLimit-Daily-Limit: 1000
+RateLimit-Daily-Remaining: 970
+RateLimit-Daily-Reset: 21600
+RateLimit-Limit: 30
+RateLimit-Policy: 30;w=30
+RateLimit-Remaining: 0
+RateLimit-Reset: 30
+Retry-After: 1
 
 {
-  "type": "https://smarterweather.com/errors/too-many-requests",
+  "type": "https://smarterweather.com/errors/rate-limit-exceeded",
   "title": "Too Many Requests",
   "status": 429,
-  "detail": "Rate limit exceeded. Retry after 12 seconds.",
-  "instance": "/v1/weather"
+  "detail": "You have exceeded your API rate limit. Slow your request rate. Retry after the Retry-After / RateLimit-Reset headers.",
+  "instance": "/v1/weather",
+  "next_steps": {
+    "recommended": "upgrade",
+    "upgrade": {
+      "href": "https://developers.smarterweather.com/dashboard/billing?utm_campaign=429&utm_medium=problem-json&utm_source=api",
+      "description": "Raise your rate limit and quota by upgrading the plan on this key's account."
+    },
+    "errors": {
+      "href": "https://developers.smarterweather.com/errors?utm_campaign=429&utm_medium=problem-json&utm_source=api"
+    },
+    "pricing": {
+      "href": "https://developers.smarterweather.com/pricing?utm_campaign=429&utm_medium=problem-json&utm_source=api"
+    },
+    "usage": {
+      "href": "https://developers.smarterweather.com/dashboard/usage?utm_campaign=429&utm_medium=problem-json&utm_source=api"
+    }
+  }
 }
 ```
+
+<!-- /generated -->
 
 ## `next_steps`: the error tells you what to do
 
@@ -53,8 +84,10 @@ plus optional grant fields, plus `recommended` naming the one to take
 first. When present, `if_no_human_present` names the relation an
 autonomous agent should take if nobody can act on `recommended` right
 now. Relations today: `device_flow` (401 recommended; also carries
-`client_id`, `device_authorization_endpoint`, `token_endpoint`,
-`api_keys_endpoint`), `get_key`, `quickstart`, `agents`,
+`command`, `client_id`, `device_authorization_endpoint`, `token_endpoint`,
+`api_keys_endpoint`), `trial` (on `401` while trial keys are enabled, as
+`if_no_human_present`; carries `command`, `challenge_endpoint`,
+`mint_endpoint`), `get_key`, `quickstart`, `agents`,
 `onboarding_mcp`, `keyless_x402`, `key_handling`, `errors` (on `401`;
 `403` recommends `get_key`), `claim` (on `402` and trial-route `403`),
 and `upgrade`, `pricing`, `usage`, `errors` (on `429`). New relations
@@ -65,10 +98,15 @@ ends, the response is `402` with `next_steps.recommended = claim` (see
 [ADR 071](../developer/adr/071-agent-first-developer-onboarding.md)); the
 per-key claim href uses a claim ticket in the URL fragment
 (`https://developers.smarterweather.com/claim#ticket=<ticket>`).
-Pre-ticket rows still use leftover `#key=<bearer>` until they TTL.
 The raw trial mint (`POST /developer/keys/trial`) also carries
 `next_steps` on its `400` (`recommended = trial`, the exact mint recipe),
 `429` and `503` (`recommended = device_flow`).
+
+The keyless `401` (links other than the recommended one shortened to
+their `href`):
+
+<!-- generated:example 401 -->
+
 ```http
 HTTP/1.1 401 Unauthorized
 Content-Type: application/problem+json
@@ -84,25 +122,58 @@ WWW-Authenticate: Bearer realm="api.smarterweather.com"
     "recommended": "device_flow",
     "device_flow": {
       "href": "https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api#device-flow",
-      "description": "No install, no loopback port: POST device_authorization_endpoint, show the human the code, poll, then GET /developer/keys.",
+      "description": "Human present: run the `command` below. It shows the human a verification URL and code, writes SMARTERWEATHER_API_KEY to ./.env (0600, gitignored), and prints only a key prefix. Without Node: device grant at the endpoints below, then POST api_keys_endpoint and write only the response's key field to .env as a SMARTERWEATHER_API_KEY= line (e.g. pipe through jq -r .key). Never print the key or access token.",
+      "command": "npx -y @smarterweather/mcp-onboarding@latest login",
       "client_id": "k2h05BUoTP393zcD",
       "device_authorization_endpoint": "https://clerk.smarterweather.com/oauth/device_authorization",
       "token_endpoint": "https://clerk.smarterweather.com/oauth/token",
       "api_keys_endpoint": "https://api.smarterweather.com/developer/keys"
     },
-    "get_key": {
-      "href": "https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api",
-      "description": "Sign in (free, no card) and mint an API key. Pass it as 'Authorization: Bearer sw_live_*'."
+    "agents": {
+      "href": "https://developers.smarterweather.com/llms.txt?utm_campaign=401&utm_medium=problem-json&utm_source=api"
     },
-    "quickstart": { "href": "…", "description": "…" },
-    "agents": { "href": "…", "description": "…" },
-    "onboarding_mcp": { "href": "…", "description": "…" },
-    "keyless_x402": { "href": "…", "description": "…" },
-    "key_handling": { "href": "…", "description": "…" },
-    "errors": { "href": "…", "description": "…" }
+    "errors": {
+      "href": "https://developers.smarterweather.com/errors?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+    },
+    "get_key": {
+      "href": "https://developers.smarterweather.com/dashboard/api-keys?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+    },
+    "key_handling": {
+      "href": "https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#key-handling"
+    },
+    "keyless_x402": {
+      "href": "https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#x402"
+    },
+    "onboarding_mcp": {
+      "href": "https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+    },
+    "quickstart": {
+      "href": "https://developers.smarterweather.com/quickstart?utm_campaign=401&utm_medium=problem-json&utm_source=api"
+    }
   }
 }
 ```
+
+<!-- /generated -->
+
+<!-- generated:example 401-trial-delta -->
+
+When trial keys are enabled, the 401's `next_steps` also carries `if_no_human_present` and `trial` (`if_no_human_present` names the link an agent with no human present should take):
+
+```json
+{
+  "if_no_human_present": "trial",
+  "trial": {
+    "href": "https://developers.smarterweather.com/agents?utm_campaign=401&utm_medium=problem-json&utm_source=api#trial",
+    "description": "No human present: run the `command` below. It mints a trial key, writes SMARTERWEATHER_API_KEY to ./.env (0600, gitignored), prints only a key prefix and claim link. Without Node: GET challenge_endpoint, solve the SHA-256 proof-of-work, then POST mint_endpoint with the JSON body {\"challenge_token\": \"<from the challenge>\", \"solution\": \"<decimal string>\", \"accept_terms\": <true only once the terms are accepted>, \"client\": {\"name\": \"<your app name>\"}}. Set accept_terms to true only after reading the terms at https://developers.smarterweather.com/legal/terms (newer challenge responses carry them as terms_url, plus a request_example whose accept_terms stays false until you change it). Its api_key field is the bearer; write only that field to .env as a SMARTERWEATHER_API_KEY= line and never print it. Claim into a free account before claim_expires_at.",
+    "command": "npx -y @smarterweather/mcp-onboarding@latest trial",
+    "challenge_endpoint": "https://api.smarterweather.com/developer/keys/trial/challenge",
+    "mint_endpoint": "https://api.smarterweather.com/developer/keys/trial"
+  }
+}
+```
+
+<!-- /generated -->
 
 `401` and `403` also carry an [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750#section-3)
 `WWW-Authenticate: Bearer` challenge. A request with no credentials gets
@@ -126,7 +197,7 @@ human does open it.
 | <a id="trial-challenge-invalid"></a>`trial-challenge-invalid` | 400 | Trial mint: the challenge token is invalid, expired, or bound to another IP, or the proof-of-work solution is wrong. | GET a fresh challenge, solve it, and mint again. |
 | <a id="terms-not-accepted"></a>`terms-not-accepted` | 400 | Trial mint or claim: `accept_terms` is not `true`. | Read the terms (the challenge's `terms_url`) and send `"accept_terms": true`. |
 | <a id="unauthorized"></a>`unauthorized` | 401  | `Authorization: Bearer` header missing or malformed, or the key is unrecognized, revoked, or expired.     | Follow `next_steps.recommended` (get a key at the dashboard, or one of the agent paths). Do not retry. Read `detail` for which case it was. |
-| <a id="trial-ended"></a>`trial-ended` | 402  | A trial key's free value ended (lifetime call cap spent or key clock expired) while the claim window is still open. Body carries `reason` (`exhausted` \| `expired`), `claim_expires_at`, and `next_steps.recommended = claim`. | Follow `next_steps.claim` (portal page with the key in the URL fragment). Do not treat as a rate limit; a wait will not restore free value. |
+| <a id="trial-ended"></a>`trial-ended` | 402  | A trial key's free value ended (lifetime call cap spent or key clock expired) while the claim window is still open. Body carries `reason` (`exhausted` \| `expired`), `claim_expires_at`, and `next_steps.recommended = claim`. | Follow `next_steps.claim` (portal page with a claim ticket in the URL fragment). Do not treat as a rate limit; a wait will not restore free value. |
 | <a id="payment-required"></a>`payment-required` | 402 | MCP only: a keyless call to a paid tool carried no valid [x402](https://www.x402.org/) payment. The text block also carries the x402 `PaymentRequired` members (`x402Version`, `accepts`, `resource`), and `structuredContent` is the bare `PaymentRequired`; a payment proof the server cannot use gets the same, re-quoted, with the reason in `detail`. `next_steps` names the free-key paths. | Pay one of `accepts` and retry with the payment, or follow `next_steps` for a key. Do not retry as-is. |
 | <a id="forbidden"></a>`forbidden` | 403  | The key authenticates but its scopes or tier do not grant access to the requested resource.               | Surface with an upgrade CTA; `next_steps` carries the links. |
 | <a id="trial-route-not-allowed"></a>`trial-route-not-allowed` | 403  | A trial key authenticated but is not allowed to call this route. `next_steps.recommended = claim`. | Claim the key for full API access, or call a trial-allowed route (`/v1/weather`, `/v1/geocode`, `/v1/alerts`, and `/v1/catalog`, which spends no trial call). A trial key minted before `/v1/catalog` opened to trials gets this error on `/v1/catalog`: mint a new trial key. |
@@ -168,6 +239,27 @@ Retries SHOULD use at least 250ms of initial backoff and double each
 attempt (up to ~2s cap) to avoid thundering-herd restarts after a
 transient upstream outage.
 
+## Rate-limit headers
+
+<a id="rate-limit-headers"></a>
+
+<!-- generated:example rate-limit-headers -->
+
+A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only when the key has a daily cap). A response to a request without a valid key, such as a `401`, carries none, and neither does one for a first-party key that is exempt from rate limiting. The examples are a free key after its first call; `Retry-After` is from a `429`:
+
+| Header | Example | Meaning |
+| ------ | ------- | ------- |
+| `RateLimit-Limit` | `30` | Burst size: requests you can send back to back. |
+| `RateLimit-Remaining` | `29` | Requests left in the burst right now. |
+| `RateLimit-Reset` | `1` | Seconds until the burst is fully refilled. |
+| `RateLimit-Policy` | `30;w=30` | Burst and refill window as limit;w=seconds. The sustained rate is limit x 60 / w per minute. |
+| `RateLimit-Daily-Limit` | `1000` | Requests per UTC day for this key. |
+| `RateLimit-Daily-Remaining` | `999` | Requests left today. |
+| `RateLimit-Daily-Reset` | `21600` | Seconds until the daily count resets at UTC midnight. |
+| `Retry-After` | `1` (from a 429) | 429 only: seconds to wait before the next request. |
+
+<!-- /generated -->
+
 ## On MCP
 
 <a id="mcp"></a>The Smarter Weather MCP server (`mcp.smarterweather.com`) uses
@@ -181,10 +273,18 @@ status per tool call, so key on `type`, then `status`.
 
 - Argument errors (a value that fails the tool's input schema, or a
   precondition such as an ambiguous place name) are `bad-request` with the
-  reason in `detail`; an unknown tool is `not-found`.
+  reason in `detail`; an unknown tool is `not-found`. An ambiguous place
+  name adds `candidates`, an array of `{name}` objects to offer the user
+  (names only, no coordinates).
 - A `400` or `404` problem from the API behind a tool reaches you as the
   API sent it, `next_steps` included (for example `outside-coverage`).
 - Every `5xx` carries a fixed, generic `detail`.
+- `get_path_exposure` returns `flag-disabled` (`403`, no `next_steps`)
+  when civic place counts are not enabled for the caller, without calling
+  the API behind it. A second text block tells a model not to retry. The
+  `detail` says "this caller" rather than "this API key", because an MCP
+  caller may have no key. `search_locations` does not fail in that case: it
+  returns place and ZIP rows without address or POI rows.
 - `next_steps` appears on `401`, `402` (`trial-ended`, `payment-required`),
   `403` (trial keys), `429` (`rate-limit-exceeded`) and on the `503` a
   keyless x402 call gets while the payment rail is unavailable.
