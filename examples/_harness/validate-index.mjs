@@ -6,16 +6,20 @@
 // - entries sharing an id share a title (the portal renders one page per id);
 // - each dir sits under its surface, has a README.md, and every example dir
 //   with a README.md is in the index (a top-level dir is a surface and may
-//   have its own README);
+//   have its own README; _harness and rest/_fixtures hold support files);
 // - `kind: code` entries carry the placeholder key constant;
+// - every test.json has the shape test-spec.mjs describes, and its fixtures exist;
 // - relative links in every README resolve, and every JSON file parses.
 import Ajv2020 from "ajv/dist/2020.js";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkTestSpec } from "./test-spec.mjs";
 
 const examples = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PLACEHOLDER = "YOUR_SMARTERWEATHER_API_KEY";
+// Directories that hold support files, not examples: no index entry needed.
+const SUPPORT_DIRS = ["_harness", "rest/_fixtures"];
 const SKIP = new Set(["node_modules", "__pycache__", ".venv", ".next"]);
 const errors = [];
 
@@ -60,10 +64,16 @@ for (const entry of entries) {
   }
 }
 
+for (const f of files.filter((f) => f.endsWith("/test.json"))) {
+  try {
+    errors.push(...checkTestSpec(readJson(join(examples, f)), join(examples, f)));
+  } catch {} // a parse error is reported below
+}
+
 const indexed = new Set(entries.map((e) => e.dir));
 for (const f of files.filter((f) => f.endsWith("README.md"))) {
   const dir = dirname(f);
-  if (dir === "." || !dir.includes("/") || dir.startsWith("_harness")) continue;
+  if (dir === "." || !dir.includes("/") || SUPPORT_DIRS.some((d) => dir === d || dir.startsWith(`${d}/`))) continue;
   if (!indexed.has(dir)) errors.push(`${dir}: has a README.md but no index.json entry`);
 }
 

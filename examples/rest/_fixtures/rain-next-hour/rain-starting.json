@@ -1,0 +1,49 @@
+{
+  "location": {
+    "lat": 47.61,
+    "lon": -122.33,
+    "name": "Seattle",
+    "region": "WA",
+    "country": "US",
+    "timezone": "America/Los_Angeles"
+  },
+  "nowcast": {
+    "interval_seconds": 300,
+    "generated_at": "2026-10-16T22:15:00Z",
+    "points": [
+      {"time": "2026-10-16T22:20:00Z", "type": "none", "intensity_dbz": 0.0, "intensity": "none"},
+      {"time": "2026-10-16T22:25:00Z", "type": "none", "intensity_dbz": 0.0, "intensity": "none"},
+      {"time": "2026-10-16T22:30:00Z", "type": "none", "intensity_dbz": 0.0, "intensity": "none"},
+      {"time": "2026-10-16T22:35:00Z", "type": "none", "intensity_dbz": 0.0, "intensity": "none"},
+      {"time": "2026-10-16T22:40:00Z", "type": "rain", "intensity_dbz": 22.5, "intensity": "light"},
+      {"time": "2026-10-16T22:45:00Z", "type": "rain", "intensity_dbz": 22.5, "intensity": "light"},
+      {"time": "2026-10-16T22:50:00Z", "type": "rain", "intensity_dbz": 22.5, "intensity": "light"},
+      {"time": "2026-10-16T22:55:00Z", "type": "rain", "intensity_dbz": 22.5, "intensity": "light"},
+      {"time": "2026-10-16T23:00:00Z", "type": "rain", "intensity_dbz": 22.5, "intensity": "light"},
+      {"time": "2026-10-16T23:05:00Z", "type": "rain", "intensity_dbz": 22.5, "intensity": "light"},
+      {"time": "2026-10-16T23:10:00Z", "type": "none", "intensity_dbz": 0.0, "intensity": "none"},
+      {"time": "2026-10-16T23:15:00Z", "type": "none", "intensity_dbz": 0.0, "intensity": "none"}
+    ],
+    "summary": {
+      "starts_at": "2026-10-16T22:40:00Z",
+      "type": "rain",
+      "peak_intensity": "light",
+      "ends_at": "2026-10-16T23:10:00Z",
+      "duration_minutes": 30
+    }
+  },
+  "attribution": {
+    "sources": [
+      "NOAA NBM",
+      "HRRR",
+      "RTMA",
+      "MRMS",
+      "NWS",
+      "JPL Ephemeris"
+    ],
+    "notice": "Weather data from NOAA/NWS. Astronomical calculations from JPL ephemerides."
+  },
+  "meta": {
+    "generated_at": "2026-10-16T22:21:40Z"
+  }
+}

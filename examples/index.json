@@ -91,6 +91,32 @@
       "dir": "mcp/cursor",
       "runtime": "Cursor, Node.js 20",
       "test": "node ../../_harness/check-mcp-config.mjs mcp.json"
+    },
+    {
+      "id": "rain-next-hour",
+      "title": "Will it rain in the next hour?",
+      "summary": "Ask /v1/weather for the radar nowcast and print a one-sentence answer, such as \"Light rain starting around 3:40 PM.\"",
+      "surface": "rest",
+      "language": "python",
+      "kind": "code",
+      "level": "build",
+      "tags": ["nowcast", "precipitation", "radar"],
+      "dir": "rest/python/rain-next-hour",
+      "runtime": "Python 3.11",
+      "test": "python3 -m pip install --quiet --disable-pip-version-check -r requirements.txt && node ../../../_harness/expect-run.mjs"
+    },
+    {
+      "id": "rain-next-hour",
+      "title": "Will it rain in the next hour?",
+      "summary": "Ask /v1/weather for the radar nowcast with fetch and print a one-sentence answer, such as \"Light rain starting around 3:40 PM.\"",
+      "surface": "rest",
+      "language": "javascript",
+      "kind": "code",
+      "level": "build",
+      "tags": ["nowcast", "precipitation", "radar"],
+      "dir": "rest/javascript/rain-next-hour",
+      "runtime": "Node.js 20",
+      "test": "npm ci --silent && npm test --silent"
     }
   ]
 }

@@ -47,6 +47,7 @@ Coverage is the 50 US states and DC.
 | Example | Language | Run |
 | --- | --- | --- |
 | [A React weather card](./rest/typescript/react-weather-card/): a `useWeather` hook and `<WeatherCard location />`, with the key in a Next.js route | TypeScript (Node.js 22.22+) | `npm install && npm run dev` |
+| [Will it rain in the next hour?](./rest/python/rain-next-hour/): one sentence from the radar nowcast | Python 3.11+, [JavaScript](./rest/javascript/rain-next-hour/) (Node.js 20+) | `python3 rain.py`, `node rain.mjs` |
 
 ## Your key
 
@@ -84,6 +85,7 @@ examples/
   index.json            {version, examples[]}: one entry per example, surface and language
   index.schema.json     its JSON Schema
   rest/<language>/<example>/
+  rest/_fixtures/       response bodies some examples' tests share
   mcp/<client>/
   sdk/                  reserved for when an SDK ships
   _harness/             the mock, the recording proxy and the checks CI runs
@@ -117,7 +119,7 @@ API and uses no secret. For REST examples (`kind: code`):
    `Bearer` token was sent, and whether it was the fake key from the
    environment or the placeholder (never the token itself).
 3. [`_harness/expect-run.mjs`](./_harness/expect-run.mjs) runs the example
-   five times with `SMARTERWEATHER_API_BASE` pointed at the proxy:
+   five times, plus once per fixture, with `SMARTERWEATHER_API_BASE` pointed at the proxy:
    - with the fake key in `SMARTERWEATHER_API_KEY`: it must exit 0, print
      what its `test.json` expects, and send exactly the request listed
      there, with that key as the bearer;
@@ -130,8 +132,17 @@ API and uses no secret. For REST examples (`kind: code`):
      with `{"message":"Endpoint request timed out"}` (JSON, but not a
      problem): the example must exit non-zero and print `<status>: ` and the
      start of the body, not a parse error.
+   - once for each body listed under `fixtures` in its `test.json`, through
+     a path where the proxy answers 200 with that body: the example must exit
+     0, print what the fixture expects, and send the same request with the
+     env key as in the first run. Fixtures are small hand-written responses
+     in the API's shape (see [`rest/_fixtures`](./rest/_fixtures/)), for
+     answers the mock's one example body cannot give: it has no radar
+     nowcast, for instance.
 
-Every example gives up after 10 seconds.
+Every example waits at most 10 seconds for the API: for the whole call in
+curl, JavaScript and Go, and for the connection and each read in Python
+(`requests`' `timeout` applies per step, not to the whole call).
 
 A web app runs the same five checks through its server route: its
 `test.json` runs a small client that starts the built app, calls the route
@@ -154,8 +165,9 @@ the rules of the client the directory is named after, with no network call:
 - No value is a key, looks like one, or is the placeholder.
 
 For everything, [`_harness/validate-index.mjs`](./_harness/validate-index.mjs)
-checks `index.json` against its schema, the READMEs' relative links and the
-key constant. Separately, [`key-scan`](../.github/workflows/key-scan.yml)
+checks `index.json` against its schema, every `test.json` against
+[`_harness/test-spec.mjs`](./_harness/test-spec.mjs), the READMEs' relative
+links and the key constant. Separately, [`key-scan`](../.github/workflows/key-scan.yml)
 runs [`_harness/scan-keys.mjs`](./_harness/scan-keys.mjs) on every pull
 request and push to `main`. It checks every file git tracks for API keys
 (`sw_live_`, `sw_test_`, `sw_trial_`, `sw_internal_<audience>_`) and claim
@@ -164,7 +176,7 @@ the same line.
 
 Run the same thing locally with Node.js 22.22+ (the React example's tests
 need it for type stripping and jsdom 30; the other examples run on Node.js
-20+), plus Python 3.10+, Go and jq for those examples:
+20+), plus Python 3.11+, Go and jq for those examples:
 
 ```bash
 cd examples/_harness
