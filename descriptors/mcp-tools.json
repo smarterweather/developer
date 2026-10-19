@@ -62,6 +62,15 @@
             "minLength": 1,
             "maxLength": 80,
             "description": "Dataset override. Default: auto-resolved NBM per location."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "default": "imperial",
+            "description": "Variables without a unit label stay native."
           }
         },
         "required": [
@@ -82,6 +91,19 @@
           },
           "hours": {
             "type": "number"
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ]
+          },
+          "unit_labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           },
           "comparisons": {
             "type": "array",
@@ -177,6 +199,8 @@
         "required": [
           "variables",
           "hours",
+          "units",
+          "unit_labels",
           "comparisons"
         ],
         "additionalProperties": false,
@@ -1053,6 +1077,14 @@
             "minimum": 1,
             "maximum": 168,
             "description": "Lookback window in hours (1-168) when no date/range is given."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "default": "imperial"
           }
         },
         "required": [
@@ -1067,6 +1099,19 @@
           "type": {
             "type": "string"
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ]
+          },
+          "unit_labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "results": {
             "type": "object",
             "additionalProperties": {}
@@ -1074,6 +1119,8 @@
         },
         "required": [
           "type",
+          "units",
+          "unit_labels",
           "results"
         ],
         "additionalProperties": false,
@@ -2851,7 +2898,7 @@
     {
       "name": "get_lightning_activity",
       "title": "Get lightning activity",
-      "description": "Real-time lightning near a location: GLM satellite flash count (30km/10min) and MRMS ground-truth lightning density + 30-minute probability. The summary field is ready-to-use. A zero flash count means no lightning inside that window -- report it as a quiet observation scoped to the window in `scope`, never as a data gap. Only call when storms may be active or the user asks about lightning. Example: {\"location\": \"Tampa, FL\"}.",
+      "description": "Real-time lightning near a location: GLM satellite flash count and MRMS ground-truth lightning density + 30-minute probability. The summary field is ready-to-use. A zero flash count means no lightning inside the area and window in `scope` -- report it as a quiet observation scoped to them, never as a data gap. Only call when storms may be active or the user asks about lightning. Example: {\"location\": \"Tampa, FL\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2872,6 +2919,14 @@
             "minimum": -180,
             "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "default": "imperial"
           }
         },
         "additionalProperties": false,
@@ -2910,6 +2965,19 @@
             "type": "string",
             "description": "Area and time window searched, so a zero count is unambiguous to report."
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ]
+          },
+          "unit_labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "lightning": {
             "type": "object",
             "additionalProperties": {}
@@ -2918,6 +2986,8 @@
         "required": [
           "location",
           "scope",
+          "units",
+          "unit_labels",
           "lightning"
         ],
         "additionalProperties": false,
@@ -3087,6 +3157,14 @@
             "minimum": 1,
             "maximum": 24,
             "description": "Hours of history in station mode (1-24)."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "default": "imperial"
           }
         },
         "additionalProperties": false,
@@ -3124,12 +3202,27 @@
           "station": {
             "type": "string"
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ]
+          },
+          "unit_labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "observations": {
             "type": "object",
             "additionalProperties": {}
           }
         },
         "required": [
+          "units",
+          "unit_labels",
           "observations"
         ],
         "additionalProperties": false,
@@ -4203,7 +4296,7 @@
     {
       "name": "get_sounding",
       "title": "Get radiosonde sounding",
-      "description": "Nearest RAOB (radiosonde) vertical soundings to a point. Each sounding carries: profile (pressure-indexed thermodynamics: pressure_hpa, height_m, temperature_c, dewpoint_c, wind arrays), wind_profile (height-indexed winds for hodographs/shear), and derived indices (sbcape/mucape/mlcape + cin, lifted_index, k_index, total_totals, pwat_mm, freezing_level_m, lcl/lfc/el, bulk_shear_0_6km_kt). Soundings launch at 00Z/12Z so data can be hours old. Example: {\"location\": \"Norman, OK\"}.",
+      "description": "Nearest RAOB (radiosonde) vertical soundings to a point. Each sounding carries: profile (pressure-indexed thermodynamics: pressure, height, temperature, dewpoint, wind arrays), wind_profile (height-indexed winds for hodographs/shear), and derived indices (sbcape/mucape/mlcape + cin, lifted_index, k_index, total_totals, pwat, freezing_level, lcl/lfc/el, bulk_shear_0_6km). Key suffixes name units; pressure levels stay hPa. Soundings launch at 00Z/12Z so data can be hours old. Example: {\"location\": \"Norman, OK\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -4231,6 +4324,14 @@
             "maximum": 5,
             "default": 1,
             "description": "Number of nearest soundings (1-5). Default 1."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "default": "imperial"
           }
         },
         "additionalProperties": false,
@@ -4265,6 +4366,19 @@
             ],
             "additionalProperties": false
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ]
+          },
+          "unit_labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "soundings": {
             "type": "object",
             "additionalProperties": {}
@@ -4272,6 +4386,8 @@
         },
         "required": [
           "location",
+          "units",
+          "unit_labels",
           "soundings"
         ],
         "additionalProperties": false,
@@ -4330,7 +4446,7 @@
               "imperial",
               "metric"
             ],
-            "description": "Axis: imperial (default; °F) or metric (°C)."
+            "description": "Axis and summary: imperial (default; °F) or metric (°C); keys end in their unit."
           },
           "unit": {
             "type": "string",
@@ -4416,6 +4532,14 @@
               "tvs"
             ],
             "description": "Which detection families to include. Default: all."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "default": "imperial"
           }
         },
         "additionalProperties": false,
@@ -4454,6 +4578,19 @@
             "type": "string",
             "description": "Ready-to-use one-liner. States explicitly when nothing was detected."
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ]
+          },
+          "unit_labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "tracks": {
             "type": "object",
             "additionalProperties": {}
@@ -4466,6 +4603,8 @@
         "required": [
           "location",
           "summary",
+          "units",
+          "unit_labels",
           "detections"
         ],
         "additionalProperties": false,
@@ -4528,6 +4667,14 @@
           "type": {
             "type": "string",
             "description": "Report type filter: T=tornado, H=hail, W=wind, F=flood, D=damage, S=snow."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "default": "imperial"
           }
         },
         "additionalProperties": false,
@@ -4565,6 +4712,19 @@
           "hours": {
             "type": "number"
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ]
+          },
+          "unit_labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "reports": {
             "type": "object",
             "additionalProperties": {}
@@ -4573,6 +4733,8 @@
         "required": [
           "location",
           "hours",
+          "units",
+          "unit_labels",
           "reports"
         ],
         "additionalProperties": false,
@@ -4721,6 +4883,14 @@
             "type": "boolean",
             "default": false,
             "description": "Include full GeoJSON geometries (cone/track polygons). Default false."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "default": "imperial"
           }
         },
         "additionalProperties": false,
@@ -4735,6 +4905,19 @@
           "feature_count": {
             "type": "number"
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ]
+          },
+          "unit_labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "features": {
             "type": "array",
             "items": {
@@ -4746,6 +4929,8 @@
         "required": [
           "active",
           "feature_count",
+          "units",
+          "unit_labels",
           "features"
         ],
         "additionalProperties": false,
@@ -4790,6 +4975,14 @@
             "maximum": 72,
             "default": 24,
             "description": "Lookback window in hours (1-72). Default 24."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "default": "imperial"
           }
         },
         "additionalProperties": false,
@@ -4814,6 +5007,19 @@
           "truncated": {
             "type": "boolean"
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ]
+          },
+          "unit_labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "features": {
             "type": "array",
             "items": {
@@ -4827,6 +5033,8 @@
           "storms",
           "feature_count",
           "truncated",
+          "units",
+          "unit_labels",
           "features"
         ],
         "additionalProperties": false,
