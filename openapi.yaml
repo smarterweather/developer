@@ -83,7 +83,7 @@ info:
     | `narrations`| no      | experimental | LLM-generated narrative text for current/short-term conditions. |
     | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/NOW/HLS/MCD/MPD/PMD). Canonical for new clients. |
     | `discussions` | no    | experimental | Deprecated. Prefer `include=guidance` (`guidance.mcds` / `guidance.afd`). |
-    | `uncertainty` | no    | experimental | NBM probabilistic sub-objects on hourly and daily forecasts (CONUS/Alaska/Hawaii only). |
+    | `uncertainty` | no    | experimental | NBM probabilistic sub-objects on hourly and daily forecasts (CONUS/Alaska/Hawaii only): ensemble spread and probability-below-threshold fields. See `HourlyUncertainty` / `DailyUncertainty`. |
     | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
     | `climate`     | no    | experimental | NCEI day-of-year normals for the location, plus per-day departure from normal on `daily[]`. |
     | `metar`       | no    | experimental | Nearest METAR sky layers and present weather for the photoreal canvas. |
@@ -6582,88 +6582,133 @@ components:
             hour. This is a distilled flag; use
             `uncertainty.*` for raw probabilistic fields.
         uncertainty:
+          x-stability: experimental
           description: |
             Optional probabilistic sub-object sourced from the NBM model.
             Populated only when the caller requests `include=uncertainty` and
             NBM coverage is available for the location (CONUS, Alaska, or
             Hawaii).
+
+            **Experimental** (`x-stability: experimental`): excluded from the
+            90-day breaking-change commitment.
           oneOf:
             - $ref: '#/components/schemas/HourlyUncertainty'
             - type: "null"
 
     HourlyUncertainty:
       type: object
+      x-stability: experimental
       description: |
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment.
+
         NBM probabilistic companion fields for a single hour. Each field is
-        optional; the sub-object is omitted when no NBM data is available.
+        optional and absent when NBM does not carry it for the hour (ceiling
+        and visibility probabilities are not on every frame); the sub-object
+        is omitted when no field is available. Each property names the
+        catalog `standard_name` and products it is read from, so the same
+        series can be fetched through `/v1/series`.
       properties:
         temperature_stddev:
           type: [number, "null"]
           format: double
-          description: Ensemble standard deviation of temperature.
+          description: |
+            Ensemble standard deviation of `temperature`, in the requested
+            temperature unit (a spread, converted without the °F/°C offset).
+            Catalog: `temperature_2m_stddev` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         dew_point_stddev:
           type: [number, "null"]
           format: double
+          description: |
+            Ensemble standard deviation of `dew_point`, in the requested
+            temperature unit (offset-free).
+            Catalog: `dew_point_2m_stddev` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         wind_speed_stddev:
           type: [number, "null"]
           format: double
+          description: |
+            Ensemble standard deviation of `wind_speed`, in the requested
+            wind speed unit.
+            Catalog: `wind_speed_10m_stddev` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         wind_gust_stddev:
           type: [number, "null"]
           format: double
+          description: |
+            Ensemble standard deviation of `wind_gust`, in the requested
+            wind speed unit.
+            Catalog: `wind_gusts_10m_stddev` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         visibility_prob_below_1mi:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that visibility is below 1 mi.
+            Catalog: `visibility_prob_below_1mi` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         visibility_prob_below_2mi:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that visibility is below 2 mi.
+            Catalog: `visibility_prob_below_2mi` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         visibility_prob_below_3mi:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that visibility is below 3 mi.
+            Catalog: `visibility_prob_below_3mi` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         visibility_prob_below_5mi:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that visibility is below 5 mi.
+            Catalog: `visibility_prob_below_5mi` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         ceiling_prob_below_500ft:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that the cloud ceiling is below 500 ft AGL.
+            Catalog: `ceiling_prob_below_500ft` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         ceiling_prob_below_1000ft:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that the cloud ceiling is below 1000 ft AGL.
+            Catalog: `ceiling_prob_below_1000ft` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         ceiling_prob_below_2000ft:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that the cloud ceiling is below 2000 ft AGL.
+            Catalog: `ceiling_prob_below_2000ft` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         ceiling_prob_below_3000ft:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that the cloud ceiling is below 3000 ft AGL.
+            Catalog: `ceiling_prob_below_3000ft` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         ceiling_prob_below_6600ft:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
-        wind_speed_p50:
-          type: [number, "null"]
-          format: double
-          description: NBM median 10m wind speed.
-        wind_speed_prob_gt_75mph:
-          type: [number, "null"]
-          format: double
-          minimum: 0
-          maximum: 100
+          description: |
+            Probability (percent) that the cloud ceiling is below 6600 ft AGL.
+            Catalog: `ceiling_prob_below_6600ft` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
 
     Daily:
       type: object
@@ -6820,9 +6865,13 @@ components:
             use this with `relative_day` to label rows Today/Tonight without
             wall-clock heuristics.
         uncertainty:
+          x-stability: experimental
           description: |
             Optional NBM probabilistic sub-object for this day. Populated only
             when `include=uncertainty` is requested and NBM coverage applies.
+
+            **Experimental** (`x-stability: experimental`): excluded from the
+            90-day breaking-change commitment.
           oneOf:
             - $ref: '#/components/schemas/DailyUncertainty'
             - type: "null"
@@ -6876,57 +6925,85 @@ components:
 
     DailyUncertainty:
       type: object
+      x-stability: experimental
       description: |
-        NBM probabilistic companion fields for a single day. All fields are
-        optional; daily uncertainty entries are produced by the NBM daily
-        aggregation stage.
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment.
+
+        NBM probabilistic companion fields for a single day, from the NBM
+        daily products. All fields are optional. The daily rules store these
+        under the same `standard_name`s as the hourly fields; each property
+        names the daily product it is read from. NBM stores daily rows
+        stamped 00Z and 12Z UTC on each date; a row's fields aggregate the
+        rows stamped with its `date` (the UTC date, as for every daily field),
+        `*_avg` fields as their mean and `*_max` fields as their maximum.
       properties:
         temperature_stddev_avg:
           type: [number, "null"]
           format: double
+          description: |
+            Day-mean ensemble standard deviation of temperature, in the
+            requested temperature unit (offset-free).
+            Catalog: `temperature_2m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         dew_point_stddev_avg:
           type: [number, "null"]
           format: double
+          description: |
+            Day-mean ensemble standard deviation of dew point, in the
+            requested temperature unit (offset-free).
+            Catalog: `dew_point_2m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         wind_speed_stddev_avg:
           type: [number, "null"]
           format: double
+          description: |
+            Day-mean ensemble standard deviation of wind speed, in the
+            requested wind speed unit.
+            Catalog: `wind_speed_10m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         wind_gust_stddev_avg:
           type: [number, "null"]
           format: double
+          description: |
+            Day-mean ensemble standard deviation of wind gust, in the
+            requested wind speed unit.
+            Catalog: `wind_gusts_10m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+        temperature_max_stddev:
+          type: [number, "null"]
+          format: double
+          description: |
+            Ensemble spread around `high`: NBM's standard deviation of the
+            daily maximum temperature, in the requested temperature unit
+            (offset-free). Present only when `high` is NBM's native daily
+            maximum, read from the same stored row; absent when `high` comes
+            from another source or was adjusted.
+            Catalog: `temperature_2m_max_stddev` on `nbm_daily_temps` / `nbm_daily_temps_ak` / `nbm_daily_temps_hi`.
+        temperature_min_stddev:
+          type: [number, "null"]
+          format: double
+          description: |
+            Ensemble spread around `low`: NBM's standard deviation of the
+            daily minimum temperature, in the requested temperature unit
+            (offset-free). Present only when `low` is NBM's native daily
+            minimum, read from the same stored row (the following morning's
+            minimum when that one sets `low`); absent when `low` comes from
+            another source or was adjusted.
+            Catalog: `temperature_2m_min_stddev` on `nbm_daily_temps` / `nbm_daily_temps_ak` / `nbm_daily_temps_hi`.
         visibility_prob_below_1mi_max:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Day-maximum probability (percent) that visibility is below 1 mi.
+            Catalog: `visibility_prob_below_1mi` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         ceiling_prob_below_1000ft_max:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
-        snow_total_p10:
-          type: [number, "null"]
-          format: double
-        snow_total_p50:
-          type: [number, "null"]
-          format: double
-        snow_total_p90:
-          type: [number, "null"]
-          format: double
-        snow_prob_gt_1in:
-          type: [number, "null"]
-          format: double
-          minimum: 0
-          maximum: 100
-        snow_prob_gt_2in:
-          type: [number, "null"]
-          format: double
-          minimum: 0
-          maximum: 100
-        snow_prob_gt_4in:
-          type: [number, "null"]
-          format: double
-          minimum: 0
-          maximum: 100
+          description: |
+            Day-maximum probability (percent) that the cloud ceiling is below
+            1000 ft AGL.
+            Catalog: `ceiling_prob_below_1000ft` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
 
     DailyPeriod:
       type: object
