@@ -219,7 +219,8 @@ Every success response is JSON (`application/json`, or
 schema documented in [`openapi.yaml`](https://developers.smarterweather.com/openapi.yaml). The shape is
 stable within a major version; breaking changes bump the version
 prefix (`/v1/...` -> `/v2/...`) and run on an at-least-12-month
-overlap.
+overlap. Every `/v1/weather` field, with its type and whether it can
+be null, is in the [Weather field reference](https://developers.smarterweather.com/build-a-weather-app#fields).
 
 ## 4. Handle rate limits
 
@@ -273,6 +274,7 @@ for the agent-driven signup path.
 
 ## Next steps
 
+- Build a weather app (your own backend, caching, times, icons and attribution): [developers.smarterweather.com/build-a-weather-app](https://developers.smarterweather.com/build-a-weather-app).
 - Error model and recovery: [developers.smarterweather.com/errors](https://developers.smarterweather.com/errors).
 - Full REST reference: [developers.smarterweather.com/api](https://developers.smarterweather.com/api).
 - SDKs: [`sdks.md`](https://github.com/smarterweather/developer/blob/main/docs/sdks.md).

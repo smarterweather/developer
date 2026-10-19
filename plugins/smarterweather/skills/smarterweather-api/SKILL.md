@@ -253,9 +253,9 @@ authoritative; branch on the problem `type`. In short:
 
 1. **Hard-coding the API key into source files.** Read from
    `process.env.SMARTERWEATHER_API_KEY` (or the language equivalent).
-2. **Calling `/v1/weather` in a tight loop without caching.** Cache with
-   a sane TTL (60-300 seconds for current conditions, longer for
-   forecasts).
+2. **Calling `/v1/weather` in a tight loop without caching.** Cache each
+   answer for the `max-age` in its `Cache-Control` header, and not at
+   all when it says `no-store`.
 3. **Treating 5xx as terminal.** Retry server errors with backoff; treat
    only 4xx as caller errors.
 4. **Calling the production API from tests.** Use `sw_test_*` keys; mock
@@ -268,6 +268,8 @@ authoritative; branch on the problem `type`. In short:
 
 - Developer portal: <https://developers.smarterweather.com>
 - Quickstart: <https://developers.smarterweather.com/quickstart>
+- Build a weather app (backend, caching, times, icons, attribution, field
+  reference): <https://developers.smarterweather.com/build-a-weather-app>
 - REST API reference: <https://developers.smarterweather.com/api/reference>
 - Agent-oriented doc index: <https://developers.smarterweather.com/llms.txt>
 - MCP integration: the `smarterweather-mcp` skill at
