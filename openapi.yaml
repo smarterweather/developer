@@ -1816,9 +1816,8 @@ paths:
 
         ### Filters
 
-        - `hours` — rolling lookback in whole hours, applied from 1 to 24.
-          Empty means the default window of 6 hours. Values from 25 to 168
-          are accepted but currently return the default 6-hour window.
+        - `hours` — rolling lookback in whole hours, applied from 1 to
+          168 (7 days). Empty means the default window of 6 hours.
         - `type` — single-letter NWS report code (e.g. `T` tornado, `H`
           hail, `W` damaging wind, `F` flood). Server uppercases the
           input before forwarding.
@@ -1845,9 +1844,8 @@ paths:
           in: query
           required: false
           description: |
-            Rolling lookback window in whole hours. Default 6. Values from
-            1 to 24 are applied; values from 25 to 168 are accepted but
-            currently return the default 6-hour window.
+            Rolling lookback window in whole hours, applied from 1 to 168
+            (7 days). Default 6.
           schema:
             type: integer
             minimum: 1
@@ -2655,9 +2653,7 @@ paths:
         1. `date=YYYY-MM-DD` — single-day window
         2. `start=...&end=...` — explicit RFC3339 window (both required
            together)
-        3. `hours=N` — rolling lookback, applied from 1 to 168 (7 days).
-           Values from 169 to 720 are accepted but currently return the
-           last 24 hours.
+        3. `hours=N` — rolling lookback, applied from 1 to 720 (30 days).
 
         If several are set, `date` wins, then `start`+`end`, then
         `hours`; every selector that is set must still be well formed.
@@ -2685,10 +2681,8 @@ paths:
           in: query
           required: false
           description: |
-            Rolling lookback window in whole hours. Values from 1 to 168
-            are applied; values from 169 to 720 are accepted but currently
-            return the last 24 hours. Lowest precedence among the
-            time-window selectors.
+            Rolling lookback window in whole hours, applied from 1 to 720
+            (30 days). Lowest precedence among the time-window selectors.
           schema:
             type: integer
             minimum: 1
