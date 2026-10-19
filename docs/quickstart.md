@@ -162,11 +162,14 @@ load it from `.env`.
 
 ### curl
 
+The first line reads only the key from `.env` (never `source` it as
+shell) and keeps a key you already exported. If the key is still unset,
+the call stops with a message instead of sending an empty token.
+
 ```bash
-# Read only the key from .env (never `source` it as shell).
-export SMARTERWEATHER_API_KEY="$(sed -n 's/^\(export \)\{0,1\}SMARTERWEATHER_API_KEY=//p' .env | tail -n 1 | tr -d "\r\"' ")"
+[ -n "$SMARTERWEATHER_API_KEY" ] || export SMARTERWEATHER_API_KEY="$(sed -n 's/^\(export \)\{0,1\}SMARTERWEATHER_API_KEY=//p' .env | tail -n 1 | tr -d "\r\"' ")"
 curl -sS https://api.smarterweather.com/v1/weather \
-  -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
+  -H "Authorization: Bearer ${SMARTERWEATHER_API_KEY:?set SMARTERWEATHER_API_KEY first, see developers.smarterweather.com/quickstart}" \
   --get \
   --data-urlencode "lat=42.3601" \
   --data-urlencode "lon=-71.0589"

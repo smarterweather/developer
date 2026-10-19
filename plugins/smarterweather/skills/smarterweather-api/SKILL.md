@@ -61,10 +61,11 @@ Load it before the samples below run:
   load_dotenv` and `load_dotenv(".env")` at startup (reads `./.env` in
   the current directory; variables already set are kept).
 - curl: read only the key, never `source` the file as shell (the last
-  `KEY=` or `export KEY=` line wins; CR and quotes are stripped):
+  `KEY=` or `export KEY=` line wins; CR and quotes are stripped; a key
+  already exported is kept):
 
 ```bash
-export SMARTERWEATHER_API_KEY="$(sed -n 's/^\(export \)\{0,1\}SMARTERWEATHER_API_KEY=//p' .env | tail -n 1 | tr -d "\r\"' ")"
+[ -n "$SMARTERWEATHER_API_KEY" ] || export SMARTERWEATHER_API_KEY="$(sed -n 's/^\(export \)\{0,1\}SMARTERWEATHER_API_KEY=//p' .env | tail -n 1 | tr -d "\r\"' ")"
 ```
 
 The key is a server-side secret: call the API from your backend, never
@@ -152,7 +153,7 @@ weather = resp.json()
 
 ```bash
 curl -sS \
-  -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
+  -H "Authorization: Bearer ${SMARTERWEATHER_API_KEY:?set SMARTERWEATHER_API_KEY first, see developers.smarterweather.com/quickstart}" \
   "https://api.smarterweather.com/v1/weather?lat=41.88&lon=-87.63"
 ```
 
