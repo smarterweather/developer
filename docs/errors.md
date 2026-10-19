@@ -291,6 +291,19 @@ status per tool call, so key on `type`, then `status`.
   wallet over its per-minute limit; it carries `retry_after_seconds` in
   place of the `Retry-After` header and no `PaymentRequired`, so x402
   clients do not treat it as payable.
+- A result for a call with a key carries `_meta["smarterweather.dev/budget"]`
+  holding the [rate-limit header](#rate-limit-headers) values under their
+  REST names. Internal keys and other keys exempt from rate limiting carry
+  no budget. On a trial key, a served, failed or `trial-ended` result also
+  carries `X-Trial-Calls-Remaining` and `X-Trial-Expires-At`. They are
+  absent on `rate-limit-exceeded`, `trial-route-not-allowed`,
+  `unauthorized` and the `service-unavailable` answered while trial
+  enforcement is unavailable, when the key is no longer a trial key, and
+  while trial enforcement runs in shadow mode. A trial call that fails,
+  including a result that fails the tool's output schema, is not counted
+  against the trial, and the count shows it. An argument error from the
+  tool's input schema carries no budget and is not counted against the
+  trial.
 - When one of several sources inside a successful result fails, that entry
   carries `error` (the problem's `detail`) and `error_type` (its `type`)
   instead of failing the call.
