@@ -6788,10 +6788,18 @@ components:
           type: [number, "null"]
           format: double
           description: |
-            The day's maximum UV index. Often an estimate from the solar-noon
-            UV index and forecast cloud cover rather than a maximum of hourly
-            values; today's value can change during the day. Null when it
-            can't be determined.
+            The day's maximum UV index. It is worked out from the hourly
+            forecast the server builds for the request, `hourly_hours` long,
+            even when `include` omits `hourly`. On a day that forecast covers
+            from 06:00 to 18:00 local, it is the highest hourly UV index. On
+            other days it is an estimate from the UV index at solar noon and
+            the forecast cloud cover, raised to any higher hourly value. Late
+            in the day, today's value reflects the remaining forecast, not the
+            observed peak: after 18:00 local the estimate can use tonight's
+            forecast cloud, so a clear day followed by a cloudy evening can
+            report a low maximum. Any day's value can change between requests
+            as the hours the forecast covers move. Null when it can't be
+            determined.
         cape_max:
           type: [number, "null"]
           format: double
