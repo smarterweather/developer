@@ -192,8 +192,8 @@ shape. Always parse defensively.
 | --- | --- | --- |
 | 400 | Invalid request shape | No — fix the call |
 | 401 | Missing or invalid API key | No — re-mint or check env |
-| 403 | Key valid but not authorized for this endpoint or tier | No |
-| 404 | `type` `https://smarterweather.com/errors/not-found`: resource or place not found | No |
+| 403 | problem+json: key valid but this endpoint, feature or tier is not enabled for it, including a trial key on a route outside its allowlist (the `type` says which). A 403 with no problem `type`, such as a bare `{"message":"Forbidden"}`, is not from the API itself: it is the edge (a path that is not a public API route, or a legacy route without its key) or the firewall. Check the URL first | No |
+| 404 | `type` `https://smarterweather.com/errors/not-found`: resource, place or API route not found. Any valid key, trial keys included, gets this for an unknown public `/v1/...` path (`/v1/internal/`, `/v1/user/` and `/v1/billing/` are not public API routes) | No |
 | 404 | `type` `https://smarterweather.com/errors/outside-coverage`: the point is outside the 50 US states and DC | No — follow `next_steps.coverage` |
 | 429 | Rate-limited | Yes — after `Retry-After` (see below) |
 | 503 | A dependency is briefly unreachable | Yes — after `Retry-After` if present, else backoff |
