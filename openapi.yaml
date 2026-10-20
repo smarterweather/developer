@@ -8095,7 +8095,9 @@ components:
           type: array
           description: |
             Value buckets in ascending `max` order; the last bucket has
-            `max: null` (the catch-all).
+            `max: null` (the catch-all). A value takes the label of the first
+            bucket whose `max` is greater than or equal to it, or the
+            catch-all's label when it exceeds every `max`.
           items:
             type: object
             required: [max, label]
