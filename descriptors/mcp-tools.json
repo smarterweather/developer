@@ -5103,7 +5103,7 @@
     {
       "name": "list_datasets",
       "title": "List datasets",
-      "description": "Discover the datasets (model grids, analyses, observations) available at a location, keyed by dataset_id, with per-dataset freshness where tracked (latest model run as latest_run, latest_time, data_age_seconds, freshness_status). Only datasets covering the point are listed: its domain (CONUS/Alaska/Hawaii) plus global grids and the GOES full disks that see it. Use this to find dataset_id values for query_dataset, or to check whether data is current. Variables, units and standard names come from describe_dataset. Example: {\"location\": \"Anchorage, AK\"}.",
+      "description": "Discover the datasets (model grids, analyses, observations) available at a location, keyed by dataset_id, with per-dataset freshness where tracked (latest model run as latest_run, latest_time, data_age_seconds, freshness_status). Only datasets covering the point are listed: its domain (CONUS/Alaska/Hawaii) plus global grids. Use this to find dataset_id values for query_dataset, or to check whether data is current. Variables, units and standard names come from describe_dataset. Example: {\"location\": \"Anchorage, AK\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
