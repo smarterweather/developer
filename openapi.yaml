@@ -5216,9 +5216,9 @@ components:
           timezone: "America/New_York"
           county: "Suffolk"
         current:
-          time: "2026-04-20T15:00:00Z"
+          time: "2026-04-20T14:45:00Z"
           temperature: 58.4
-          feels_like: 56.1
+          feels_like: 58.4
           humidity: 62
           dew_point: 45.2
           pressure: 30.05
@@ -5234,9 +5234,19 @@ components:
           icon: "partly-cloudy-day"
           severe: false
         hourly:
+          - time: "2026-04-20T15:00:00Z"
+            temperature: 58.4
+            feels_like: 58.4
+            humidity: 62
+            wind_speed: 11.3
+            wind_direction: 240
+            precip_probability: 5
+            precip_amount: 0
+            conditions: "Partly Cloudy"
+            icon: "partly-cloudy-day"
           - time: "2026-04-20T16:00:00Z"
             temperature: 59.1
-            feels_like: 56.8
+            feels_like: 59.1
             humidity: 60
             wind_speed: 12.1
             wind_direction: 245
@@ -5246,7 +5256,7 @@ components:
             icon: "partly-cloudy-day"
           - time: "2026-04-20T17:00:00Z"
             temperature: 59.6
-            feels_like: 57.2
+            feels_like: 59.6
             humidity: 58
             wind_speed: 12.4
             wind_direction: 245
@@ -6244,7 +6254,10 @@ components:
         time:
           type: string
           format: date-time
-          description: Observation time (ISO 8601, UTC).
+          description: >-
+            Observation valid time (ISO 8601, UTC) of the analysis behind
+            `temperature`, or the response time when no fresh observation is
+            available.
         temperature:
           type: [number, "null"]
           format: double
@@ -6252,7 +6265,10 @@ components:
         feels_like:
           type: [number, "null"]
           format: double
-          description: Apparent temperature (wind chill or heat index).
+          description: >-
+            Feels-like temperature: the air temperature unless wind chill
+            (50°F or below, wind 3 mph or more) or heat index (80°F or above,
+            relative humidity 40% or more) applies.
         humidity:
           type: [number, "null"]
           format: double
@@ -7078,7 +7094,7 @@ components:
         feels_like:
           type: [number, "null"]
           format: double
-          description: High-for-day / low-for-night of hourly apparent temperature.
+          description: High-for-day / low-for-night of the hourly feels-like temperature (see `Current.feels_like`).
         visibility:
           type: [number, "null"]
           format: double
