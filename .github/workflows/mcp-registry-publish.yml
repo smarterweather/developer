@@ -6,6 +6,10 @@
 # for weather or onboarding. This workflow is the recovery path and can be
 # re-run whenever a server.json needs to be pushed again.
 #
+# Each manifest is published from a temp copy stamped with the package's
+# package.json version (scripts/stamp-server-json.sh, shared with
+# release.yml); the committed server.json keeps a placeholder version.
+#
 # Auth: GitHub OIDC (id-token: write). Namespace io.github.smarterweather/*
 # is validated from the workflow's repo owner.
 
@@ -56,11 +60,16 @@ jobs:
               failed=1
               continue
             fi
-            version="$(jq -r '.version' "$manifest")"
-            name="$(jq -r '.name' "$manifest")"
-            echo "Publishing ${name}@${version} from ${manifest}..."
+            # The committed server.json carries a placeholder version;
+            # publish a copy stamped with package.json's version, the
+            # same way release.yml does.
+            stamped="$(mktemp -d)/server.json"
+            ./scripts/stamp-server-json.sh "packages/${dir}" > "$stamped"
+            version="$(jq -r '.version' "$stamped")"
+            name="$(jq -r '.name' "$stamped")"
+            echo "Publishing ${name}@${version} from ${manifest} (stamped from package.json)..."
             out="$(mktemp)"
-            if ./mcp-publisher publish "$manifest" >"$out" 2>&1; then
+            if ./mcp-publisher publish "$stamped" >"$out" 2>&1; then
               cat "$out"
             else
               cat "$out"
