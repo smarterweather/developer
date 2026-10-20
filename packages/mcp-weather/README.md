@@ -1,15 +1,34 @@
 # @smarterweather/mcp-weather
 
-A stdio-to-Streamable-HTTP bridge for the [Smarter Weather hosted MCP server](https://github.com/afisch710/SmarterWeather/issues/7148). Lets local-only MCP clients (Claude Desktop, Claude Code, Cursor, MCP Inspector, etc.) talk to `sw-mcp` over the network and authenticate via either:
+A stdio-to-Streamable-HTTP bridge for the Smarter Weather hosted MCP server at `https://mcp.smarterweather.com`. It lets local-only MCP clients (Claude Desktop, Claude Code, Cursor, MCP Inspector, etc.) reach `sw-mcp` over the network with your API key.
 
-- **OAuth 2.1 + PKCE** (recommended for end users). The bridge runs the full MCP OAuth client — discovery, dynamic client registration, browser-based consent on `localhost`, and token caching at `~/.mcp-auth/`. You sign in once with your SmarterWeather account; tokens auto-refresh.
-- **`SMARTERWEATHER_API_KEY`** (or `.env`). Useful for headless / CI /
-  scripted clients. The bridge resolves the key from process env →
-  `SMARTERWEATHER_ENV_FILE` → `cwd/.env`, then passes
-  `Authorization:${SMARTERWEATHER_AUTH_HEADER}` with the bearer in the
-  child env — never on argv. Unexpanded `${…}` placeholders count as unset.
+Requires Node.js 22 or later.
 
-The package itself is a thin wrapper around [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) — no weather logic ships here, no protocol implementation forks. All tools, schemas, rate-limiting, and metering live server-side in `sw-mcp`.
+The package is a thin wrapper around [`mcp-remote`](https://www.npmjs.com/package/mcp-remote): no weather logic ships here, and the protocol implementation is not forked. All tools, schemas, rate limiting and metering live server-side in `sw-mcp`.
+
+## Get an API key
+
+Run one of these in your project directory:
+
+```bash
+# A human is present: device sign-in in the browser (free account, no card)
+npx -y @smarterweather/mcp-onboarding@latest login
+
+# No human present: mint a trial key you can claim into a free account later
+npx -y @smarterweather/mcp-onboarding@latest trial
+```
+
+Both write `SMARTERWEATHER_API_KEY` to `./.env` (mode `0600`, gitignored) and print only a key prefix, never the key.
+
+The bridge resolves the key from:
+
+1. `SMARTERWEATHER_API_KEY` in the process environment
+2. the file named by `SMARTERWEATHER_ENV_FILE`
+3. `.env` in the working directory (skipped when the working directory is `/` or `$HOME`)
+
+Unexpanded `${…}` placeholders count as unset. The bridge passes the key to `mcp-remote` as `Authorization:${SMARTERWEATHER_AUTH_HEADER}`, with the bearer only in the child process environment, never on argv.
+
+Without a key the bridge still connects, and discovery tools such as `search_locations` and `search_catalog` stay free. Other tool calls return x402 payment requirements (USDC on Base) with `next_steps` that point back to `login` and `trial`. OAuth sign-in through the bridge is not available yet; use an API key.
 
 ## Install
 
@@ -20,23 +39,6 @@ npx -y @smarterweather/mcp-weather --version
 ## Claude Desktop
 
 Add to `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`):
-
-### OAuth (recommended)
-
-```json
-{
-  "mcpServers": {
-    "smarterweather": {
-      "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather"]
-    }
-  }
-}
-```
-
-When Claude Desktop starts the server, your default browser opens to a SmarterWeather sign-in flow. After consent, the bridge caches the access + refresh tokens locally and Claude Desktop sees the full tool catalog (`get_forecast`, `get_alerts`, `get_map_snapshot`, etc.).
-
-### API key
 
 ```json
 {
@@ -52,29 +54,11 @@ When Claude Desktop starts the server, your default browser opens to a SmarterWe
 }
 ```
 
-Claude Desktop does not interpolate env placeholders, so point the
-bridge at the `.env` that `login` / `trial` wrote, by absolute path —
-never paste the key into this file. The bridge injects
-`Authorization: Bearer <key>` on every proxied request. No browser
-pop-up.
+Claude Desktop does not interpolate env placeholders, so point the bridge at the `.env` that `login` / `trial` wrote, by absolute path. Never paste the key into this file. The bridge sends `Authorization: Bearer <key>` on every proxied request.
 
 ## Cursor
 
-Add to `~/.cursor/mcp.json`. OAuth:
-
-```json
-{
-  "mcpServers": {
-    "smarterweather": {
-      "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather"]
-    }
-  }
-}
-```
-
-API key — Cursor `envFile` in the project `.cursor/mcp.json`
-(preferred after `login` / `trial`; `envFile` requires `"type": "stdio"`):
+Use `envFile` in the project `.cursor/mcp.json` (`envFile` requires `"type": "stdio"`):
 
 ```json
 {
@@ -106,46 +90,19 @@ Or `${env:NAME}` from the process environment:
 }
 ```
 
-> **Note (Cursor built-in OAuth):** Cursor's *built-in* MCP OAuth client (`cursor://` redirect) is currently incompatible with Clerk; this is tracked at [SmarterWeather#7184](https://github.com/afisch710/SmarterWeather/issues/7184). Using `@smarterweather/mcp-weather` (which delegates OAuth to `mcp-remote`'s loopback callback) is the documented workaround — it works on Cursor today.
-
-## Dev / staging override
-
-To point the bridge at a non-production `sw-mcp` deployment (e.g. a dev ALB), override the URL:
-
-```json
-{
-  "mcpServers": {
-    "smarterweather-dev": {
-      "command": "npx",
-      "args": ["-y", "@smarterweather/mcp-weather"],
-      "env": {
-        "SMARTERWEATHER_MCP_URL": "http://<dev-alb-dns>/mcp"
-      }
-    }
-  }
-}
-```
-
-Or pass the URL as a positional arg (precedence: positional > env > default):
-
-```jsonc
-"args": ["-y", "@smarterweather/mcp-weather", "http://<dev-alb-dns>/mcp"]
-```
-
 ## Environment variables
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `SMARTERWEATHER_MCP_URL` | Override the target MCP endpoint. Useful for dev / staging. | `https://mcp.smarterweather.com` |
-| `SMARTERWEATHER_API_KEY` | Prefer this when set (skips OAuth). Unexpanded `${…}` falls through. | unset (then `.env`, else OAuth) |
-| `SMARTERWEATHER_ENV_FILE` | Absolute `.env` path when the process env key is unset. | unset → `cwd/.env` (not `/` or `$HOME`) |
-| `MCP_REMOTE_CONFIG_DIR` | OAuth token cache directory (passed through to `mcp-remote`). | `~/.mcp-auth/` |
+| `SMARTERWEATHER_API_KEY` | API key. Takes precedence when set; an unexpanded `${…}` falls through. | unset (then `SMARTERWEATHER_ENV_FILE`, then `.env`) |
+| `SMARTERWEATHER_ENV_FILE` | Absolute `.env` path, read when the process env key is unset. | unset → `cwd/.env` (not `/` or `$HOME`) |
+| `SMARTERWEATHER_MCP_URL` | Override the target MCP endpoint. A positional URL argument wins over it. | `https://mcp.smarterweather.com` |
 
-Power users can pass any [`mcp-remote` flag](https://www.npmjs.com/package/mcp-remote) verbatim — they're forwarded unchanged. Examples:
+Any [`mcp-remote` flag](https://www.npmjs.com/package/mcp-remote) passes through unchanged. Examples:
 
-- `--debug` — verbose logs at `~/.mcp-auth/{server_hash}_debug.log`.
-- `--transport http-only` — force Streamable HTTP (skip SSE fallback).
-- `--header "X-Custom:value"` — inject additional headers. Note the no-space form for cross-platform arg-escaping safety.
+- `--debug`: verbose logs at `~/.mcp-auth/{server_hash}_debug.log`.
+- `--transport http-only`: force Streamable HTTP (skip the SSE fallback).
+- `--header "X-Custom:value"`: add a header. Use the no-space form for cross-platform argument escaping.
 
 ```jsonc
 "args": [
@@ -157,14 +114,14 @@ Power users can pass any [`mcp-remote` flag](https://www.npmjs.com/package/mcp-r
 
 ## Troubleshooting
 
-- **"Connection error: fetch failed"** — verify `SMARTERWEATHER_MCP_URL` (or the default) is reachable from your machine. `curl -i $SMARTERWEATHER_MCP_URL` should return an HTTP response (a 401 with a `WWW-Authenticate` header is the expected unauthenticated reply for `sw-mcp`).
-- **OAuth window keeps re-opening** — clear stale tokens with `rm -rf ~/.mcp-auth/` and restart the MCP client.
-- **API key returns 401** — double-check the key was minted with `mcp` scope and isn't expired. The bridge passes the key verbatim; `sw-mcp` is the source of truth for which scopes a key carries.
-- **Cursor still doesn't see the server** — make sure `~/.cursor/mcp.json` is valid JSON, then restart Cursor. The MCP panel logs the spawned process's stderr.
+- **Tool calls return "Payment required"**: the bridge found no key. Its stderr names every place it checked. Run `login` or `trial` in the project directory, or set `SMARTERWEATHER_ENV_FILE` to the `.env` path, then restart the MCP client.
+- **"Incompatible auth server: does not support dynamic client registration"**: the server rejected the key (unknown, revoked or expired), and the bridge has no sign-in fallback. Mint a new key with `login` or `trial` and restart the client. The bridge passes the key verbatim.
+- **"Connection error: fetch failed"**: check that the endpoint is reachable from your machine. `curl -i https://mcp.smarterweather.com` should return HTTP `405` with `Method not allowed. Use POST.` (the endpoint accepts POST only).
+- **Cursor doesn't see the server**: make sure `.cursor/mcp.json` is valid JSON, then restart Cursor. The MCP panel logs the spawned process's stderr.
 
-## How it works (one paragraph)
+## How it works
 
-The bin is a ~70-line Node script: it resolves the URL (positional arg → `SMARTERWEATHER_MCP_URL` → default), optionally appends `--header "Authorization:Bearer $SMARTERWEATHER_API_KEY"`, then `spawn()`s `mcp-remote`'s `dist/proxy.js` with the assembled argv. `mcp-remote` handles the actual stdio↔HTTP plumbing: it reads JSON-RPC over stdio, performs the OAuth flow if needed (discovery → DCR → PKCE → loopback callback → token cache), and proxies each message to the upstream HTTP MCP endpoint. Signals (SIGINT/SIGTERM/SIGHUP) are forwarded; exit codes propagate. The wrapper does not transform or inspect MCP traffic — it's purely a config-and-spawn shim.
+The bin is a small Node script. It resolves the URL (positional arg → `SMARTERWEATHER_MCP_URL` → default) and the API key (see above), sets `SMARTERWEATHER_AUTH_HEADER` in the child environment, appends `--header "Authorization:${SMARTERWEATHER_AUTH_HEADER}"` when a key was found, then `spawn()`s `mcp-remote`'s `dist/proxy.js`. `mcp-remote` reads JSON-RPC over stdio and proxies each message to the hosted Streamable HTTP endpoint. Signals (SIGINT/SIGTERM/SIGHUP) are forwarded and exit codes propagate. The wrapper does not transform or inspect MCP traffic.
 
 ## License
 

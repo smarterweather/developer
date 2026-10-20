@@ -204,7 +204,9 @@ describe('resolveApiKey', () => {
       const line = describeMissingKey(hit);
       expect(line).toContain(dir);
       expect(line).toContain(join(dir, '.env'));
-      expect(line).toMatch(/OAuth/);
+      expect(line).toMatch(/x402 payment requirements/);
+      expect(line).toContain('@smarterweather/mcp-onboarding@latest login');
+      expect(line).not.toMatch(/OAuth/);
     }
   });
 });

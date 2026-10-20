@@ -59,9 +59,8 @@ if (!resolved.ok) process.stderr.write(`${describeMissingKey(resolved)}\n`);
 const args = buildArgs(userArgs, {
   url: process.env.SMARTERWEATHER_MCP_URL,
   injectAuthHeader: resolved.ok,
-  // The live prod hostname is the baked default. For dev/staging,
-  // users override via SMARTERWEATHER_MCP_URL=http://<dev-alb>/mcp;
-  // see README for the dev/staging snippet.
+  // The live prod hostname is the baked default; SMARTERWEATHER_MCP_URL
+  // or a positional URL overrides it (see README, Environment variables).
   defaultUrl: 'https://mcp.smarterweather.com',
 });
 
