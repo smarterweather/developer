@@ -21,7 +21,7 @@ prints only a 12-character prefix — never the bearer. Call again with
 | Surface | Endpoint | Auth |
 | ------- | -------- | ---- |
 | REST API | `https://api.smarterweather.com` | `Authorization: Bearer sw_live_*` / `sw_test_*` |
-| Weather MCP | `https://mcp.smarterweather.com` | OAuth 2.1 + PKCE, or API key Bearer |
+| Weather MCP | `https://mcp.smarterweather.com` | API key Bearer; keyless: free discovery tools, x402 for the rest |
 | Onboarding MCP | `https://mcp.developers.smarterweather.com` | Anonymous discovery tools; OAuth for account tools |
 
 Canonical machine-readable contracts:
@@ -88,6 +88,12 @@ OAuth for gated tools (Clerk + `cursor://` is broken).
 - Errors use RFC 9457 problem details (same wire format as RFC 7807);
   `401` / `403` / `429` carry a `next_steps` extension. See
   [docs/errors.md](./docs/errors.md).
+- The weather MCP differs: keyless calls are not rejected. Discovery
+  tools answer free; other `tools/call`s return in-band x402 payment
+  requirements with `next_steps`. An invalid key gets HTTP `401` with
+  a JSON-RPC error carrying `next_steps` and no `WWW-Authenticate`.
+  OAuth sign-in for generic clients is not available yet (no dynamic
+  client registration); use an API key.
 
 ## Docs
 

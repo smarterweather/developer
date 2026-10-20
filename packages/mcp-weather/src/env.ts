@@ -69,7 +69,7 @@ function readKeyOrWarn(filePath: string, warn: (msg: string) => void): string | 
 
 /** One stderr line for the no-key case, naming every place that was checked. */
 export function describeMissingKey(result: Extract<ResolveKeyResult, { ok: false }>): string {
-  return `@smarterweather/mcp-weather: no ${KEY_VAR} found (checked ${result.searched.join(', ')}); connecting without a key, so the server will ask for OAuth sign-in.`;
+  return `@smarterweather/mcp-weather: no ${KEY_VAR} found (checked ${result.searched.join(', ')}); connecting without a key, so paid tool calls will return x402 payment requirements. Run 'npx -y @smarterweather/mcp-onboarding@latest login' (or 'trial') to write a key to .env.`;
 }
 
 export function resolveApiKey(opts: {
