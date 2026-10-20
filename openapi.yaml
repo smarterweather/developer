@@ -5329,7 +5329,7 @@ components:
             - "HRRR"
             - "RTMA"
             - "MRMS"
-          notice: "Data sourced from NOAA/NWS public products. Derived products produced by SmarterWeather."
+          notice: "Data sourced from NOAA/NWS public products. Derived products produced by Smarter Weather."
         meta:
           schema_version: "1.0.0"
           generated_at: "2026-04-20T15:00:04Z"
@@ -5459,7 +5459,7 @@ components:
             - "HRRR"
             - "RTMA"
             - "MRMS"
-          notice: "Data sourced from NOAA/NWS public products. Derived products produced by SmarterWeather."
+          notice: "Data sourced from NOAA/NWS public products. Derived products produced by Smarter Weather."
         meta:
           schema_version: "1.0.0"
           generated_at: "2026-04-20T15:06:40Z"
@@ -8942,7 +8942,12 @@ components:
       properties:
         sources:
           type: array
-          description: Canonical source identifiers that contributed data.
+          description: |
+            Canonical source identifiers that contributed data. `EPA AirNow`
+            is listed only when the body as returned carries an air-quality
+            value (`current.aqi`, `pm25`, `ozone` or `pm10`, `hourly[].aqi`,
+            `daily[].aqi_max`, `daily[].day.aqi` or `daily[].night.aqi`), so a
+            `view` or `fields` selection that drops those columns drops it.
           items:
             type: string
           example:
@@ -8952,10 +8957,11 @@ components:
             - "HRRR"
             - "RTMA"
             - "MRMS"
+            - "EPA AirNow"
         notice:
           type: string
           description: Human-readable attribution notice.
-          example: "Data sourced from NOAA/NWS public products. Derived products produced by SmarterWeather."
+          example: "Data sourced from NOAA/NWS and EPA AirNow public products. Derived products produced by Smarter Weather."
 
     Meta:
       type: object
