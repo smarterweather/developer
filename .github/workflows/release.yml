@@ -156,11 +156,43 @@ jobs:
               echo "${name}: no server.json; skipping registry publish."
               continue
             fi
+            stamped="$(mktemp -d)/server.json"
+            ./scripts/stamp-server-json.sh "$dir" "$version" > "$stamped"
+
+            # The registry validates the npm version, which can take a
+            # few seconds to become visible after `changeset publish`.
+            seen=""
+            for try in $(seq 1 10); do
+              seen="$(npm view "${name}@${version}" version --prefer-online 2>/dev/null || true)"
+              [ "$seen" = "$version" ] && break
+              if [ "$try" -lt 10 ]; then
+                echo "Waiting for ${name}@${version} on npm (try ${try}/10)..."
+                sleep 15
+              fi
+            done
+            if [ "$seen" != "$version" ]; then
+              echo "::warning::${name}@${version} still not visible on npm after 10 tries; attempting the registry publish anyway."
+            fi
+
             echo "Publishing ${name}@${version} to the MCP Registry..."
-            jq --arg v "$version" \
-              '.version = $v | .packages[]?.version = $v' \
-              "$manifest" > "${manifest}.tmp" && mv "${manifest}.tmp" "$manifest"
-            if ! ./mcp-publisher publish "$manifest"; then
-              echo "::warning::MCP Registry publish failed for ${name}@${version}. Re-run manually: mcp-publisher login github && mcp-publisher publish ${manifest}"
+            out="$(mktemp)"
+            ok=0
+            for attempt in 1 2 3 4 5; do
+              if ./mcp-publisher publish "$stamped" >"$out" 2>&1; then
+                cat "$out"
+                ok=1
+                break
+              fi
+              cat "$out"
+              if [ "$attempt" -lt 5 ] && grep -q 'was not found' "$out"; then
+                echo "npm version not visible to the registry yet; retrying in 30 s (attempt ${attempt}/5)..."
+                sleep 30
+                continue
+              fi
+              break
+            done
+            rm -f "$out"
+            if [ "$ok" -ne 1 ]; then
+              echo "::warning::MCP Registry publish failed for ${name}@${version}. Re-run by dispatching the mcp-registry-publish workflow with packages=${dir#packages/}."
             fi
           done
