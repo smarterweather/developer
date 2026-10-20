@@ -4145,7 +4145,10 @@ paths:
         outside the 50 US states and DC (`global` products included), with
         `related` naming a sibling product that covers the point when one
         exists (there is no automatic switch); `not_public`. `partial` and
-        `entitlement_required` are reserved. `data_age_seconds` and
+        `entitlement_required` are reserved. A read that failed upstream,
+        or was cut short before it returned any frame of the window,
+        answers `503` `service-unavailable` with `Retry-After`, never
+        `unavailable`. `data_age_seconds` and
         `freshness_status` match `GET /v1/catalog?include=freshness`; with
         `run`, both describe the pinned run (its age, and `fresh` or
         `stale` against the product's freshness budget; a product tracked
@@ -4175,7 +4178,8 @@ paths:
         `meta.timezone` may be null when the timezone lookup is
         unavailable or slow; the response is then sent with
         `Cache-Control: no-store`, as it is when the timezone comes from a
-        temporarily degraded or fallback lookup.
+        temporarily degraded or fallback lookup, or when the upstream read
+        returned only part of an element's frames.
 
         ### Auth and cost
 
@@ -4270,7 +4274,10 @@ paths:
         Elements come back location-major in request order, each echoing
         its location's `label`. Every rule of `GET /v1/series` applies;
         `points`, top-level `lat`/`lon` and `at` are not words of this
-        route, and an unknown field is a `400`.
+        route, and an unknown field is a `400`. A read that failed
+        upstream, or was cut short before it returned any frame, at any
+        location answers `503` `service-unavailable` with `Retry-After`,
+        never `unavailable`.
 
         **Experimental** (`x-stability: experimental`), as
         `GET /v1/series`.
