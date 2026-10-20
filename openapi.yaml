@@ -83,7 +83,7 @@ info:
     | `narrations`| no      | experimental | LLM-generated narrative text for current/short-term conditions. |
     | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/NOW/HLS/MCD/MPD/PMD). Canonical for new clients. |
     | `discussions` | no    | experimental | Deprecated. Prefer `include=guidance` (`guidance.mcds` / `guidance.afd`). |
-    | `uncertainty` | no    | experimental | NBM probabilistic sub-objects on hourly and daily forecasts (CONUS/Alaska/Hawaii only). |
+    | `uncertainty` | no    | experimental | NBM probabilistic sub-objects on hourly and daily forecasts (CONUS/Alaska/Hawaii only): ensemble spread and probability-below-threshold fields. See `HourlyUncertainty` / `DailyUncertainty`. |
     | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
     | `climate`     | no    | experimental | NCEI day-of-year normals for the location, plus per-day departure from normal on `daily[]`. |
     | `metar`       | no    | experimental | Nearest METAR sky layers and present weather for the photoreal canvas. |
@@ -1469,8 +1469,10 @@ paths:
         the latest observation per station (within the last 2 hours),
         sorted by distance.
 
-        A location is required. This route currently accepts it as `lat`
-        and `lon`; a request without a location returns `400`.
+        Pass one location: `lat` and `lon`, `zip`, or `location`. A request
+        without one returns `400`; a ZIP or name that does not resolve
+        returns `404`; while location lookup is unavailable, a `zip` or
+        `location` request returns `503` with `Retry-After`.
 
         A point outside the 50 US states and DC returns `404`
         `outside-coverage` with `next_steps`.
@@ -1480,6 +1482,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/LatQuery'
         - $ref: '#/components/parameters/LonQuery'
+        - $ref: '#/components/parameters/ZipQuery'
+        - $ref: '#/components/parameters/LocationQuery'
         - name: n
           in: query
           description: |
@@ -1738,8 +1742,10 @@ paths:
         The full `properties` bag is forward-compatible: the data pipeline
         may add keys without a sw-api release, so treat unknown keys as opaque.
 
-        A location is required. This route currently accepts it as `lat`
-        and `lon`; a request without a location returns `400`.
+        Pass one location: `lat` and `lon`, `zip`, or `location`. A request
+        without one returns `400`; a ZIP or name that does not resolve
+        returns `404`; while location lookup is unavailable, a `zip` or
+        `location` request returns `503` with `Retry-After`.
 
         A point outside the 50 US states and DC returns `404`
         `outside-coverage` with `next_steps`.
@@ -1749,6 +1755,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/LatQuery'
         - $ref: '#/components/parameters/LonQuery'
+        - $ref: '#/components/parameters/ZipQuery'
+        - $ref: '#/components/parameters/LocationQuery'
         - name: n
           in: query
           description: |
@@ -1808,9 +1816,8 @@ paths:
 
         ### Filters
 
-        - `hours` — rolling lookback in whole hours, applied from 1 to 24.
-          Empty means the default window of 6 hours. Values from 25 to 168
-          are accepted but currently return the default 6-hour window.
+        - `hours` — rolling lookback in whole hours, applied from 1 to
+          168 (7 days). Empty means the default window of 6 hours.
         - `type` — single-letter NWS report code (e.g. `T` tornado, `H`
           hail, `W` damaging wind, `F` flood). Server uppercases the
           input before forwarding.
@@ -1837,9 +1844,8 @@ paths:
           in: query
           required: false
           description: |
-            Rolling lookback window in whole hours. Default 6. Values from
-            1 to 24 are applied; values from 25 to 168 are accepted but
-            currently return the default 6-hour window.
+            Rolling lookback window in whole hours, applied from 1 to 168
+            (7 days). Default 6.
           schema:
             type: integer
             minimum: 1
@@ -2647,9 +2653,7 @@ paths:
         1. `date=YYYY-MM-DD` — single-day window
         2. `start=...&end=...` — explicit RFC3339 window (both required
            together)
-        3. `hours=N` — rolling lookback, applied from 1 to 168 (7 days).
-           Values from 169 to 720 are accepted but currently return the
-           last 24 hours.
+        3. `hours=N` — rolling lookback, applied from 1 to 720 (30 days).
 
         If several are set, `date` wins, then `start`+`end`, then
         `hours`; every selector that is set must still be well formed.
@@ -2677,10 +2681,8 @@ paths:
           in: query
           required: false
           description: |
-            Rolling lookback window in whole hours. Values from 1 to 168
-            are applied; values from 169 to 720 are accepted but currently
-            return the last 24 hours. Lowest precedence among the
-            time-window selectors.
+            Rolling lookback window in whole hours, applied from 1 to 720
+            (30 days). Lowest precedence among the time-window selectors.
           schema:
             type: integer
             minimum: 1
@@ -3388,8 +3390,12 @@ paths:
         `computation_path`, `source`, `unit`, any `gaps`) so nothing is
         silently assumed.
 
-        A location is required. This route currently accepts it as `lat`
-        and `lon`; a request without a location returns `400`.
+        Pass one location: `lat` and `lon`, `zip`, or `location`. A request
+        without one returns `400`; a ZIP or name that does not resolve
+        returns `404`; while location lookup is unavailable, a `zip` or
+        `location` request returns `503` with `Retry-After`.
+        The resolved place is echoed as `location`, present when the place
+        was resolved.
 
         A point outside the 50 US states and DC returns `404`
         `outside-coverage` with `next_steps`.
@@ -3399,6 +3405,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/LatQuery'
         - $ref: '#/components/parameters/LonQuery'
+        - $ref: '#/components/parameters/ZipQuery'
+        - $ref: '#/components/parameters/LocationQuery'
         - name: crop
           in: query
           required: true
@@ -3508,6 +3516,8 @@ paths:
           $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
         '504':
           $ref: '#/components/responses/Problem504'
 
@@ -3559,8 +3569,12 @@ paths:
         `meta.missing_days`, so the series stays aligned with the dates you
         asked for.
 
-        A location is required. This route currently accepts it as `lat`
-        and `lon`; a request without a location returns `400`.
+        Pass one location: `lat` and `lon`, `zip`, or `location`. A request
+        without one returns `400`; a ZIP or name that does not resolve
+        returns `404`; while location lookup is unavailable, a `zip` or
+        `location` request returns `503` with `Retry-After`.
+        The resolved place is echoed as `location`, present when the place
+        was resolved.
 
         A point outside the 50 US states and DC returns `404`
         `outside-coverage` with `next_steps`.
@@ -3570,6 +3584,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/LatQuery'
         - $ref: '#/components/parameters/LonQuery'
+        - $ref: '#/components/parameters/ZipQuery'
+        - $ref: '#/components/parameters/LocationQuery'
         - name: start
           in: query
           required: false
@@ -3641,6 +3657,8 @@ paths:
           $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
         '504':
           $ref: '#/components/responses/Problem504'
 
@@ -3815,9 +3833,13 @@ paths:
       operationId: getPointValue
       summary: Curated point value(s) for allowlisted stored data.
       description: |
-        Returns the latest value of allowlisted stored data sampled at a point,
-        with friendly output (canonical `unit`, an optional `category` label,
-        `observed_at`, and a staleness flag).
+        Returns the value in effect now of allowlisted stored data sampled at
+        a point: the latest frame of an analysis, or the forecast frame whose
+        period contains now, from the newest run that has one (HeatRisk:
+        today's level; `unavailable` when no frame covers now). Output is
+        friendly (canonical `unit`, an optional `category` label,
+        `observed_at`, and a staleness flag). The other days of a forecast
+        are on `GET /v1/series`.
 
         This is the one curated point lookup over stored data: it serves
         only the `(product, var)` pairs on a server-side **allowlist**, so the
@@ -3868,7 +3890,9 @@ paths:
 
         `approximate` is `true` when the value is older than the product's update
         cadence allows (e.g. a SPoRT-LIS daily analysis older than ~36 h, an
-        MRMS hourly accumulation older than ~3 h).
+        MRMS hourly accumulation older than ~3 h). A forecast's age is that of
+        the run it is served from: HeatRisk is `approximate` when that run is
+        older than ~36 h.
 
         ### Caching
 
@@ -4121,7 +4145,10 @@ paths:
         outside the 50 US states and DC (`global` products included), with
         `related` naming a sibling product that covers the point when one
         exists (there is no automatic switch); `not_public`. `partial` and
-        `entitlement_required` are reserved. `data_age_seconds` and
+        `entitlement_required` are reserved. A read that failed upstream,
+        or was cut short before it returned any frame of the window,
+        answers `503` `service-unavailable` with `Retry-After`, never
+        `unavailable`. `data_age_seconds` and
         `freshness_status` match `GET /v1/catalog?include=freshness`; with
         `run`, both describe the pinned run (its age, and `fresh` or
         `stale` against the product's freshness budget; a product tracked
@@ -4151,7 +4178,8 @@ paths:
         `meta.timezone` may be null when the timezone lookup is
         unavailable or slow; the response is then sent with
         `Cache-Control: no-store`, as it is when the timezone comes from a
-        temporarily degraded or fallback lookup.
+        temporarily degraded or fallback lookup, or when the upstream read
+        returned only part of an element's frames.
 
         ### Auth and cost
 
@@ -4246,7 +4274,10 @@ paths:
         Elements come back location-major in request order, each echoing
         its location's `label`. Every rule of `GET /v1/series` applies;
         `points`, top-level `lat`/`lon` and `at` are not words of this
-        route, and an unknown field is a `400`.
+        route, and an unknown field is a `400`. A read that failed
+        upstream, or was cut short before it returned any frame, at any
+        location answers `503` `service-unavailable` with `Retry-After`,
+        never `unavailable`.
 
         **Experimental** (`x-stability: experimental`), as
         `GET /v1/series`.
@@ -5185,9 +5216,9 @@ components:
           timezone: "America/New_York"
           county: "Suffolk"
         current:
-          time: "2026-04-20T15:00:00Z"
+          time: "2026-04-20T14:45:00Z"
           temperature: 58.4
-          feels_like: 56.1
+          feels_like: 58.4
           humidity: 62
           dew_point: 45.2
           pressure: 30.05
@@ -5203,9 +5234,19 @@ components:
           icon: "partly-cloudy-day"
           severe: false
         hourly:
+          - time: "2026-04-20T15:00:00Z"
+            temperature: 58.4
+            feels_like: 58.4
+            humidity: 62
+            wind_speed: 11.3
+            wind_direction: 240
+            precip_probability: 5
+            precip_amount: 0
+            conditions: "Partly Cloudy"
+            icon: "partly-cloudy-day"
           - time: "2026-04-20T16:00:00Z"
             temperature: 59.1
-            feels_like: 56.8
+            feels_like: 59.1
             humidity: 60
             wind_speed: 12.1
             wind_direction: 245
@@ -5215,7 +5256,7 @@ components:
             icon: "partly-cloudy-day"
           - time: "2026-04-20T17:00:00Z"
             temperature: 59.6
-            feels_like: 57.2
+            feels_like: 59.6
             humidity: 58
             wind_speed: 12.4
             wind_direction: 245
@@ -5305,7 +5346,7 @@ components:
             - "HRRR"
             - "RTMA"
             - "MRMS"
-          notice: "Data sourced from NOAA/NWS public products. Derived products produced by SmarterWeather."
+          notice: "Data sourced from NOAA/NWS public products. Derived products produced by Smarter Weather."
         meta:
           schema_version: "1.0.0"
           generated_at: "2026-04-20T15:00:04Z"
@@ -5435,7 +5476,7 @@ components:
             - "HRRR"
             - "RTMA"
             - "MRMS"
-          notice: "Data sourced from NOAA/NWS public products. Derived products produced by SmarterWeather."
+          notice: "Data sourced from NOAA/NWS public products. Derived products produced by Smarter Weather."
         meta:
           schema_version: "1.0.0"
           generated_at: "2026-04-20T15:06:40Z"
@@ -6213,7 +6254,10 @@ components:
         time:
           type: string
           format: date-time
-          description: Observation time (ISO 8601, UTC).
+          description: >-
+            Observation valid time (ISO 8601, UTC) of the analysis behind
+            `temperature`, or the response time when no fresh observation is
+            available.
         temperature:
           type: [number, "null"]
           format: double
@@ -6221,7 +6265,10 @@ components:
         feels_like:
           type: [number, "null"]
           format: double
-          description: Apparent temperature (wind chill or heat index).
+          description: >-
+            Feels-like temperature: the air temperature unless wind chill
+            (50°F or below, wind 3 mph or more) or heat index (80°F or above,
+            relative humidity 40% or more) applies.
         humidity:
           type: [number, "null"]
           format: double
@@ -6558,88 +6605,133 @@ components:
             hour. This is a distilled flag; use
             `uncertainty.*` for raw probabilistic fields.
         uncertainty:
+          x-stability: experimental
           description: |
             Optional probabilistic sub-object sourced from the NBM model.
             Populated only when the caller requests `include=uncertainty` and
             NBM coverage is available for the location (CONUS, Alaska, or
             Hawaii).
+
+            **Experimental** (`x-stability: experimental`): excluded from the
+            90-day breaking-change commitment.
           oneOf:
             - $ref: '#/components/schemas/HourlyUncertainty'
             - type: "null"
 
     HourlyUncertainty:
       type: object
+      x-stability: experimental
       description: |
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment.
+
         NBM probabilistic companion fields for a single hour. Each field is
-        optional; the sub-object is omitted when no NBM data is available.
+        optional and absent when NBM does not carry it for the hour (ceiling
+        and visibility probabilities are not on every frame); the sub-object
+        is omitted when no field is available. Each property names the
+        catalog `standard_name` and products it is read from, so the same
+        series can be fetched through `/v1/series`.
       properties:
         temperature_stddev:
           type: [number, "null"]
           format: double
-          description: Ensemble standard deviation of temperature.
+          description: |
+            Ensemble standard deviation of `temperature`, in the requested
+            temperature unit (a spread, converted without the °F/°C offset).
+            Catalog: `temperature_2m_stddev` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         dew_point_stddev:
           type: [number, "null"]
           format: double
+          description: |
+            Ensemble standard deviation of `dew_point`, in the requested
+            temperature unit (offset-free).
+            Catalog: `dew_point_2m_stddev` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         wind_speed_stddev:
           type: [number, "null"]
           format: double
+          description: |
+            Ensemble standard deviation of `wind_speed`, in the requested
+            wind speed unit.
+            Catalog: `wind_speed_10m_stddev` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         wind_gust_stddev:
           type: [number, "null"]
           format: double
+          description: |
+            Ensemble standard deviation of `wind_gust`, in the requested
+            wind speed unit.
+            Catalog: `wind_gusts_10m_stddev` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         visibility_prob_below_1mi:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that visibility is below 1 mi.
+            Catalog: `visibility_prob_below_1mi` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         visibility_prob_below_2mi:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that visibility is below 2 mi.
+            Catalog: `visibility_prob_below_2mi` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         visibility_prob_below_3mi:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that visibility is below 3 mi.
+            Catalog: `visibility_prob_below_3mi` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         visibility_prob_below_5mi:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that visibility is below 5 mi.
+            Catalog: `visibility_prob_below_5mi` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         ceiling_prob_below_500ft:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that the cloud ceiling is below 500 ft AGL.
+            Catalog: `ceiling_prob_below_500ft` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         ceiling_prob_below_1000ft:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that the cloud ceiling is below 1000 ft AGL.
+            Catalog: `ceiling_prob_below_1000ft` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         ceiling_prob_below_2000ft:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that the cloud ceiling is below 2000 ft AGL.
+            Catalog: `ceiling_prob_below_2000ft` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         ceiling_prob_below_3000ft:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Probability (percent) that the cloud ceiling is below 3000 ft AGL.
+            Catalog: `ceiling_prob_below_3000ft` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
         ceiling_prob_below_6600ft:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
-        wind_speed_p50:
-          type: [number, "null"]
-          format: double
-          description: NBM median 10m wind speed.
-        wind_speed_prob_gt_75mph:
-          type: [number, "null"]
-          format: double
-          minimum: 0
-          maximum: 100
+          description: |
+            Probability (percent) that the cloud ceiling is below 6600 ft AGL.
+            Catalog: `ceiling_prob_below_6600ft` on `nbm_conus` / `nbm_alaska` / `nbm_hawaii`.
 
     Daily:
       type: object
@@ -6719,10 +6811,18 @@ components:
           type: [number, "null"]
           format: double
           description: |
-            The day's maximum UV index. Often an estimate from the solar-noon
-            UV index and forecast cloud cover rather than a maximum of hourly
-            values; today's value can change during the day. Null when it
-            can't be determined.
+            The day's maximum UV index. It is worked out from the hourly
+            forecast the server builds for the request, `hourly_hours` long,
+            even when `include` omits `hourly`. On a day that forecast covers
+            from 06:00 to 18:00 local, it is the highest hourly UV index. On
+            other days it is an estimate from the UV index at solar noon and
+            the forecast cloud cover, raised to any higher hourly value. Late
+            in the day, today's value reflects the remaining forecast, not the
+            observed peak: after 18:00 local the estimate can use tonight's
+            forecast cloud, so a clear day followed by a cloudy evening can
+            report a low maximum. Any day's value can change between requests
+            as the hours the forecast covers move. Null when it can't be
+            determined.
         cape_max:
           type: [number, "null"]
           format: double
@@ -6796,9 +6896,13 @@ components:
             use this with `relative_day` to label rows Today/Tonight without
             wall-clock heuristics.
         uncertainty:
+          x-stability: experimental
           description: |
             Optional NBM probabilistic sub-object for this day. Populated only
             when `include=uncertainty` is requested and NBM coverage applies.
+
+            **Experimental** (`x-stability: experimental`): excluded from the
+            90-day breaking-change commitment.
           oneOf:
             - $ref: '#/components/schemas/DailyUncertainty'
             - type: "null"
@@ -6852,57 +6956,85 @@ components:
 
     DailyUncertainty:
       type: object
+      x-stability: experimental
       description: |
-        NBM probabilistic companion fields for a single day. All fields are
-        optional; daily uncertainty entries are produced by the NBM daily
-        aggregation stage.
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment.
+
+        NBM probabilistic companion fields for a single day, from the NBM
+        daily products. All fields are optional. The daily rules store these
+        under the same `standard_name`s as the hourly fields; each property
+        names the daily product it is read from. NBM stores daily rows
+        stamped 00Z and 12Z UTC on each date; a row's fields aggregate the
+        rows stamped with its `date` (the UTC date, as for every daily field),
+        `*_avg` fields as their mean and `*_max` fields as their maximum.
       properties:
         temperature_stddev_avg:
           type: [number, "null"]
           format: double
+          description: |
+            Day-mean ensemble standard deviation of temperature, in the
+            requested temperature unit (offset-free).
+            Catalog: `temperature_2m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         dew_point_stddev_avg:
           type: [number, "null"]
           format: double
+          description: |
+            Day-mean ensemble standard deviation of dew point, in the
+            requested temperature unit (offset-free).
+            Catalog: `dew_point_2m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         wind_speed_stddev_avg:
           type: [number, "null"]
           format: double
+          description: |
+            Day-mean ensemble standard deviation of wind speed, in the
+            requested wind speed unit.
+            Catalog: `wind_speed_10m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         wind_gust_stddev_avg:
           type: [number, "null"]
           format: double
+          description: |
+            Day-mean ensemble standard deviation of wind gust, in the
+            requested wind speed unit.
+            Catalog: `wind_gusts_10m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+        temperature_max_stddev:
+          type: [number, "null"]
+          format: double
+          description: |
+            Ensemble spread around `high`: NBM's standard deviation of the
+            daily maximum temperature, in the requested temperature unit
+            (offset-free). Present only when `high` is NBM's native daily
+            maximum, read from the same stored row; absent when `high` comes
+            from another source or was adjusted.
+            Catalog: `temperature_2m_max_stddev` on `nbm_daily_temps` / `nbm_daily_temps_ak` / `nbm_daily_temps_hi`.
+        temperature_min_stddev:
+          type: [number, "null"]
+          format: double
+          description: |
+            Ensemble spread around `low`: NBM's standard deviation of the
+            daily minimum temperature, in the requested temperature unit
+            (offset-free). Present only when `low` is NBM's native daily
+            minimum, read from the same stored row (the following morning's
+            minimum when that one sets `low`); absent when `low` comes from
+            another source or was adjusted.
+            Catalog: `temperature_2m_min_stddev` on `nbm_daily_temps` / `nbm_daily_temps_ak` / `nbm_daily_temps_hi`.
         visibility_prob_below_1mi_max:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: |
+            Day-maximum probability (percent) that visibility is below 1 mi.
+            Catalog: `visibility_prob_below_1mi` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         ceiling_prob_below_1000ft_max:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
-        snow_total_p10:
-          type: [number, "null"]
-          format: double
-        snow_total_p50:
-          type: [number, "null"]
-          format: double
-        snow_total_p90:
-          type: [number, "null"]
-          format: double
-        snow_prob_gt_1in:
-          type: [number, "null"]
-          format: double
-          minimum: 0
-          maximum: 100
-        snow_prob_gt_2in:
-          type: [number, "null"]
-          format: double
-          minimum: 0
-          maximum: 100
-        snow_prob_gt_4in:
-          type: [number, "null"]
-          format: double
-          minimum: 0
-          maximum: 100
+          description: |
+            Day-maximum probability (percent) that the cloud ceiling is below
+            1000 ft AGL.
+            Catalog: `ceiling_prob_below_1000ft` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
 
     DailyPeriod:
       type: object
@@ -6962,7 +7094,7 @@ components:
         feels_like:
           type: [number, "null"]
           format: double
-          description: High-for-day / low-for-night of hourly apparent temperature.
+          description: High-for-day / low-for-night of the hourly feels-like temperature (see `Current.feels_like`).
         visibility:
           type: [number, "null"]
           format: double
@@ -8833,7 +8965,12 @@ components:
       properties:
         sources:
           type: array
-          description: Canonical source identifiers that contributed data.
+          description: |
+            Canonical source identifiers that contributed data. `EPA AirNow`
+            is listed only when the body as returned carries an air-quality
+            value (`current.aqi`, `pm25`, `ozone` or `pm10`, `hourly[].aqi`,
+            `daily[].aqi_max`, `daily[].day.aqi` or `daily[].night.aqi`), so a
+            `view` or `fields` selection that drops those columns drops it.
           items:
             type: string
           example:
@@ -8843,10 +8980,11 @@ components:
             - "HRRR"
             - "RTMA"
             - "MRMS"
+            - "EPA AirNow"
         notice:
           type: string
           description: Human-readable attribution notice.
-          example: "Data sourced from NOAA/NWS public products. Derived products produced by SmarterWeather."
+          example: "Data sourced from NOAA/NWS and EPA AirNow public products. Derived products produced by Smarter Weather."
 
     Meta:
       type: object
@@ -9790,6 +9928,13 @@ components:
             and the crop has catalog milestones.
           items:
             $ref: '#/components/schemas/GddMilestone'
+        location:
+          $ref: '#/components/schemas/Location'
+          description: |
+            Resolved location, as `/v1/weather` returns it. Present when the
+            place was resolved: always for a `zip` or `location` request, and
+            for `lat`/`lon` when the coverage check's lookup answered in time
+            (omitted when that check fails open).
 
     ClimateNormalsStation:
       type: object
@@ -10004,6 +10149,13 @@ components:
           description: Per-day normals series, in requested date order.
           items:
             $ref: '#/components/schemas/ClimateNormalsDay'
+        location:
+          $ref: '#/components/schemas/Location'
+          description: |
+            Resolved location, as `/v1/weather` returns it. Present when the
+            place was resolved: always for a `zip` or `location` request, and
+            for `lat`/`lon` when the coverage check's lookup answered in time
+            (omitted when that check fails open).
 
     SeriesResponse:
       x-stability: experimental

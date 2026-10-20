@@ -3,10 +3,9 @@ name: smarterweather-api
 description: >-
   Build integrations against the Smarter Weather developer platform — the
   REST API at api.smarterweather.com. Covers authentication via API key,
-  calling /v1/weather, /v1/alerts/{id}, /v1/geocode/{search,autosuggest,reverse},
-  and /v1/storm-tracks,
-  handling the RFC 7807 error envelope, respecting RateLimit-* headers,
-  and choosing between REST and MCP for the integration. Use when the
+  calling /v1/weather and the other routes in the OpenAPI contract,
+  handling the RFC 9457 error envelope, respecting RateLimit-* headers,
+  retrying safely, and choosing between REST and MCP for the integration. Use when the
   user wants to fetch weather data from Smarter Weather, integrate the
   Smarter Weather REST API, mint or use a SMARTERWEATHER_API_KEY, or
   write any code that calls api.smarterweather.com.
@@ -47,11 +46,30 @@ outside-coverage response.
 ## Authentication — required reading
 
 Every Smarter Weather request is authenticated with an API key. **Never
-hard-code keys.** Read them from the environment:
+hard-code keys.** Keep the key in the project's `.env` (mode 0600,
+gitignored) and read it from the environment in server-side code:
 
 ```bash
-export SMARTERWEATHER_API_KEY="sw_live_..."
+# .env -- written for you by `login` / `trial` below
+SMARTERWEATHER_API_KEY=sw_live_...
 ```
+
+Load it before the samples below run:
+
+- Node 20.6+: `node --env-file=.env app.mjs`.
+- Python: `pip install python-dotenv`, then `from dotenv import
+  load_dotenv` and `load_dotenv(".env")` at startup (reads `./.env` in
+  the current directory; variables already set are kept).
+- curl: read only the key, never `source` the file as shell (the last
+  `KEY=` or `export KEY=` line wins; CR and quotes are stripped; a key
+  already exported is kept):
+
+```bash
+[ -n "$SMARTERWEATHER_API_KEY" ] || export SMARTERWEATHER_API_KEY="$(sed -n 's/^\(export \)\{0,1\}SMARTERWEATHER_API_KEY=//p' .env | tail -n 1 | tr -d "\r\"' ")"
+```
+
+The key is a server-side secret: call the API from your backend, never
+from a browser bundle or mobile app.
 
 Hard rules:
 
@@ -78,7 +96,7 @@ Hard rules:
 | Base URL | `https://api.smarterweather.com` |
 | Versioning | Path-based: `/v1/*` |
 | Auth header | `Authorization: Bearer $SMARTERWEATHER_API_KEY` (the `X-API-Key` header is **not** supported) |
-| Response content type | `application/json; charset=utf-8` (success), `application/problem+json` (errors) |
+| Response content type | `application/json` or `application/geo+json` by route (success; the operation in the OpenAPI document says which), `application/problem+json` (errors) |
 | Machine-readable contract | <https://developers.smarterweather.com/openapi.yaml> |
 
 The OpenAPI document above is canonical. If an endpoint is not in it, the
@@ -103,7 +121,7 @@ const res = await fetch(
 );
 
 if (!res.ok) {
-  // Errors are RFC 7807 application/problem+json documents.
+  // Errors are RFC 9457 application/problem+json documents.
   const problem = await res.json().catch(() => ({}));
   throw new Error(
     `SmarterWeather ${res.status}: ${problem?.type ?? "unknown"} - ${problem?.detail ?? res.statusText}`,
@@ -135,7 +153,7 @@ weather = resp.json()
 
 ```bash
 curl -sS \
-  -H "Authorization: Bearer $SMARTERWEATHER_API_KEY" \
+  -H "Authorization: Bearer ${SMARTERWEATHER_API_KEY:?set SMARTERWEATHER_API_KEY first, see developers.smarterweather.com/quickstart}" \
   "https://api.smarterweather.com/v1/weather?lat=41.88&lon=-87.63"
 ```
 
@@ -157,7 +175,7 @@ to every row of `POST /v1/weather/batch`.
 
 ### Errors
 
-Errors are RFC 7807 `application/problem+json` documents with a stable
+Errors are RFC 9457 `application/problem+json` documents with a stable
 shape. Always parse defensively.
 
 ```json
@@ -174,11 +192,12 @@ shape. Always parse defensively.
 | --- | --- | --- |
 | 400 | Invalid request shape | No — fix the call |
 | 401 | Missing or invalid API key | No — re-mint or check env |
-| 403 | Key valid but not authorized for this endpoint or tier | No |
-| 404 | `type` `https://smarterweather.com/errors/not-found`: resource or place not found | No |
+| 403 | problem+json: key valid but this endpoint, feature or tier is not enabled for it, including a trial key on a route outside its allowlist (the `type` says which). A 403 with no problem `type`, such as a bare `{"message":"Forbidden"}`, is not from the API itself: it is the edge (a path that is not a public API route, or a legacy route without its key) or the firewall. Check the URL first | No |
+| 404 | `type` `https://smarterweather.com/errors/not-found`: resource, place or API route not found. Any valid key, trial keys included, gets this for an unknown public `/v1/...` path (`/v1/internal/`, `/v1/user/` and `/v1/billing/` are not public API routes) | No |
 | 404 | `type` `https://smarterweather.com/errors/outside-coverage`: the point is outside the 50 US states and DC | No — follow `next_steps.coverage` |
-| 429 | Rate-limited | Yes — back off (see below) |
-| 5xx | Server error | Yes — exponential backoff with jitter |
+| 429 | Rate-limited | Yes — after `Retry-After` (see below) |
+| 503 | A dependency is briefly unreachable | Yes — after `Retry-After` if present, else backoff |
+| other 5xx | Server error | Yes — exponential backoff, max 3 retries |
 
 Two problems share `404`, so branch on the problem `type`, not the
 status.
@@ -206,29 +225,52 @@ A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only
 
 <!-- /generated -->
 
-On `429`, respect `Retry-After` (seconds) if present; otherwise use
-exponential backoff starting at 1 second with jitter, capped at 5
-retries. Production code should pre-empt 429s by pacing requests when
-`RateLimit-Remaining` drops near zero.
+### Retry policy
+
+The retry table at
+<https://developers.smarterweather.com/errors> ("Retry guidance") is
+authoritative; branch on the problem `type`. In short:
+
+- Do not retry a `4xx` as-is: fix the request or follow `next_steps`.
+  Examples of the exceptions: `429` (wait, below); `409` `conflict`
+  (re-read state, retry once if the conflict was stale); `400`
+  `trial-challenge-invalid` (fetch a fresh challenge, retry once);
+  `402` `payment-required` on the MCP (retry once with a payment for one
+  of `accepts`).
+- On `429`, wait the `Retry-After` seconds. Without the header, wait
+  `RateLimit-Daily-Reset` when `RateLimit-Daily-Remaining` is `0`,
+  otherwise `RateLimit-Reset`.
+- On `503` `trial-mint-unavailable` (the global trial cap), follow
+  `next_steps.recommended` (`device_flow`) for a regular key instead of
+  sleeping out the hour-long `Retry-After`. On another `503`, wait
+  `Retry-After` when present.
+- On other `5xx`, and on a `503` without `Retry-After`, back off
+  exponentially: start at 250 ms or more, double each attempt, add
+  jitter, and stop after 3 retries.
+- Pre-empt `429`s by pacing requests when `RateLimit-Remaining` drops
+  near zero.
 
 ## Anti-patterns to avoid
 
 1. **Hard-coding the API key into source files.** Read from
    `process.env.SMARTERWEATHER_API_KEY` (or the language equivalent).
-2. **Calling `/v1/weather` in a tight loop without caching.** Cache with
-   a sane TTL (60-300 seconds for current conditions, longer for
-   forecasts).
+2. **Calling `/v1/weather` in a tight loop without caching.** Cache each
+   answer for the `max-age` in its `Cache-Control` header, and not at
+   all when it says `no-store`.
 3. **Treating 5xx as terminal.** Retry server errors with backoff; treat
    only 4xx as caller errors.
 4. **Calling the production API from tests.** Use `sw_test_*` keys; mock
    responses where practical.
-5. **Inventing endpoints.** The canonical contract is
-   <https://developers.smarterweather.com/openapi.yaml>.
+5. **Inventing endpoints.** The route list is the canonical contract at
+   <https://developers.smarterweather.com/openapi.yaml>; read it instead
+   of guessing a path.
 
 ## Where to learn more
 
 - Developer portal: <https://developers.smarterweather.com>
 - Quickstart: <https://developers.smarterweather.com/quickstart>
+- Build a weather app (backend, caching, times, icons, attribution, field
+  reference): <https://developers.smarterweather.com/build-a-weather-app>
 - REST API reference: <https://developers.smarterweather.com/api/reference>
 - Agent-oriented doc index: <https://developers.smarterweather.com/llms.txt>
 - MCP integration: the `smarterweather-mcp` skill at
