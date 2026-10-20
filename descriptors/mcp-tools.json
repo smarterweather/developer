@@ -215,6 +215,9 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/toolset": "planning"
       }
     },
     {
@@ -268,6 +271,9 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/toolset": "catalog"
       }
     },
     {
@@ -538,7 +544,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "planning"
       }
     },
     {
@@ -768,7 +775,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "planning"
       }
     },
     {
@@ -945,7 +953,8 @@
           [
             "alert_id"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "core"
       }
     },
     {
@@ -1028,7 +1037,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "history"
       }
     },
     {
@@ -1135,6 +1145,9 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/toolset": "history"
       }
     },
     {
@@ -1319,7 +1332,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "core"
       }
     },
     {
@@ -1497,7 +1511,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "core"
       }
     },
     {
@@ -1643,6 +1658,9 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/toolset": "guidance"
       }
     },
     {
@@ -1915,7 +1933,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "core"
       }
     },
     {
@@ -2393,7 +2412,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "verification"
       }
     },
     {
@@ -2594,7 +2614,8 @@
             "variable": "temperature_2m",
             "lead_hours": 24
           }
-        ]
+        ],
+        "smarterweather.dev/toolset": "verification"
       }
     },
     {
@@ -2707,7 +2728,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "agriculture"
       }
     },
     {
@@ -2892,7 +2914,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "core"
       }
     },
     {
@@ -3012,7 +3035,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "severe"
       }
     },
     {
@@ -3111,7 +3135,8 @@
             "zoom": 7,
             "time": 1783554900
           }
-        ]
+        ],
+        "smarterweather.dev/toolset": "visual"
       }
     },
     {
@@ -3247,7 +3272,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "observed"
       }
     },
     {
@@ -3581,7 +3607,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "core"
       }
     },
     {
@@ -3757,7 +3784,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "guidance"
       }
     },
     {
@@ -3851,6 +3879,9 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/toolset": "exposure"
       }
     },
     {
@@ -4074,7 +4105,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "planning"
       }
     },
     {
@@ -4207,6 +4239,9 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/toolset": "catalog"
       }
     },
     {
@@ -4291,6 +4326,9 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/toolset": "exposure"
       }
     },
     {
@@ -4412,7 +4450,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "observed"
       }
     },
     {
@@ -4486,7 +4525,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "visual"
       }
     },
     {
@@ -4629,7 +4669,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "severe"
       }
     },
     {
@@ -4759,7 +4800,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "severe"
       }
     },
     {
@@ -4869,7 +4911,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "catalog"
       }
     },
     {
@@ -4945,6 +4988,9 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/toolset": "guidance"
       }
     },
     {
@@ -5049,6 +5095,9 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/toolset": "observed"
       }
     },
     {
@@ -5212,7 +5261,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "catalog"
       }
     },
     {
@@ -5391,7 +5441,8 @@
             "lat",
             "lon"
           ]
-        ]
+        ],
+        "smarterweather.dev/toolset": "catalog"
       }
     },
     {
@@ -5469,6 +5520,9 @@
       },
       "execution": {
         "taskSupport": "forbidden"
+      },
+      "_meta": {
+        "smarterweather.dev/toolset": "catalog"
       }
     },
     {
@@ -5649,7 +5703,8 @@
             "lon": -104.99,
             "limit": 3
           }
-        ]
+        ],
+        "smarterweather.dev/toolset": "core"
       }
     },
     {
@@ -5798,7 +5853,8 @@
           {
             "query": "50219"
           }
-        ]
+        ],
+        "smarterweather.dev/toolset": "core"
       }
     }
   ]
