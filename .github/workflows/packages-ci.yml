@@ -7,6 +7,25 @@ on:
       - "package.json"
       - "package-lock.json"
 jobs:
+  # The MCP Registry rejects a server.json description over 100 characters
+  # (422 at publish time, after npm already has the release).
+  registry-manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: server.json description <= 100 chars
+        run: |
+          set -euo pipefail
+          failed=0
+          for f in packages/*/server.json; do
+            len="$(jq -r '.description | length' "$f")"
+            echo "${f}: ${len} chars"
+            if [ "$len" -gt 100 ]; then
+              echo "::error file=${f}::description is ${len} chars; the MCP Registry accepts at most 100."
+              failed=1
+            fi
+          done
+          exit "$failed"
   build:
     runs-on: ubuntu-latest
     strategy:
