@@ -223,7 +223,7 @@
     {
       "name": "describe_dataset",
       "title": "Describe dataset",
-      "description": "Variables available in a dataset, with standard names, units, descriptions, and the time range of available data. Use before query_dataset to discover valid variable names. Example: {\"dataset_id\": \"nbm_conus\"}.",
+      "description": "A dataset's variables (standard names, units, display units, categories, bands), horizon, step, cadence, freshness, cost class and an example_query for query_dataset. Example: {\"dataset_id\": \"nbm_conus\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -249,6 +249,16 @@
           "detail": {
             "type": "object",
             "additionalProperties": {}
+          },
+          "example_query": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "query_dataset arguments for this dataset; add a location."
+          },
+          "data_status": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Present only when the data service could not answer: a cached copy, or catalog facts without freshness."
           },
           "attribution": {
             "type": "string",
