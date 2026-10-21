@@ -6743,8 +6743,20 @@ components:
       type: object
       description: |
         Single daily forecast entry. Per-period weather (temperature, wind,
-        precipitation, narrative) lives in `day` / `night`; top-level
-        fields are aggregate values for the full calendar day.
+        precipitation, narrative) lives in `day` / `night`, the row's local
+        06:00-18:00 and 18:00-06:00 halves, so a row spans 06:00 local on
+        `date` to 06:00 local the next day rather than the calendar day.
+        Precipitation, snow and ice totals are built on that window; the
+        other top-level aggregates come from the daily model product for
+        `date`, sub-daily guidance, or both, and promise no window. The row
+        that holds the response time may cover only the remainder of its
+        window, and the overnight row before 06:00 (`relative_day: -1`)
+        carries only its overnight portion. A row built from the hourly
+        forecast alone (no daily product and no 6 h precipitation buckets
+        in the response) uses the local calendar day for its top-level
+        values instead. `high` is the daytime maximum (on hourly-only rows,
+        the calendar day's maximum); `low` is the overnight minimum described
+        on that field and is not bounded by the row's window.
       required: [date]
       properties:
         date:
@@ -6756,7 +6768,8 @@ components:
           type: [number, "null"]
           format: double
           description: |
-            Daytime maximum. May be null on the `relative_day: -1` overnight
+            Daytime maximum (on hourly-only rows, the calendar day's maximum).
+            May be null on the `relative_day: -1` overnight
             row, whose daytime is already past: that row reports a maximum only
             when the forecast cycle still carries one for the date, and never
             estimates it from the overnight minimum. When `high` is null the
@@ -6765,9 +6778,13 @@ components:
           type: [number, "null"]
           format: double
           description: |
-            Overnight minimum, covering 00:00–05:59 of the following calendar
-            date. Present on the `relative_day: -1` row, whose remaining
-            overnight hours are still ahead.
+            Overnight minimum temperature for `date`: the lower of the
+            morning-of-`date` and night-after-`date` minima where the source
+            carries both. The source decides the exact hours (NBM MinT
+            periods, or hourly minima over those night hours); it is not
+            bounded by the row's 06:00-06:00 window. Present on the
+            `relative_day: -1` row, whose remaining overnight hours are
+            still ahead.
         conditions:
           type: string
         icon:
@@ -6783,22 +6800,22 @@ components:
         precip_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source covers any hour of the day.
+          description: Null when no forecast source provides precipitation for the row.
         snow_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source covers any hour of the day.
+          description: Null when `precip_total` is null and no source provides snowfall for the row.
         ice_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source covers any hour of the day.
+          description: Null when `precip_total` is null and no source provides ice for the row.
         wind_speed_max:
           type: [number, "null"]
           format: double
         wind_gust_max:
           type: [number, "null"]
           format: double
-          description: Maximum sustained-gust value across the calendar day.
+          description: Maximum sustained-gust value for the row.
         wind_direction:
           type: [integer, "null"]
           minimum: 0
@@ -6817,7 +6834,7 @@ components:
           type: [number, "null"]
           format: double
           description: |
-            The day's maximum UV index. It is worked out from the hourly
+            The row's maximum UV index. It is worked out from the hourly
             forecast the server builds for the request, `hourly_hours` long,
             even when `include` omits `hourly`. On a day that forecast covers
             from 06:00 to 18:00 local, it is the highest hourly UV index. On
@@ -6826,7 +6843,7 @@ components:
             in the day, today's value reflects the remaining forecast, not the
             observed peak: after 18:00 local the estimate can use tonight's
             forecast cloud, so a clear day followed by a cloudy evening can
-            report a low maximum. Any day's value can change between requests
+            report a low maximum. Any row's value can change between requests
             as the hours the forecast covers move. Null when it can't be
             determined.
         cape_max:
@@ -6864,14 +6881,14 @@ components:
         solar_radiation_max:
           type: [number, "null"]
           format: double
-          description: Peak downward shortwave radiation across the day (W/m^2).
+          description: Peak downward shortwave radiation for the row (W/m^2).
         snow_level:
           type: [number, "null"]
           format: double
         thunder_possible:
           type: boolean
           default: false
-          description: Distilled flag; true if any hour in the day crosses the blender's lightning-risk threshold.
+          description: Distilled flag; true when the row crosses the blender's lightning-risk threshold.
         astro:
           $ref: '#/components/schemas/Astro'
         day:
@@ -7072,15 +7089,15 @@ components:
         precip_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source covers any hour of the day.
+          description: Null when the row's `precip_total` is null.
         snow_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source covers any hour of the day.
+          description: Null when the row's `snow_total` is null.
         ice_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source covers any hour of the day.
+          description: Null when the row's `ice_total` is null.
         humidity:
           type: [number, "null"]
           format: double
