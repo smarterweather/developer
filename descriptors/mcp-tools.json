@@ -5217,34 +5217,13 @@
               "additionalProperties": false
             }
           },
-          "freshness": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object",
-              "properties": {
-                "status": {
-                  "type": "string",
-                  "enum": [
-                    "fresh",
-                    "stale",
-                    "missing"
-                  ]
-                },
-                "age": {
-                  "type": "string"
-                },
-                "max_age": {
-                  "type": "string"
-                },
-                "latest_time": {
-                  "type": "string"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
           "note": {
             "type": "string"
+          },
+          "data_status": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Present only when freshness was asked for and the data service did not provide it, or answered from a cached copy."
           }
         },
         "required": [
