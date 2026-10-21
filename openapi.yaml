@@ -6981,28 +6981,28 @@ components:
           description: |
             Day-mean ensemble standard deviation of temperature, in the
             requested temperature unit (offset-free).
-            Catalog: `temperature_2m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+            Catalog: `temperature_2m_stddev_mean` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         dew_point_stddev_avg:
           type: [number, "null"]
           format: double
           description: |
             Day-mean ensemble standard deviation of dew point, in the
             requested temperature unit (offset-free).
-            Catalog: `dew_point_2m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+            Catalog: `dew_point_2m_stddev_mean` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         wind_speed_stddev_avg:
           type: [number, "null"]
           format: double
           description: |
             Day-mean ensemble standard deviation of wind speed, in the
             requested wind speed unit.
-            Catalog: `wind_speed_10m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+            Catalog: `wind_speed_10m_stddev_mean` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         wind_gust_stddev_avg:
           type: [number, "null"]
           format: double
           description: |
             Day-mean ensemble standard deviation of wind gust, in the
             requested wind speed unit.
-            Catalog: `wind_gusts_10m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+            Catalog: `wind_gusts_10m_stddev_mean` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         temperature_max_stddev:
           type: [number, "null"]
           format: double
@@ -7031,7 +7031,7 @@ components:
           maximum: 100
           description: |
             Day-maximum probability (percent) that visibility is below 1 mi.
-            Catalog: `visibility_prob_below_1mi` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+            Catalog: `visibility_prob_below_1mi_max` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         ceiling_prob_below_1000ft_max:
           type: [number, "null"]
           format: double
@@ -7040,7 +7040,7 @@ components:
           description: |
             Day-maximum probability (percent) that the cloud ceiling is below
             1000 ft AGL.
-            Catalog: `ceiling_prob_below_1000ft` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+            Catalog: `ceiling_prob_below_1000ft_max` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
 
     DailyPeriod:
       type: object
