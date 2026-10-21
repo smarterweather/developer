@@ -24,6 +24,13 @@ Extension members beyond these five may appear (RFC 9457 §3.2); today
 `401`, `402`, `403`, and `429` carry `next_steps` (below). Ignore members you
 do not understand.
 
+<a id="reason"></a>`reason` is an optional extension member: a snake_case
+machine code from a bounded list, more specific than `type` (for example
+`location_ambiguous` on a `bad-request`). Today it appears on
+`trial-ended` (`exhausted` or `expired`) and on [MCP](#mcp) tool results.
+Branch on `type` first; use `reason` only to refine it, and treat a value
+you do not know as absent.
+
 Errors sw-api itself returns are **`application/problem+json`**.
 Responses that never reach it (an unknown route, a wrong method, a
 gateway or throttling error in front of it) can be `text/plain` or
@@ -268,7 +275,17 @@ JSON, with the same `type` URIs. It carries no `structuredContent`, with one
 exception: on `payment-required` the text block also carries the x402
 `PaymentRequired` members and `structuredContent` is the bare
 `PaymentRequired`, the two places x402 clients read it. There is no HTTP
-status per tool call, so key on `type`, then `status`.
+status per tool call, so key on `type`, then `status`. Argument, location,
+dataset and rate-limit problems add a [`reason`](#reason): `input_validation`,
+`unknown_tool`, `tool_disabled`, `location_required`, `location_conflict`,
+`coordinates_incomplete`, `coordinates_out_of_range`, `location_not_found`,
+`location_ambiguous`, `unknown_dataset`, `rpm_exceeded`, `daily_exceeded`,
+`wallet_limited`, or `output_validation` on a `500`. A `payment-required`
+quote carries none. A re-quote after settlement failed carries
+`settlement_rejected` (the facilitator refused your authorization, for
+example a used nonce or low balance) or `settlement_failed` (the
+facilitator or chain failed). After `settlement_failed` the payment may
+still have settled: check your wallet before paying again.
 
 - Argument errors (a value that fails the tool's input schema, or a
   precondition such as an ambiguous place name) are `bad-request` with the
