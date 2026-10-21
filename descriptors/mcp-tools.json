@@ -5103,13 +5103,12 @@
     {
       "name": "list_datasets",
       "title": "List datasets",
-      "description": "Discover the datasets (model grids, analyses, observations) available at a location, keyed by dataset_id, with per-dataset freshness where tracked (latest model run as latest_run, latest_time, data_age_seconds, freshness_status). Only datasets covering the point are listed: its domain (CONUS/Alaska/Hawaii) plus global grids. Use this to find dataset_id values for query_dataset, or to check whether data is current. Variables, units and standard names come from describe_dataset. Example: {\"location\": \"Anchorage, AK\"}.",
+      "description": "Discover the gridded datasets (model grids, analyses) available at a location, or every public one when none is given, keyed by dataset_id. At a point: its domain (CONUS/Alaska/Hawaii) plus global grids, with freshness where tracked (latest model run as latest_run, latest_time, data_age_seconds, freshness_status). Use this to find dataset_id values for query_dataset or check whether data is current. Variables, units and standard names come from describe_dataset. Example: {\"location\": \"Anchorage, AK\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "location": {
             "type": "string",
-            "minLength": 1,
             "maxLength": 200,
             "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
           },
@@ -5233,10 +5232,12 @@
               },
               "additionalProperties": false
             }
+          },
+          "note": {
+            "type": "string"
           }
         },
         "required": [
-          "location",
           "datasets"
         ],
         "additionalProperties": false,
@@ -5253,15 +5254,6 @@
         "taskSupport": "forbidden"
       },
       "_meta": {
-        "smarterweather.dev/required_one_of": [
-          [
-            "location"
-          ],
-          [
-            "lat",
-            "lon"
-          ]
-        ],
         "smarterweather.dev/toolset": "catalog"
       }
     },
