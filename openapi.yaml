@@ -4110,11 +4110,15 @@ paths:
         ### Units and raw values
 
         `units` is `si`, `metric` or `imperial`. `si` serves stored values
-        (K, m/s, mm, Pa, percent, and the stored SI unit for anything
-        else). The chosen system is echoed at the top level and each
-        element's `units` names every variable's unit; a percentage is
-        always labelled `percent`. Values without a
-        display unit are served raw, as stored, with no decode: `astro`
+        labelled with the variable's catalog `units` (K, m/s, mm, Pa,
+        kg/m2/s, percent, ...). `metric` and `imperial` convert to the
+        catalog `display_units`, labelled `C`, `F`, `delta_C`, `delta_F`,
+        `kph`, `mph`, `mm`, `in`, `hPa`, `inHg`, `m`, `ft`, `km`, `mi`,
+        `kft`, `mm/hr` or `in/hr` (a precipitation rate in kg/m2/s); a unit
+        with no display unit keeps its catalog spelling. The chosen system
+        is echoed at the top level and each element's `units` names every
+        variable's unit; a percentage is always labelled `percent`. Values
+        without a display unit are served raw, as stored, with no decode: `astro`
         sun and moon times are seconds after the row's UTC midnight (they
         can be negative or above 86400), moon values are x1000, and
         `day_length` -1 means no event. `GET /v1/catalog/{product_id}`
@@ -4860,8 +4864,10 @@ components:
       required: true
       description: |
         Units system, required on this route while experimental. `si`
-        serves stored values; `metric` and `imperial` convert to each
-        variable's catalog display unit.
+        serves stored values labelled with the catalog `units` spelling;
+        `metric` and `imperial` convert to each variable's catalog display
+        unit (`C`, `F`, `delta_C`, `delta_F`, `kph`, `mph`, `mm`, `in`,
+        `hPa`, `inHg`, `m`, `ft`, `km`, `mi`, `kft`, `mm/hr`, `in/hr`).
       schema:
         type: string
         enum: [si, metric, imperial]
@@ -8039,7 +8045,9 @@ components:
           type: [string, "null"]
         units:
           type: [string, "null"]
-          description: Units of the stored values.
+          description: |
+            Units of the stored values, in the catalog unit vocabulary
+            (assets/data-catalog/README.md).
           example: K
         display_units:
           type: object
