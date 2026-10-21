@@ -294,7 +294,9 @@ still have settled: check your wallet before paying again.
   (names only, no coordinates).
 - A `400` or `404` problem from the API behind a tool reaches you as the
   API sent it, `next_steps` included (for example `outside-coverage`).
-- Every `5xx` carries a fixed, generic `detail`.
+- Every `5xx` carries a fixed, generic `detail`. When the API behind a tool
+  answers `503` or `429` with `Retry-After`, the problem carries it as
+  `retry_after_seconds`, as `rate-limit-exceeded` does.
 - `get_path_exposure` returns `flag-disabled` (`403`, no `next_steps`)
   when civic place counts are not enabled for the caller, without calling
   the API behind it. A second text block tells a model not to retry. The

@@ -5260,7 +5260,7 @@
     {
       "name": "query_dataset",
       "title": "Query dataset",
-      "description": "Raw time series from a specific dataset for specific variables at a point. Power-user access to any gridded product (NBM, HRRR, RRFS, GFS, RTMA, MRMS, air quality, ...). Time modes: hours (next N hours, default 24), time_start+time_end (explicit ISO-8601 window), or latest=true (single most-recent value). reference_time pins a specific model run, and each returned series reports the run that served it (reference_time, or reference_times when a series mixes runs) — check it before comparing two runs, since a run older than about 48 hours may no longer be available. For blended forecasts use get_forecast instead. Examples: {\"location\": \"Denver, CO\", \"dataset_id\": \"rrfs_surface\", \"variables\": [\"temperature_2m\"], \"hours\": 18} or {\"lat\": 41.4, \"lon\": -92.9, \"dataset_id\": \"rtma_conus\", \"variables\": [\"temperature_2m\"], \"latest\": true}.",
+      "description": "Raw time series of one dataset's variables at a point, with unit labels: any gridded product (NBM, HRRR, RRFS, GFS, RTMA, MRMS, air quality, ...). Time modes: hours (default 24), time_start+time_end (ISO 8601), or latest=true (newest value). Up to 168 frames: when truncated, send next_cursor as cursor with the same arguments. reference_time pins a model run; each series reports its run (reference_time, or reference_times when runs mix); runs older than about 48 h may be gone. For blended forecasts use get_forecast. Examples: {\"location\": \"Denver, CO\", \"dataset_id\": \"rrfs_surface\", \"variables\": [\"temperature_2m\"], \"hours\": 18} or {\"lat\": 41.4, \"lon\": -92.9, \"dataset_id\": \"rtma_conus\", \"variables\": [\"temperature_2m\"], \"latest\": true}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -5286,7 +5286,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 80,
-            "description": "Dataset to query. Default: the NBM dataset for the location domain (nbm_conus/nbm_alaska/nbm_hawaii). Discover options with list_datasets."
+            "description": "Default: the NBM dataset for the location (nbm_conus/nbm_alaska/nbm_hawaii). Discover with list_datasets."
           },
           "variables": {
             "type": "array",
@@ -5295,13 +5295,13 @@
             },
             "minItems": 1,
             "maxItems": 20,
-            "description": "Standard variable names (e.g. temperature_2m, precipitation). Discover with describe_dataset."
+            "description": "Standard names (e.g. temperature_2m, precipitation); see describe_dataset."
           },
           "hours": {
             "type": "integer",
             "minimum": 1,
             "maximum": 264,
-            "description": "Forecast/lookahead hours from now (1-264). Default 24 when no other time mode set."
+            "description": "Hours from now (1-264): ahead, or back on analyses (default: newest 166 frames); from the run start with reference_time."
           },
           "time_start": {
             "type": "string",
@@ -5314,11 +5314,23 @@
           "latest": {
             "type": "boolean",
             "default": false,
-            "description": "Return only the most recent value (analysis datasets like RTMA/MRMS)."
+            "description": "Only the newest value (analyses like RTMA/MRMS)."
           },
           "reference_time": {
             "type": "string",
             "description": "Pin a specific model run (ISO 8601). Default: latest run."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ],
+            "default": "imperial"
+          },
+          "cursor": {
+            "type": "string",
+            "description": "next_cursor of the previous page."
           }
         },
         "required": [
@@ -5356,6 +5368,13 @@
             ],
             "additionalProperties": false
           },
+          "units": {
+            "type": "string",
+            "enum": [
+              "imperial",
+              "metric"
+            ]
+          },
           "series": {
             "type": "array",
             "items": {
@@ -5382,6 +5401,16 @@
                     }
                   }
                 },
+                "unit_labels": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "description": "Unit of each variable in data."
+                },
                 "reference_time": {
                   "type": "string",
                   "description": "Model run behind every value in this series."
@@ -5392,15 +5421,66 @@
                     "type": "string"
                   },
                   "description": "Distinct runs, when this series mixes more than one."
+                },
+                "status": {
+                  "type": "string",
+                  "description": "ok, unavailable, out_of_domain (see related) or not_public."
+                },
+                "related": {
+                  "type": "string",
+                  "description": "With out_of_domain: a dataset that covers the point."
+                },
+                "data_age_seconds": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "freshness_status": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "fresh",
+                        "stale",
+                        "missing"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "required": [
                 "dataset_id",
                 "valid_times",
-                "data"
+                "data",
+                "unit_labels",
+                "status",
+                "data_age_seconds",
+                "freshness_status"
               ],
               "additionalProperties": false
             }
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data_status": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Present only when the data service did not answer and a cached copy was served."
           },
           "attribution": {
             "type": "string",
@@ -5409,7 +5489,10 @@
         },
         "required": [
           "location",
-          "series"
+          "units",
+          "series",
+          "truncated",
+          "next_cursor"
         ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
