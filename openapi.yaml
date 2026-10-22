@@ -6536,7 +6536,15 @@ components:
           type: [number, "null"]
         precip_type:
           type: string
-          enum: [none, rain, snow, mix, hail, unknown]
+          enum: [none, rain, snow, mix, sleet, freezing_rain, hail, unknown]
+          description: |
+            Precipitation type for the hour. Omitted when the hour has no
+            type, or has neither a precipitation chance nor an amount.
+            `mix` is rain and snow, or a wintry mix; `sleet` is ice pellets.
+            `none`, `hail` and `unknown` are reserved and not currently
+            served. Thunder is never a type: it is reported in `conditions`
+            and `thunderstorm_probability` (`thunder_possible` flags thunder
+            with snow).
         precip_type_rain_prob:
           type: [number, "null"]
           format: double
@@ -7144,7 +7152,17 @@ components:
           format: double
         precip_type:
           type: string
-          enum: ["", none, rain, snow, mix, sleet, freezing_rain, thunderstorms, unknown]
+          enum: ["", none, rain, snow, mix, sleet, freezing_rain, unknown]
+          description: |
+            Precipitation type for the period, from the hourly forecast
+            within `hourly_hours` (whether or not `hourly` is included).
+            Omitted for a period those hours do not type, which includes
+            periods past `hourly_hours`, even when `conditions` names
+            precipitation. `mix` is rain and snow, or a wintry mix; `sleet`
+            is ice pellets. `""`, `none` and `unknown` are reserved and not
+            currently served. Thunder is never a type: it is reported in
+            `conditions` and `thunderstorm_probability` (`thunder_possible`
+            flags thunder with snow).
         thunder_possible:
           type: boolean
           default: false
