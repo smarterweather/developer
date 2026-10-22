@@ -75,8 +75,7 @@
         "required": [
           "locations",
           "variables"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -205,7 +204,6 @@
           "unit_labels",
           "comparisons"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -214,9 +212,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/toolset": "planning"
@@ -238,8 +233,7 @@
         },
         "required": [
           "dataset_id"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -273,7 +267,6 @@
           "dataset_id",
           "detail"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -282,9 +275,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/toolset": "catalog"
@@ -388,8 +378,7 @@
         },
         "required": [
           "criteria"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -516,7 +505,6 @@
           "daylight_only",
           "activity_duration_hours"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -525,9 +513,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/input_examples": [
@@ -607,8 +592,7 @@
             "description": "Also return the AirNow next-day AQI forecast.",
             "type": "boolean"
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -764,7 +748,6 @@
           "location",
           "current"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -773,9 +756,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "ui": {
@@ -866,8 +846,7 @@
             "description": "ISO-8601 UTC past instant for the in-effect snapshot. Ignored with alert_id.",
             "type": "string"
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -944,7 +923,6 @@
             "additionalProperties": false
           }
         },
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -953,9 +931,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "ui": {
@@ -1037,8 +1012,7 @@
               "metric"
             ]
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "annotations": {
         "title": "Get climate normals",
@@ -1046,9 +1020,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -1121,8 +1092,7 @@
         },
         "required": [
           "type"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -1156,7 +1126,6 @@
           "unit_labels",
           "results"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -1165,9 +1134,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/toolset": "history"
@@ -1208,8 +1174,7 @@
               "si"
             ]
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -1335,7 +1300,6 @@
           "analysis",
           "nearest_station"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -1344,9 +1308,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -1424,8 +1385,7 @@
               "detailed"
             ]
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -1512,7 +1472,6 @@
           "units",
           "forecast"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -1521,9 +1480,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "ui": {
@@ -1625,8 +1581,7 @@
         },
         "required": [
           "type"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -1673,7 +1628,6 @@
           "type",
           "products"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -1682,9 +1636,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/toolset": "guidance"
@@ -1748,8 +1699,7 @@
         },
         "required": [
           "aspect"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -1957,7 +1907,6 @@
           "units",
           "series"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -1966,9 +1915,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -2047,8 +1993,7 @@
               "si"
             ]
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -2411,7 +2356,6 @@
           "skill",
           "insufficientHistory"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -2420,9 +2364,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/input_examples": [
@@ -2526,8 +2467,7 @@
           "model",
           "variable",
           "lead_hours"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -2638,7 +2578,6 @@
           "bbox",
           "slices"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -2647,9 +2586,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/input_examples": [
@@ -2755,8 +2691,7 @@
         },
         "required": [
           "crop"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "annotations": {
         "title": "Get growing degree days",
@@ -2764,9 +2699,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -2851,8 +2783,7 @@
               "detailed"
             ]
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -2939,7 +2870,6 @@
           "units",
           "forecast"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -2948,9 +2878,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "ui": {
@@ -3002,8 +2929,7 @@
               "metric"
             ]
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -3065,7 +2991,6 @@
           "unit_labels",
           "lightning"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -3074,9 +2999,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -3157,8 +3079,7 @@
             "properties": {},
             "additionalProperties": {}
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "annotations": {
         "title": "Get map snapshot",
@@ -3166,9 +3087,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/input_examples": [
@@ -3245,8 +3163,7 @@
               "metric"
             ]
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -3305,7 +3222,6 @@
           "unit_labels",
           "observations"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -3314,9 +3230,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -3397,8 +3310,7 @@
             "description": "Next-hour radar nowcast (CONUS; ignored with `at`).",
             "type": "boolean"
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -3623,7 +3535,6 @@
           "derived",
           "_sources"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -3632,9 +3543,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/input_examples": [
@@ -3726,8 +3634,7 @@
               "seasonal"
             ]
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -3818,7 +3725,6 @@
           "day",
           "outlooks"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -3827,9 +3733,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -3889,7 +3792,6 @@
         "required": [
           "geometry"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "outputSchema": {
@@ -3930,7 +3832,6 @@
           "counts",
           "features"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -3939,9 +3840,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/toolset": "exposure"
@@ -4034,8 +3932,7 @@
         "required": [
           "variable",
           "periods"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -4144,7 +4041,6 @@
           "aggregation",
           "periods"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -4153,9 +4049,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -4183,7 +4076,6 @@
             "type": "boolean"
           }
         },
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "outputSchema": {
@@ -4288,7 +4180,6 @@
         "required": [
           "overall"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -4297,9 +4188,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/toolset": "catalog"
@@ -4330,8 +4218,7 @@
             "minimum": 1,
             "maximum": 5
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -4374,7 +4261,6 @@
           "min_level",
           "summaries"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -4383,9 +4269,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/toolset": "exposure"
@@ -4431,8 +4314,7 @@
               "metric"
             ]
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -4489,7 +4371,6 @@
           "unit_labels",
           "soundings"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -4498,9 +4379,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -4563,8 +4441,7 @@
             "minimum": 1,
             "maximum": 3
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "annotations": {
         "title": "Get sounding chart",
@@ -4572,9 +4449,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -4641,8 +4515,7 @@
               "metric"
             ]
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -4709,7 +4582,6 @@
           "unit_labels",
           "detections"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -4718,9 +4590,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -4779,8 +4648,7 @@
               "metric"
             ]
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -4841,7 +4709,6 @@
           "unit_labels",
           "reports"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -4850,9 +4717,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -4892,8 +4756,7 @@
             "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -4955,7 +4818,6 @@
           "moon",
           "calendar"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -4964,9 +4826,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -5002,7 +4861,6 @@
             ]
           }
         },
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "outputSchema": {
@@ -5044,7 +4902,6 @@
           "unit_labels",
           "features"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -5053,9 +4910,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/toolset": "guidance"
@@ -5098,8 +4952,7 @@
               "metric"
             ]
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -5153,7 +5006,6 @@
           "unit_labels",
           "features"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -5162,9 +5014,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/toolset": "observed"
@@ -5199,8 +5048,7 @@
             "description": "Include latest model run and data age where tracked. Default true.",
             "type": "boolean"
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -5292,7 +5140,6 @@
         "required": [
           "datasets"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -5301,9 +5148,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/toolset": "catalog"
@@ -5387,8 +5231,7 @@
         },
         "required": [
           "variables"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -5550,7 +5393,6 @@
           "truncated",
           "next_cursor"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -5559,9 +5401,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/required_one_of": [
@@ -5599,8 +5438,7 @@
         "required": [
           "lat",
           "lon"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -5638,7 +5476,6 @@
           "lon",
           "place"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -5647,9 +5484,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/toolset": "catalog"
@@ -5716,8 +5550,7 @@
         },
         "required": [
           "query"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -5812,7 +5645,6 @@
           "query",
           "hits"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -5821,9 +5653,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/input_examples": [
@@ -5876,8 +5705,7 @@
         },
         "required": [
           "query"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -5957,7 +5785,6 @@
           "query",
           "candidates"
         ],
-        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       },
       "annotations": {
@@ -5966,9 +5793,6 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
-      },
-      "execution": {
-        "taskSupport": "forbidden"
       },
       "_meta": {
         "smarterweather.dev/input_examples": [

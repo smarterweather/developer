@@ -277,7 +277,7 @@ exception: on `payment-required` the text block also carries the x402
 `PaymentRequired`, the two places x402 clients read it. There is no HTTP
 status per tool call, so key on `type`, then `status`. Argument, location,
 dataset and rate-limit problems add a [`reason`](#reason): `input_validation`,
-`unknown_tool`, `tool_disabled`, `location_required`, `location_conflict`,
+`location_required`, `location_conflict`,
 `coordinates_incomplete`, `coordinates_out_of_range`, `location_not_found`,
 `location_ambiguous`, `unknown_dataset`, `rpm_exceeded`, `daily_exceeded`,
 `wallet_limited`, or `output_validation` on a `500`. A `payment-required`
@@ -289,7 +289,9 @@ still have settled: check your wallet before paying again.
 
 - Argument errors (a value that fails the tool's input schema, or a
   precondition such as an ambiguous place name) are `bad-request` with the
-  reason in `detail`; an unknown tool is `not-found`. An ambiguous place
+  reason in `detail`. A tool the connection does not serve is not a tool
+  result: it is a JSON-RPC error `-32602` whose message names the path that
+  serves it (`connect to /x/...`). An ambiguous place
   name adds `candidates`, an array of `{name}` objects to offer the user
   (names only, no coordinates).
 - A `400` or `404` problem from the API behind a tool reaches you as the
