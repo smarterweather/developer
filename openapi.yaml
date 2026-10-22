@@ -912,6 +912,13 @@ paths:
         fields the upstream pipeline adds without a sw-api release
         pass through unchanged.
 
+        ### Places and areas (experimental)
+
+        `representative_place` is a named point inside the alert area
+        and `areas` lists each UGC zone the alert names, with a point
+        inside each resolved zone. Both are `x-stability: experimental`,
+        optional, and returned only by this endpoint.
+
         ### Auth
 
         Standard sw-api Bearer auth applies.
@@ -7479,6 +7486,136 @@ components:
               type: array
               items:
                 type: object
+        representative_place:
+          x-stability: experimental
+          allOf:
+            - $ref: '#/components/schemas/AlertRepresentativePlace'
+          description: |
+            **Experimental** (`x-stability: experimental`): excluded from the
+            90-day breaking-change commitment; the selection rule may be
+            tuned.
+
+            A named point inside the alert area, for landing a map or a
+            location page on the alert. `source: census_place` is the most
+            populous Census place inside the area; otherwise
+            `source: area_point` is a point inside the area named for its
+            zone. Omitted when the alert has no geometry, when no name
+            resolves, or when the value is unavailable. Independent of
+            `areas`: either can be present without the other.
+
+            Detail-only: never returned by `GET /v1/alerts`, including
+            as-of (`at=`) reads.
+        areas:
+          x-stability: experimental
+          type: array
+          description: |
+            **Experimental** (`x-stability: experimental`): excluded from the
+            90-day breaking-change commitment.
+
+            One entry per UGC code the alert names, in first-seen order.
+            Derived from the alert's UGC codes only: deduplicated (so
+            `areas[i]` does not pair with a raw UGC list or an
+            `area_desc` segment), and present even when
+            `representative_place` is not. A code the platform cannot
+            resolve is named by its UGC and has no `lat`/`lon`; resolved
+            zones, marine zones included, carry a point inside the zone.
+            Omitted when no usable entry exists (an alert with no UGC
+            codes included) or when the value is unavailable; clients
+            fall back to `area_desc`.
+
+            Typically a handful of entries; can reach about 100 for large
+            advisories (at most 1000).
+
+            Detail-only: never returned by `GET /v1/alerts`, including
+            as-of (`at=`) reads.
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/AlertArea'
+
+    AlertRepresentativePlace:
+      type: object
+      x-stability: experimental
+      description: |
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment.
+
+        A named point inside an alert area. See `AlertDetail.representative_place`.
+      required: [name, lat, lon, source]
+      properties:
+        name:
+          type: string
+          description: |
+            Census place name with state (`census_place`), or the zone
+            name for an `area_point`.
+          example: "Whiteriver, AZ"
+        lat:
+          type: number
+          format: double
+          example: 33.837
+        lon:
+          type: number
+          format: double
+          example: -109.9643
+        population:
+          type: integer
+          description: |
+            Census population of the place. Present only for
+            `source: census_place` when the Census row carries one.
+          example: 4520
+        source:
+          type: string
+          enum: [census_place, area_point]
+          description: |
+            `census_place`: the most populous Census place inside the
+            alert area. `area_point`: a point inside the area named for
+            the zone that contains it (or the alert's first area).
+          example: census_place
+      example:
+        name: "Whiteriver, AZ"
+        lat: 33.837
+        lon: -109.9643
+        population: 4520
+        source: census_place
+
+    AlertArea:
+      type: object
+      x-stability: experimental
+      description: |
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment.
+
+        One UGC zone of an alert. See `AlertDetail.areas`. `lat` and
+        `lon` are present together or not at all.
+      required: [ugc, name]
+      dependentRequired:
+        lat: [lon]
+        lon: [lat]
+      properties:
+        ugc:
+          type: string
+          description: NWS UGC code (zone `..Z###` or county `..C###`).
+          example: "AZC001"
+        name:
+          type: string
+          description: Zone name; the UGC itself when the code is unresolved.
+          example: "Apache"
+        lat:
+          type: number
+          format: double
+          description: |
+            Latitude of a point inside the zone. Omitted, with `lon`, for
+            a UGC code the platform cannot resolve.
+          example: 35.3957
+        lon:
+          type: number
+          format: double
+          description: Longitude of a point inside the zone; omitted with `lat`.
+          example: -109.4888
+      example:
+        ugc: "AZC001"
+        name: "Apache"
+        lat: 35.3957
+        lon: -109.4888
 
     Outlook:
       type: object
