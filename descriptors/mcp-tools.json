@@ -12,13 +12,15 @@
         "type": "object",
         "properties": {
           "locations": {
+            "minItems": 2,
+            "maxItems": 10,
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
                 "location": {
-                  "type": "string",
-                  "description": "\"City, ST\", ZIP, or \"lat,lon\" (e.g. \"Boulder, CO\")."
+                  "description": "\"City, ST\", ZIP, or \"lat,lon\" (e.g. \"Boulder, CO\").",
+                  "type": "string"
                 },
                 "lat": {
                   "type": "number",
@@ -31,53 +33,49 @@
                   "maximum": 180
                 },
                 "label": {
-                  "type": "string",
-                  "description": "Optional display label (e.g. \"Denver warehouse\")."
+                  "description": "Optional display label (e.g. \"Denver warehouse\").",
+                  "type": "string"
                 }
-              },
-              "additionalProperties": false
+              }
             },
-            "minItems": 2,
-            "maxItems": 10,
             "description": "Locations to compare (2-10). Each takes location OR lat/lon, optional label."
           },
           "variables": {
+            "minItems": 1,
+            "maxItems": 10,
             "type": "array",
             "items": {
               "type": "string"
             },
-            "minItems": 1,
-            "maxItems": 10,
             "description": "Standard variable names (e.g. temperature_2m, precipitation)."
           },
           "hours": {
+            "default": 24,
+            "description": "Forecast hours. Default 24.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 168,
-            "default": 24,
-            "description": "Forecast hours. Default 24."
+            "maximum": 168
           },
           "dataset_id": {
+            "description": "Dataset override. Default: auto-resolved NBM per location.",
             "type": "string",
             "minLength": 1,
-            "maxLength": 80,
-            "description": "Dataset override. Default: auto-resolved NBM per location."
+            "maxLength": 80
           },
           "units": {
+            "default": "imperial",
+            "description": "Variables without a unit label stay native.",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "default": "imperial",
-            "description": "Variables without a unit label stay native."
+            ]
           }
         },
         "required": [
           "locations",
           "variables"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -101,6 +99,7 @@
           },
           "unit_labels": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "string"
             }
@@ -147,6 +146,7 @@
                 },
                 "data": {
                   "type": "object",
+                  "properties": {},
                   "additionalProperties": {
                     "type": "array",
                     "items": {
@@ -165,12 +165,15 @@
             }
           },
           "errors": {
+            "description": "Locations left out of comparisons, by input index: outside coverage.",
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
                 "index": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
                 },
                 "label": {
                   "type": "string"
@@ -188,12 +191,11 @@
                 "error_type"
               ],
               "additionalProperties": false
-            },
-            "description": "Locations left out of comparisons, by input index: outside coverage."
+            }
           },
           "attribution": {
-            "type": "string",
-            "description": "Attribution the dataset licence requires. Cite it when quoting these values."
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
+            "type": "string"
           }
         },
         "required": [
@@ -203,8 +205,8 @@
           "unit_labels",
           "comparisons"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Compare locations",
@@ -237,7 +239,6 @@
         "required": [
           "dataset_id"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -248,29 +249,32 @@
           },
           "detail": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           },
           "example_query": {
+            "description": "query_dataset arguments for this dataset; add a location.",
             "type": "object",
-            "additionalProperties": {},
-            "description": "query_dataset arguments for this dataset; add a location."
+            "properties": {},
+            "additionalProperties": {}
           },
           "data_status": {
+            "description": "Present only when the data service could not answer: a cached copy, or catalog facts without freshness.",
             "type": "object",
-            "additionalProperties": {},
-            "description": "Present only when the data service could not answer: a cached copy, or catalog facts without freshness."
+            "properties": {},
+            "additionalProperties": {}
           },
           "attribution": {
-            "type": "string",
-            "description": "Attribution the dataset licence requires. Cite it when quoting these values."
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
+            "type": "string"
           }
         },
         "required": [
           "dataset_id",
           "detail"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Describe dataset",
@@ -312,81 +316,79 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "units": {
+            "default": "imperial",
+            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric.",
             "type": "string",
             "enum": [
               "imperial",
               "metric",
               "si"
-            ],
-            "default": "imperial",
-            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric."
+            ]
           },
           "criteria": {
             "type": "object",
             "properties": {
               "max_precipitation_probability": {
+                "description": "Maximum acceptable precipitation probability (0-100%).",
                 "type": "number",
                 "minimum": 0,
-                "maximum": 100,
-                "description": "Maximum acceptable precipitation probability (0-100%)."
+                "maximum": 100
               },
               "min_temperature": {
-                "type": "number",
-                "description": "Minimum temperature in the selected units (°F / °C / K)."
+                "description": "Minimum temperature in the selected units (°F / °C / K).",
+                "type": "number"
               },
               "max_temperature": {
-                "type": "number",
-                "description": "Maximum temperature in the selected units (°F / °C / K)."
+                "description": "Maximum temperature in the selected units (°F / °C / K).",
+                "type": "number"
               },
               "max_wind_speed": {
-                "type": "number",
-                "description": "Maximum sustained wind in the selected units (mph / km/h / m/s)."
+                "description": "Maximum sustained wind in the selected units (mph / km/h / m/s).",
+                "type": "number"
               },
               "max_wind_gust": {
-                "type": "number",
-                "description": "Maximum wind gust in the selected units (mph / km/h / m/s)."
+                "description": "Maximum wind gust in the selected units (mph / km/h / m/s).",
+                "type": "number"
               },
               "min_visibility": {
-                "type": "number",
-                "description": "Minimum visibility in the selected units (miles / km / m)."
+                "description": "Minimum visibility in the selected units (miles / km / m).",
+                "type": "number"
               },
               "min_ceiling": {
-                "type": "number",
-                "description": "Minimum cloud ceiling in the selected units (feet / m / m)."
+                "description": "Minimum cloud ceiling in the selected units (feet / m / m).",
+                "type": "number"
               }
             },
-            "additionalProperties": false,
             "description": "Weather criteria defining acceptable conditions (all optional)."
           },
           "hours": {
+            "default": 72,
+            "description": "Hours to search. Default 72.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 168,
-            "default": 72,
-            "description": "Hours to search. Default 72."
+            "maximum": 168
           },
           "activity_duration_hours": {
+            "default": 2,
+            "description": "Minimum consecutive hours meeting criteria. Default 2.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 24,
-            "default": 2,
-            "description": "Minimum consecutive hours meeting criteria. Default 2."
+            "maximum": 24
           },
           "daylight_only": {
-            "type": "boolean",
             "default": true,
-            "description": "Only consider daylight hours (sunrise to sunset). Default true."
+            "description": "Only consider daylight hours (sunrise to sunset). Default true.",
+            "type": "boolean"
           },
           "activity": {
+            "description": "Free-form activity to rate the windows for (e.g. \"afternoon golf\"). Accepted even when rating is off so clients can send it.",
             "type": "string",
-            "maxLength": 200,
-            "description": "Free-form activity to rate the windows for (e.g. \"afternoon golf\"). Accepted even when rating is off so clients can send it."
+            "maxLength": 200
           }
         },
         "required": [
           "criteria"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -467,6 +469,7 @@
           },
           "criteria_applied": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           },
           "daylight_only": {
@@ -513,8 +516,8 @@
           "daylight_only",
           "activity_duration_hours"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Find best weather window",
@@ -584,6 +587,10 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "pollutants": {
+            "default": [
+              "aqi"
+            ],
+            "description": "Which measurements to return. aqi = combined AQI index. Default: [\"aqi\"].",
             "type": "array",
             "items": {
               "type": "string",
@@ -593,19 +600,14 @@
                 "ozone",
                 "pm10"
               ]
-            },
-            "default": [
-              "aqi"
-            ],
-            "description": "Which measurements to return. aqi = combined AQI index. Default: [\"aqi\"]."
+            }
           },
           "include_forecast": {
-            "type": "boolean",
             "default": false,
-            "description": "Also return the AirNow next-day AQI forecast."
+            "description": "Also return the AirNow next-day AQI forecast.",
+            "type": "boolean"
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -658,6 +660,7 @@
                 },
                 "data": {
                   "type": "object",
+                  "properties": {},
                   "additionalProperties": {
                     "type": "array",
                     "items": {
@@ -699,6 +702,7 @@
                 },
                 "data": {
                   "type": "object",
+                  "properties": {},
                   "additionalProperties": {
                     "type": "array",
                     "items": {
@@ -720,6 +724,7 @@
             }
           },
           "widget": {
+            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore.",
             "type": "object",
             "properties": {
               "spec": {
@@ -736,6 +741,7 @@
                     },
                     "props": {
                       "type": "object",
+                      "properties": {},
                       "additionalProperties": {}
                     }
                   },
@@ -751,16 +757,15 @@
               "spec",
               "entries"
             ],
-            "additionalProperties": false,
-            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore."
+            "additionalProperties": false
           }
         },
         "required": [
           "location",
           "current"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get air quality",
@@ -815,19 +820,28 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "bbox": {
+            "description": "Bounding box {west,south,east,north}; west/east are negative in the US. Skips geocoding; intersecting polygons.",
             "type": "object",
             "properties": {
               "west": {
-                "$ref": "#/properties/lon"
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
               },
               "south": {
-                "$ref": "#/properties/lat"
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
               },
               "east": {
-                "$ref": "#/properties/lon"
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
               },
               "north": {
-                "$ref": "#/properties/lat"
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
               }
             },
             "required": [
@@ -835,27 +849,24 @@
               "south",
               "east",
               "north"
-            ],
-            "additionalProperties": false,
-            "description": "Bounding box {west,south,east,north}. Skips geocoding; intersecting polygons."
+            ]
           },
           "events": {
+            "description": "Optional event-name filter, e.g. [\"Tornado Warning\"].",
             "type": "array",
             "items": {
               "type": "string"
-            },
-            "description": "Optional event-name filter, e.g. [\"Tornado Warning\"]."
+            }
           },
           "alert_id": {
-            "type": "string",
-            "description": "Alert identifier for detail mode. When set, location is ignored."
+            "description": "Alert identifier for detail mode. When set, location is ignored.",
+            "type": "string"
           },
           "at": {
-            "type": "string",
-            "description": "ISO-8601 UTC past instant for the in-effect snapshot. Ignored with alert_id."
+            "description": "ISO-8601 UTC past instant for the in-effect snapshot. Ignored with alert_id.",
+            "type": "string"
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -889,13 +900,15 @@
           "alerts": {},
           "alert": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           },
           "valid_time": {
-            "type": "string",
-            "description": "Echo of at when an as-of snapshot was requested."
+            "description": "Echo of at when an as-of snapshot was requested.",
+            "type": "string"
           },
           "widget": {
+            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore.",
             "type": "object",
             "properties": {
               "spec": {
@@ -912,6 +925,7 @@
                     },
                     "props": {
                       "type": "object",
+                      "properties": {},
                       "additionalProperties": {}
                     }
                   },
@@ -927,12 +941,11 @@
               "spec",
               "entries"
             ],
-            "additionalProperties": false,
-            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore."
+            "additionalProperties": false
           }
         },
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get NWS alerts",
@@ -993,39 +1006,38 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "start": {
+            "description": "Inclusive range start as YYYY-MM-DD. Must be supplied with end.",
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-            "description": "Inclusive range start as YYYY-MM-DD. Must be supplied with end."
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
           },
           "end": {
+            "description": "Inclusive range end as YYYY-MM-DD. Must be supplied with start.",
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-            "description": "Inclusive range end as YYYY-MM-DD. Must be supplied with start."
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
           },
           "days": {
+            "description": "Range length in days when start/end are omitted; the window opens today (default 14).",
             "type": "integer",
             "minimum": 1,
-            "maximum": 366,
-            "description": "Range length in days when start/end are omitted; the window opens today (default 14)."
+            "maximum": 366
           },
           "units": {
+            "description": "imperial (default; °F) or metric.",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "description": "imperial (default; °F) or metric."
+            ]
           },
           "unit": {
+            "description": "Deprecated: use units.",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "description": "Deprecated: use units."
+            ]
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "annotations": {
@@ -1067,50 +1079,49 @@
             "description": "reports = CLI daily climate reports; records = RER record events."
           },
           "wfo": {
+            "description": "WFO office filter (e.g. DMX, OUN).",
             "type": "string",
             "minLength": 3,
-            "maxLength": 4,
-            "description": "WFO office filter (e.g. DMX, OUN)."
+            "maxLength": 4
           },
           "station": {
-            "type": "string",
-            "description": "Station identifier filter (reports only)."
+            "description": "Station identifier filter (reports only).",
+            "type": "string"
           },
           "record_type": {
-            "type": "string",
-            "description": "Record type filter (records only), e.g. HIGH, LOW, RAIN."
+            "description": "Record type filter (records only), e.g. HIGH, LOW, RAIN.",
+            "type": "string"
           },
           "date": {
-            "type": "string",
-            "description": "Single date, YYYY-MM-DD."
+            "description": "Single date, YYYY-MM-DD.",
+            "type": "string"
           },
           "start": {
-            "type": "string",
-            "description": "Range start date, YYYY-MM-DD."
+            "description": "Range start date, YYYY-MM-DD.",
+            "type": "string"
           },
           "end": {
-            "type": "string",
-            "description": "Range end date, YYYY-MM-DD."
+            "description": "Range end date, YYYY-MM-DD.",
+            "type": "string"
           },
           "hours": {
+            "description": "Lookback window in hours (1-168) when no date/range is given.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 168,
-            "description": "Lookback window in hours (1-168) when no date/range is given."
+            "maximum": 168
           },
           "units": {
+            "default": "imperial",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "default": "imperial"
+            ]
           }
         },
         "required": [
           "type"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -1128,12 +1139,14 @@
           },
           "unit_labels": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "string"
             }
           },
           "results": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           }
         },
@@ -1143,8 +1156,8 @@
           "unit_labels",
           "results"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get climate reports and records",
@@ -1186,17 +1199,16 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "units": {
+            "default": "imperial",
+            "description": "imperial (default; °F, mph, inHg, mi, ft) or metric (°C, km/h, hPa, km, m); si returns K, m/s, Pa, m. si is deprecated and will be removed; use metric. Not applied to nearest_station.",
             "type": "string",
             "enum": [
               "imperial",
               "metric",
               "si"
-            ],
-            "default": "imperial",
-            "description": "imperial (default; °F, mph, inHg, mi, ft) or metric (°C, km/h, hPa, km, m); si returns K, m/s, Pa, m. si is deprecated and will be removed; use metric. Not applied to nearest_station."
+            ]
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -1252,6 +1264,7 @@
                   },
                   "data": {
                     "type": "object",
+                    "properties": {},
                     "additionalProperties": {
                       "type": "array",
                       "items": {
@@ -1273,6 +1286,7 @@
                   },
                   "unit_labels": {
                     "type": "object",
+                    "properties": {},
                     "additionalProperties": {
                       "type": "string"
                     }
@@ -1306,6 +1320,7 @@
             "anyOf": [
               {
                 "type": "object",
+                "properties": {},
                 "additionalProperties": {}
               },
               {
@@ -1320,8 +1335,8 @@
           "analysis",
           "nearest_station"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get current conditions",
@@ -1372,45 +1387,44 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "days": {
+            "default": 10,
+            "description": "Number of forecast days (1-14). Default 10.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 14,
-            "default": 10,
-            "description": "Number of forecast days (1-14). Default 10."
+            "maximum": 14
           },
           "units": {
+            "default": "imperial",
+            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric.",
             "type": "string",
             "enum": [
               "imperial",
               "metric",
               "si"
-            ],
-            "default": "imperial",
-            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric."
+            ]
           },
           "include": {
-            "type": "string",
             "default": "current,daily,alerts,outlooks",
-            "description": "Comma-separated sections: current, daily, hourly, alerts, outlooks. Default \"current,daily,alerts,outlooks\". Use get_hourly_forecast for hourly detail."
+            "description": "Comma-separated sections: current, daily, hourly, alerts, outlooks. Default \"current,daily,alerts,outlooks\". Use get_hourly_forecast for hourly detail.",
+            "type": "string"
           },
           "view": {
+            "description": "concise (default; REST's is detailed), ~5-10KB: daily has day_precip_probability / night_precip_probability (precip_probability is their max). detailed, ~12-20KB: adds CAPE, UV, full day/night periods, extra hourly fields.",
             "type": "string",
             "enum": [
               "concise",
               "detailed"
-            ],
-            "description": "concise (default; REST's is detailed), ~5-10KB: daily has day_precip_probability / night_precip_probability (precip_probability is their max). detailed, ~12-20KB: adds CAPE, UV, full day/night periods, extra hourly fields."
+            ]
           },
           "detail_level": {
+            "description": "Deprecated alias of view.",
             "type": "string",
             "enum": [
               "standard",
               "detailed"
-            ],
-            "description": "Deprecated alias of view."
+            ]
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -1447,14 +1461,17 @@
           },
           "forecast": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           },
           "data_status": {
+            "description": "Present only when the platform reports degraded/outage data sources: overall state, a caveat note, and the affected sources. Absent means no advisory was available -- not a freshness guarantee. See get_platform_status for the full document.",
             "type": "object",
-            "additionalProperties": {},
-            "description": "Present only when the platform reports degraded/outage data sources: overall state, a caveat note, and the affected sources. Absent means no advisory was available -- not a freshness guarantee. See get_platform_status for the full document."
+            "properties": {},
+            "additionalProperties": {}
           },
           "widget": {
+            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore.",
             "type": "object",
             "properties": {
               "spec": {
@@ -1471,6 +1488,7 @@
                     },
                     "props": {
                       "type": "object",
+                      "properties": {},
                       "additionalProperties": {}
                     }
                   },
@@ -1486,8 +1504,7 @@
               "spec",
               "entries"
             ],
-            "additionalProperties": false,
-            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore."
+            "additionalProperties": false
           }
         },
         "required": [
@@ -1495,8 +1512,8 @@
           "units",
           "forecast"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get forecast",
@@ -1575,41 +1592,40 @@
             "description": "Product type: afd (WFO discussion), hwo (hazard outlook), now (short-term NOW), fwf/hls/esf (local WFO), mcd (SPC mesoscale), mpd (WPC precipitation discussion), swo (SPC convective outlook), fwd (SPC fire weather), ero (WPC excessive rainfall), tcd/tcp/tcm/twd/two (NHC tropical text; two is text TWO not GIS), pmd (desk discussion), pwo (SPC public outlook)."
           },
           "day": {
+            "default": 1,
+            "description": "Outlook day for type=swo or type=fwd (1-8). Ignored for the other types; WPC files ERO days 1-3 under one product.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 8,
-            "default": 1,
-            "description": "Outlook day for type=swo or type=fwd (1-8). Ignored for the other types; WPC files ERO days 1-3 under one product."
+            "maximum": 8
           },
           "awips_id": {
+            "description": "AWIPS id (e.g. TCDAT1, PMDSPD; CPC: PMDMRD 6-10/8-14d, PMD34D wk3-4, PMD30D 30d, PMD90D 90d, PMDTHR hazards, PMDENS ENSO). Exact source_ref; beats type+location.",
             "type": "string",
             "minLength": 3,
-            "maxLength": 12,
-            "description": "AWIPS id (e.g. TCDAT1, PMDSPD; CPC: PMDMRD 6-10/8-14d, PMD34D wk3-4, PMD30D 30d, PMD90D 90d, PMDTHR hazards, PMDENS ENSO). Exact source_ref; beats type+location."
+            "maxLength": 12
           },
           "wfo": {
+            "description": "WFO identifier override (e.g. BOU). Default: resolved from the location.",
             "type": "string",
             "minLength": 3,
-            "maxLength": 4,
-            "description": "WFO identifier override (e.g. BOU). Default: resolved from the location."
+            "maxLength": 4
           },
           "limit": {
+            "default": 1,
+            "description": "Number of recent products (1-10). Default 1 (latest).",
             "type": "integer",
             "minimum": 1,
-            "maximum": 10,
-            "default": 1,
-            "description": "Number of recent products (1-10). Default 1 (latest)."
+            "maximum": 10
           },
           "summary_only": {
-            "type": "boolean",
             "default": false,
-            "description": "Return only the LLM summary + sections, omitting the full body text."
+            "description": "Return only the LLM summary + sections, omitting the full body text.",
+            "type": "boolean"
           }
         },
         "required": [
           "type"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -1648,6 +1664,7 @@
             "type": "array",
             "items": {
               "type": "object",
+              "properties": {},
               "additionalProperties": {}
             }
           }
@@ -1656,8 +1673,8 @@
           "type",
           "products"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get forecast discussion",
@@ -1713,26 +1730,25 @@
             "description": "Distribution family (see description)."
           },
           "hours": {
+            "description": "Forecast hours; default 48-72 by aspect.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 264,
-            "description": "Forecast hours; default 48-72 by aspect."
+            "maximum": 264
           },
           "units": {
+            "default": "imperial",
+            "description": "imperial (default; °F, mph, in) or metric. si is deprecated and will be removed; use metric.",
             "type": "string",
             "enum": [
               "imperial",
               "metric",
               "si"
-            ],
-            "default": "imperial",
-            "description": "imperial (default; °F, mph, in) or metric. si is deprecated and will be removed; use metric."
+            ]
           }
         },
         "required": [
           "aspect"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -1804,6 +1820,7 @@
                 },
                 "data": {
                   "type": "object",
+                  "properties": {},
                   "additionalProperties": {
                     "type": "array",
                     "items": {
@@ -1816,6 +1833,7 @@
                 },
                 "unit_labels": {
                   "type": "object",
+                  "properties": {},
                   "additionalProperties": {
                     "type": "string"
                   }
@@ -1894,7 +1912,25 @@
                       "additionalProperties": false
                     },
                     "low": {
-                      "$ref": "#/properties/daily/properties/days/items/properties/high"
+                      "type": "object",
+                      "properties": {
+                        "p10": {
+                          "type": "number"
+                        },
+                        "p50": {
+                          "type": "number"
+                        },
+                        "p90": {
+                          "type": "number"
+                        },
+                        "stddev": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "p50"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
@@ -1921,8 +1957,8 @@
           "units",
           "series"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get forecast distribution",
@@ -1973,45 +2009,45 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "variable": {
-            "type": "string",
-            "description": "Narrow to one variable, e.g. temperature_2m, dew_point_2m, wind_speed_10m, wind_gusts_10m, wind_vector_10m, cloud_cover, precipitation, precipitation_probability, or a thresholded rain event such as precipitation_gt_0p254mm (any measurable rain) or precipitation_gt_2p54mm. Omit for everything measured at the location."
+            "description": "Narrow to one variable, e.g. temperature_2m, dew_point_2m, wind_speed_10m, wind_gusts_10m, wind_vector_10m, cloud_cover, precipitation, precipitation_probability, or a thresholded rain event such as precipitation_gt_0p254mm (any measurable rain) or precipitation_gt_2p54mm. Omit for everything measured at the location.",
+            "type": "string"
           },
           "model": {
-            "type": "string",
-            "description": "Narrow to one model, e.g. nbm or rrfs."
+            "description": "Narrow to one model, e.g. nbm or rrfs.",
+            "type": "string"
           },
           "lead_hours": {
+            "description": "Narrow to the lead time being asked about, in hours; the containing lead bucket is selected for you (60 gives the 48-72h bucket). Use the lead of the forecast you are qualifying: ~24 for tomorrow, ~72 for three days out. Never approximated -- a lead we have not verified returns no entries rather than a nearby bucket, so an empty result means we cannot speak to that range.",
             "type": "integer",
             "minimum": 1,
-            "description": "Narrow to the lead time being asked about, in hours; the containing lead bucket is selected for you (60 gives the 48-72h bucket). Use the lead of the forecast you are qualifying: ~24 for tomorrow, ~72 for three days out. Never approximated -- a lead we have not verified returns no entries rather than a nearby bucket, so an empty result means we cannot speak to that range."
+            "maximum": 264
           },
           "truth": {
-            "type": "string",
-            "description": "Measure against a named truth source instead of the default one for each variable, e.g. urma. Only pass this if the user asked which analysis was used or named one; the default is already the designated source, and the analyses disagree, so switching changes the numbers."
+            "description": "Measure against a named truth source instead of the default one for each variable, e.g. urma. Only pass this if the user asked which analysis was used or named one; the default is already the designated source, and the analyses disagree, so switching changes the numbers.",
+            "type": "string"
           },
           "regime": {
-            "type": "string",
-            "description": "Ask for a track record measured only under particular conditions, as a comma-separated preference chain, most specific first, e.g. \"SCN1:WINDY,SEA:JJA\". SEA: is the meteorological season (DJF, MAM, JJA, SON); SCN1: is a forecast-conditioned scenario (WINDY, WET, QUIET — mutually exclusive within the family); JC1: is a circulation pattern. The most specific tier with enough observations answers and the unconditioned record is the last resort, so this never empties a result the way truth does -- it degrades. Read the regime field on each entry to see which tier actually answered. Pass this when the question is conditional (\"is it worse in winter\", \"how does it do when the model shows windy\"); omit it otherwise, since conditioned tiers are thinner and slower to earn numbers."
+            "description": "Ask for a track record measured only under particular conditions, as a comma-separated preference chain, most specific first, e.g. \"SCN1:WINDY,SEA:JJA\". SEA: is the meteorological season (DJF, MAM, JJA, SON); SCN1: is a forecast-conditioned scenario (WINDY, WET, QUIET — mutually exclusive within the family); JC1: is a circulation pattern. The most specific tier with enough observations answers and the unconditioned record is the last resort, so this never empties a result the way truth does -- it degrades. Read the regime field on each entry to see which tier actually answered. Pass this when the question is conditional (\"is it worse in winter\", \"how does it do when the model shows windy\"); omit it otherwise, since conditioned tiers are thinner and slower to earn numbers.",
+            "type": "string"
           },
           "units": {
+            "description": "Error units: imperial (default) or metric.",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "description": "Error units: imperial (default) or metric."
+            ]
           },
           "unit": {
+            "description": "Deprecated: use units. si is deprecated and will be removed; use metric.",
             "type": "string",
             "enum": [
               "imperial",
               "metric",
               "si"
-            ],
-            "description": "Deprecated: use units. si is deprecated and will be removed; use metric."
+            ]
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -2055,6 +2091,7 @@
           },
           "cells": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "string"
             }
@@ -2320,7 +2357,7 @@
                 "scope",
                 "metric"
               ],
-              "additionalProperties": true
+              "additionalProperties": {}
             }
           },
           "insufficientHistory": {
@@ -2362,7 +2399,7 @@
                 "scope",
                 "samples"
               ],
-              "additionalProperties": true
+              "additionalProperties": {}
             }
           }
         },
@@ -2374,8 +2411,8 @@
           "skill",
           "insufficientHistory"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get forecast skill",
@@ -2439,20 +2476,22 @@
               "west": {
                 "type": "number",
                 "minimum": -180,
-                "maximum": 180,
-                "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
+                "maximum": 180
               },
               "south": {
                 "type": "number",
                 "minimum": -90,
-                "maximum": 90,
-                "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
+                "maximum": 90
               },
               "east": {
-                "$ref": "#/properties/bbox/properties/west"
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
               },
               "north": {
-                "$ref": "#/properties/bbox/properties/south"
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
               }
             },
             "required": [
@@ -2461,8 +2500,7 @@
               "east",
               "north"
             ],
-            "additionalProperties": false,
-            "description": "Bounding box {west,south,east,north}. Hexes whose H3 center falls inside are returned."
+            "description": "Bounding box {west,south,east,north}; west/east are negative in the US. Hexes whose H3 center falls inside are returned."
           },
           "model": {
             "type": "string",
@@ -2475,11 +2513,12 @@
           "lead_hours": {
             "type": "integer",
             "minimum": 1,
+            "maximum": 264,
             "description": "Lead time in hours; the containing published bucket is selected. Never approximated."
           },
           "domain": {
-            "type": "string",
-            "description": "Optional domain (conus, alaska, hawaii). Omit unless you already know it."
+            "description": "Optional domain (conus, alaska, hawaii). Omit unless you already know it.",
+            "type": "string"
           }
         },
         "required": [
@@ -2488,7 +2527,6 @@
           "variable",
           "lead_hours"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -2509,20 +2547,22 @@
               "west": {
                 "type": "number",
                 "minimum": -180,
-                "maximum": 180,
-                "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
+                "maximum": 180
               },
               "south": {
                 "type": "number",
                 "minimum": -90,
-                "maximum": 90,
-                "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
+                "maximum": 90
               },
               "east": {
-                "$ref": "#/properties/bbox/properties/west"
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
               },
               "north": {
-                "$ref": "#/properties/bbox/properties/south"
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
               }
             },
             "required": [
@@ -2587,7 +2627,7 @@
                 "cells",
                 "withheld"
               ],
-              "additionalProperties": true
+              "additionalProperties": {}
             }
           }
         },
@@ -2598,8 +2638,8 @@
           "bbox",
           "slices"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get forecast skill map",
@@ -2658,65 +2698,64 @@
             "description": "Crop id from the catalog (e.g. \"corn\", \"soybean\", \"wheat\"), or \"custom\" with base_temp_c."
           },
           "season_start": {
+            "description": "Season/planting start, YYYY-MM-DD local, within the last ~180 days.",
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-            "description": "Season/planting start, YYYY-MM-DD local, within the last ~180 days."
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
           },
           "days": {
+            "description": "Forecast horizon in days (default 10).",
             "type": "integer",
             "minimum": 1,
-            "maximum": 30,
-            "description": "Forecast horizon in days (default 10)."
+            "maximum": 30
           },
           "day_definition": {
+            "description": "Daily boundary: \"nws\" (default; NBM MaxT/MinT period extremes) or \"local_calendar\" (midnight-to-midnight local day).",
             "type": "string",
             "enum": [
               "nws",
               "local_calendar"
-            ],
-            "description": "Daily boundary: \"nws\" (default; NBM MaxT/MinT period extremes) or \"local_calendar\" (midnight-to-midnight local day)."
+            ]
           },
           "units": {
+            "description": "imperial (default; °F-days) or metric.",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "description": "imperial (default; °F-days) or metric."
+            ]
           },
           "unit": {
+            "description": "Deprecated: use units.",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "description": "Deprecated: use units."
+            ]
           },
           "base_temp_c": {
-            "type": "number",
-            "description": "Custom base threshold in °C. Required when crop=\"custom\"."
+            "description": "Custom base threshold in °C. Required when crop=\"custom\".",
+            "type": "number"
           },
           "upper_temp_c": {
-            "type": "number",
-            "description": "Custom upper cutoff in °C (enables the modified method)."
+            "description": "Custom upper cutoff in °C (enables the modified method).",
+            "type": "number"
           },
           "method": {
+            "description": "GDU method for custom crops. Defaults from whether upper_temp_c is set.",
             "type": "string",
             "enum": [
               "simple",
               "modified"
-            ],
-            "description": "GDU method for custom crops. Defaults from whether upper_temp_c is set."
+            ]
           },
           "include_milestones": {
-            "type": "boolean",
-            "description": "Add the crop's growth-stage GDU milestones."
+            "description": "Add the crop's growth-stage GDU milestones.",
+            "type": "boolean"
           }
         },
         "required": [
           "crop"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "annotations": {
@@ -2768,52 +2807,51 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "days": {
+            "default": 2,
+            "description": "Days of hourly data (1-7). Default 2. Widened when hours_to reaches further.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 7,
-            "default": 2,
-            "description": "Days of hourly data (1-7). Default 2. Widened when hours_to reaches further."
+            "maximum": 7
           },
           "hours_from": {
+            "description": "Window start, in hours from now (0 = the current hour).",
             "type": "integer",
             "minimum": 0,
-            "maximum": 168,
-            "description": "Window start, in hours from now (0 = the current hour)."
+            "maximum": 168
           },
           "hours_to": {
+            "description": "Window end, in hours from now, exclusive. 36 to 48 is hours 36-47.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 168,
-            "description": "Window end, in hours from now, exclusive. 36 to 48 is hours 36-47."
+            "maximum": 168
           },
           "units": {
+            "default": "imperial",
+            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric.",
             "type": "string",
             "enum": [
               "imperial",
               "metric",
               "si"
-            ],
-            "default": "imperial",
-            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric."
+            ]
           },
           "view": {
+            "description": "concise (default) samples past 24h; detailed adds CAPE, ceiling, UV, gust and thunderstorm probability for 48h.",
             "type": "string",
             "enum": [
               "concise",
               "detailed"
-            ],
-            "description": "concise (default) samples past 24h; detailed adds CAPE, ceiling, UV, gust and thunderstorm probability for 48h."
+            ]
           },
           "detail_level": {
+            "description": "Deprecated alias of view.",
             "type": "string",
             "enum": [
               "standard",
               "detailed"
-            ],
-            "description": "Deprecated alias of view."
+            ]
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -2850,14 +2888,17 @@
           },
           "forecast": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           },
           "data_status": {
+            "description": "Present only when the platform reports degraded/outage data sources: overall state, a caveat note, and the affected sources. Absent means no advisory was available -- not a freshness guarantee. See get_platform_status for the full document.",
             "type": "object",
-            "additionalProperties": {},
-            "description": "Present only when the platform reports degraded/outage data sources: overall state, a caveat note, and the affected sources. Absent means no advisory was available -- not a freshness guarantee. See get_platform_status for the full document."
+            "properties": {},
+            "additionalProperties": {}
           },
           "widget": {
+            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore.",
             "type": "object",
             "properties": {
               "spec": {
@@ -2874,6 +2915,7 @@
                     },
                     "props": {
                       "type": "object",
+                      "properties": {},
                       "additionalProperties": {}
                     }
                   },
@@ -2889,8 +2931,7 @@
               "spec",
               "entries"
             ],
-            "additionalProperties": false,
-            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore."
+            "additionalProperties": false
           }
         },
         "required": [
@@ -2898,8 +2939,8 @@
           "units",
           "forecast"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get hourly forecast",
@@ -2954,15 +2995,14 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "units": {
+            "default": "imperial",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "default": "imperial"
+            ]
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -3007,12 +3047,14 @@
           },
           "unit_labels": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "string"
             }
           },
           "lightning": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           }
         },
@@ -3023,8 +3065,8 @@
           "unit_labels",
           "lightning"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get lightning activity",
@@ -3075,45 +3117,47 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "product": {
-            "type": "string",
-            "description": "viz-catalog product_id or nexrad_l3:{SITE}:{KEY} (simple form)"
+            "description": "viz-catalog product_id or nexrad_l3:{SITE}:{KEY} (simple form)",
+            "type": "string"
           },
           "zoom": {
+            "default": 7,
+            "description": "Map zoom (simple form)",
             "type": "number",
             "minimum": 2,
-            "maximum": 14,
-            "default": 7,
-            "description": "Map zoom (simple form)"
+            "maximum": 14
           },
           "time": {
+            "description": "Unix seconds; closest frame (default: latest). Forecasts honor future times.",
             "type": "integer",
-            "description": "Unix seconds; closest frame (default: latest). Forecasts honor future times."
+            "minimum": 0,
+            "maximum": 4102444800
           },
           "opacity": {
+            "description": "Weather layer opacity",
             "type": "number",
             "minimum": 0,
-            "maximum": 1,
-            "description": "Weather layer opacity"
+            "maximum": 1
           },
           "width": {
+            "default": 720,
             "type": "integer",
             "minimum": 300,
-            "maximum": 2000,
-            "default": 720
+            "maximum": 2000
           },
           "height": {
+            "default": 440,
             "type": "integer",
             "minimum": 200,
-            "maximum": 2000,
-            "default": 440
+            "maximum": 2000
           },
           "scene": {
+            "description": "Full scene document (composed form). When set, product/location/zoom are ignored.",
             "type": "object",
-            "additionalProperties": {},
-            "description": "Full scene document (composed form). When set, product/location/zoom are ignored."
+            "properties": {},
+            "additionalProperties": {}
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "annotations": {
@@ -3175,34 +3219,33 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "n": {
+            "default": 1,
+            "description": "Number of nearest stations (1-10). Default 1. Ignored in station mode.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 10,
-            "default": 1,
-            "description": "Number of nearest stations (1-10). Default 1. Ignored in station mode."
+            "maximum": 10
           },
           "station": {
+            "description": "ICAO station identifier (e.g. KJFK). Switches to station-history mode.",
             "type": "string",
             "minLength": 3,
-            "maxLength": 4,
-            "description": "ICAO station identifier (e.g. KJFK). Switches to station-history mode."
+            "maxLength": 4
           },
           "hours": {
+            "description": "Hours of history in station mode (1-24).",
             "type": "integer",
             "minimum": 1,
-            "maximum": 24,
-            "description": "Hours of history in station mode (1-24)."
+            "maximum": 24
           },
           "units": {
+            "default": "imperial",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "default": "imperial"
+            ]
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -3246,12 +3289,14 @@
           },
           "unit_labels": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "string"
             }
           },
           "observations": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           }
         },
@@ -3260,8 +3305,8 @@
           "unit_labels",
           "observations"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get station observations",
@@ -3312,6 +3357,13 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "windows": {
+            "default": [
+              "1h",
+              "24h"
+            ],
+            "description": "Accumulation windows ending at the latest frame (or at `at`).",
+            "minItems": 1,
+            "maxItems": 6,
             "type": "array",
             "items": {
               "type": "string",
@@ -3323,37 +3375,29 @@
                 "48h",
                 "72h"
               ]
-            },
-            "minItems": 1,
-            "maxItems": 6,
-            "default": [
-              "1h",
-              "24h"
-            ],
-            "description": "Accumulation windows ending at the latest frame (or at `at`)."
+            }
           },
           "units": {
+            "default": "imperial",
+            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric.",
             "type": "string",
             "enum": [
               "imperial",
               "metric",
               "si"
-            ],
-            "default": "imperial",
-            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric."
+            ]
           },
           "at": {
+            "description": "RFC3339 end time within the last 33 h. Default: latest.",
             "type": "string",
-            "format": "date-time",
-            "description": "RFC3339 end time within the last 33 h. Default: latest."
+            "format": "date-time"
           },
           "include_nowcast": {
-            "type": "boolean",
             "default": true,
-            "description": "Next-hour radar nowcast (CONUS; ignored with `at`)."
+            "description": "Next-hour radar nowcast (CONUS; ignored with `at`).",
+            "type": "boolean"
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -3567,6 +3611,7 @@
           },
           "data_status": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           }
         },
@@ -3578,8 +3623,8 @@
           "derived",
           "_sources"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Observed precipitation",
@@ -3647,6 +3692,7 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "hazard": {
+            "description": "Hazard family (see description). Default severe; with period, both CPC hazards.",
             "type": "string",
             "enum": [
               "severe",
@@ -3655,22 +3701,22 @@
               "heat",
               "temperature",
               "precipitation"
-            ],
-            "description": "Hazard family (see description). Default severe; with period, both CPC hazards."
+            ]
           },
           "day": {
+            "default": 1,
+            "description": "Outlook day for the narrative filter (1-8). Default 1.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 8,
-            "default": 1,
-            "description": "Outlook day for the narrative filter (1-8). Default 1."
+            "maximum": 8
           },
           "include_narrative": {
-            "type": "boolean",
             "default": false,
-            "description": "Include the forecaster narrative (all hazards but heat)."
+            "description": "Include the forecaster narrative (all hazards but heat).",
+            "type": "boolean"
           },
           "period": {
+            "description": "Temperature/precipitation only. Default: all but seasonal.",
             "type": "string",
             "enum": [
               "610",
@@ -3678,11 +3724,9 @@
               "wk34",
               "monthly",
               "seasonal"
-            ],
-            "description": "Temperature/precipitation only. Default: all but seasonal."
+            ]
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -3724,6 +3768,7 @@
             "type": "array",
             "items": {
               "type": "object",
+              "properties": {},
               "additionalProperties": {}
             }
           },
@@ -3748,7 +3793,7 @@
                   }
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": {}
             }
           },
           "heat_risk_note": {
@@ -3758,6 +3803,7 @@
             "anyOf": [
               {
                 "type": "object",
+                "properties": {},
                 "additionalProperties": {}
               },
               {
@@ -3772,8 +3818,8 @@
           "day",
           "outlooks"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get hazard outlooks",
@@ -3817,6 +3863,12 @@
               },
               "coordinates": {
                 "type": "array"
+              },
+              "bbox": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
               }
             },
             "required": [
@@ -3827,24 +3879,25 @@
             "description": "GeoJSON Polygon or MultiPolygon. Clip national outlooks first."
           },
           "classes": {
+            "description": "Optional civic classes: airport, station, hospital, school, university, library, museum, stadium, cemetery, place_of_worship, camp_site, golf, attraction.",
             "type": "array",
             "items": {
               "type": "string"
-            },
-            "description": "Optional civic classes: airport, station, hospital, school, university, library, museum, stadium, cemetery, place_of_worship, camp_site, golf, attraction."
+            }
           }
         },
         "required": [
           "geometry"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
         "properties": {
           "counts": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "number"
             }
@@ -3877,8 +3930,8 @@
           "counts",
           "features"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get path exposure",
@@ -3924,17 +3977,19 @@
             "description": "Standard variable name (e.g. precipitation, snowfall, temperature_2m, wind_speed_10m, cape)."
           },
           "aggregation": {
+            "default": "sum",
+            "description": "Aggregation function. Default sum. Use sum for precipitation/snowfall, max for temperature/wind, min for low temperatures, avg for humidity/cloud cover.",
             "type": "string",
             "enum": [
               "sum",
               "max",
               "min",
               "avg"
-            ],
-            "default": "sum",
-            "description": "Aggregation function. Default sum. Use sum for precipitation/snowfall, max for temperature/wind, min for low temperatures, avg for humidity/cloud cover."
+            ]
           },
           "periods": {
+            "minItems": 1,
+            "maxItems": 14,
             "type": "array",
             "items": {
               "type": "object",
@@ -3948,42 +4003,38 @@
                   "description": "ISO 8601 end time"
                 },
                 "label": {
-                  "type": "string",
-                  "description": "Human label, e.g. \"Today\", \"Tomorrow\""
+                  "description": "Human label, e.g. \"Today\", \"Tomorrow\"",
+                  "type": "string"
                 }
               },
               "required": [
                 "start",
                 "end"
-              ],
-              "additionalProperties": false
+              ]
             },
-            "minItems": 1,
-            "maxItems": 14,
             "description": "Time periods to aggregate over (1-14)."
           },
           "units": {
+            "default": "imperial",
+            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric.",
             "type": "string",
             "enum": [
               "imperial",
               "metric",
               "si"
-            ],
-            "default": "imperial",
-            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric."
+            ]
           },
           "dataset_id": {
+            "description": "Dataset override. Default: auto-resolved NBM for the location.",
             "type": "string",
             "minLength": 1,
-            "maxLength": 80,
-            "description": "Dataset override. Default: auto-resolved NBM for the location."
+            "maxLength": 80
           }
         },
         "required": [
           "variable",
           "periods"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -4083,8 +4134,8 @@
             "type": "string"
           },
           "attribution": {
-            "type": "string",
-            "description": "Attribution the dataset licence requires. Cite it when quoting these values."
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
+            "type": "string"
           }
         },
         "required": [
@@ -4093,8 +4144,8 @@
           "aggregation",
           "periods"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get period totals",
@@ -4127,13 +4178,13 @@
         "type": "object",
         "properties": {
           "include_ok": {
-            "type": "boolean",
             "default": false,
-            "description": "true: list every monitored source including healthy ones. false (default): only sources that are not ok, keeping the response compact."
+            "description": "true: list every monitored source including healthy ones. false (default): only sources that are not ok, keeping the response compact.",
+            "type": "boolean"
           }
         },
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -4150,8 +4201,8 @@
             "description": "Worst state across customer-facing data sources; \"unknown\" when status is unavailable."
           },
           "generated_at": {
-            "type": "string",
-            "description": "When the status document was generated (UTC)."
+            "description": "When the status document was generated (UTC).",
+            "type": "string"
           },
           "sources": {
             "type": "array",
@@ -4177,8 +4228,8 @@
                   ]
                 },
                 "warming": {
-                  "type": "boolean",
-                  "description": "true when no_signal only means monitoring is still warming up (not an outage)."
+                  "description": "true when no_signal only means monitoring is still warming up (not an outage).",
+                  "type": "boolean"
                 },
                 "severity": {
                   "type": "string"
@@ -4199,14 +4250,14 @@
                       "type": "string"
                     }
                   },
-                  "additionalProperties": true
+                  "additionalProperties": {}
                 }
               },
               "required": [
                 "source_id",
                 "state"
               ],
-              "additionalProperties": true
+              "additionalProperties": {}
             }
           },
           "advisories": {
@@ -4227,7 +4278,7 @@
                   "type": "string"
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": {}
             }
           },
           "note": {
@@ -4237,8 +4288,8 @@
         "required": [
           "overall"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get platform status",
@@ -4262,25 +4313,24 @@
         "type": "object",
         "properties": {
           "hazard": {
+            "description": "Hazard family (expands the day-1..3 product set). Currently: heat (HeatRisk).",
             "type": "string",
             "enum": [
               "heat"
-            ],
-            "description": "Hazard family (expands the day-1..3 product set). Currently: heat (HeatRisk)."
+            ]
           },
           "product_id": {
-            "type": "string",
-            "description": "Explicit risk-zone product ID (overrides hazard), e.g. heatrisk_day1_conus."
+            "description": "Explicit risk-zone product ID (overrides hazard), e.g. heatrisk_day1_conus.",
+            "type": "string"
           },
           "min_level": {
+            "default": 1,
+            "description": "Minimum risk level to count (>=). Default 1 (any elevated risk).",
             "type": "integer",
             "minimum": 1,
-            "maximum": 5,
-            "default": 1,
-            "description": "Minimum risk level to count (>=). Default 1 (any elevated risk)."
+            "maximum": 5
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -4324,8 +4374,8 @@
           "min_level",
           "summaries"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get population exposure",
@@ -4367,22 +4417,21 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "n": {
+            "default": 1,
+            "description": "Number of nearest soundings (1-5). Default 1.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 5,
-            "default": 1,
-            "description": "Number of nearest soundings (1-5). Default 1."
+            "maximum": 5
           },
           "units": {
+            "default": "imperial",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "default": "imperial"
+            ]
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -4423,12 +4472,14 @@
           },
           "unit_labels": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "string"
             }
           },
           "soundings": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           }
         },
@@ -4438,8 +4489,8 @@
           "unit_labels",
           "soundings"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get radiosonde sounding",
@@ -4490,30 +4541,29 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "units": {
+            "description": "Axis and summary: imperial (default; °F) or metric (°C); keys end in their unit.",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "description": "Axis and summary: imperial (default; °F) or metric (°C); keys end in their unit."
+            ]
           },
           "unit": {
+            "description": "Deprecated: use units.",
             "type": "string",
             "enum": [
               "fahrenheit",
               "celsius"
-            ],
-            "description": "Deprecated: use units."
+            ]
           },
           "scale": {
+            "default": 2,
+            "description": "Raster scale factor (2 = retina; higher = larger image payload)",
             "type": "number",
             "minimum": 1,
-            "maximum": 3,
-            "default": 2,
-            "description": "Raster scale factor (2 = retina; higher = larger image payload)"
+            "maximum": 3
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "annotations": {
@@ -4565,6 +4615,13 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "include": {
+            "default": [
+              "tracks",
+              "hail_index",
+              "mesocyclone",
+              "tvs"
+            ],
+            "description": "Which detection families to include. Default: all.",
             "type": "array",
             "items": {
               "type": "string",
@@ -4574,25 +4631,17 @@
                 "mesocyclone",
                 "tvs"
               ]
-            },
-            "default": [
-              "tracks",
-              "hail_index",
-              "mesocyclone",
-              "tvs"
-            ],
-            "description": "Which detection families to include. Default: all."
+            }
           },
           "units": {
+            "default": "imperial",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "default": "imperial"
+            ]
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -4637,16 +4686,19 @@
           },
           "unit_labels": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "string"
             }
           },
           "tracks": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           },
           "detections": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           }
         },
@@ -4657,8 +4709,8 @@
           "unit_labels",
           "detections"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get storm cells",
@@ -4709,26 +4761,25 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "hours": {
+            "default": 6,
+            "description": "Lookback window in hours (1-24). Default 6.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 24,
-            "default": 6,
-            "description": "Lookback window in hours (1-24). Default 6."
+            "maximum": 24
           },
           "type": {
-            "type": "string",
-            "description": "Report type filter: T=tornado, H=hail, W=wind, F=flood, D=damage, S=snow."
+            "description": "Report type filter: T=tornado, H=hail, W=wind, F=flood, D=damage, S=snow.",
+            "type": "string"
           },
           "units": {
+            "default": "imperial",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "default": "imperial"
+            ]
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -4772,12 +4823,14 @@
           },
           "unit_labels": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "string"
             }
           },
           "reports": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           }
         },
@@ -4788,8 +4841,8 @@
           "unit_labels",
           "reports"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get storm reports",
@@ -4840,7 +4893,6 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -4874,20 +4926,24 @@
           },
           "current_time": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           },
           "daylight": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           },
           "moon": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {}
           },
           "calendar": {
             "type": "array",
             "items": {
               "type": "object",
+              "properties": {},
               "additionalProperties": {}
             }
           }
@@ -4899,8 +4955,8 @@
           "moon",
           "calendar"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get time context",
@@ -4933,21 +4989,21 @@
         "type": "object",
         "properties": {
           "include_geometry": {
-            "type": "boolean",
             "default": false,
-            "description": "Include full GeoJSON geometries (cone/track polygons). Default false."
+            "description": "Include full GeoJSON geometries (cone/track polygons). Default false.",
+            "type": "boolean"
           },
           "units": {
+            "default": "imperial",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "default": "imperial"
+            ]
           }
         },
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -4967,6 +5023,7 @@
           },
           "unit_labels": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "string"
             }
@@ -4975,6 +5032,7 @@
             "type": "array",
             "items": {
               "type": "object",
+              "properties": {},
               "additionalProperties": {}
             }
           }
@@ -4986,8 +5044,8 @@
           "unit_labels",
           "features"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get tropical activity",
@@ -5011,37 +5069,36 @@
         "type": "object",
         "properties": {
           "storm": {
+            "description": "ATCF id (al14) or storm name (polo). Unnumbered USAF missions never match.",
             "type": "string",
-            "maxLength": 32,
-            "description": "ATCF id (al14) or storm name (polo). Unnumbered USAF missions never match."
+            "maxLength": 32
           },
           "kind": {
+            "default": "vdm",
+            "description": "vdm = vortex fixes; hdob = flight-level obs; all = both. Default vdm.",
             "type": "string",
             "enum": [
               "vdm",
               "hdob",
               "all"
-            ],
-            "default": "vdm",
-            "description": "vdm = vortex fixes; hdob = flight-level obs; all = both. Default vdm."
+            ]
           },
           "hours": {
+            "default": 24,
+            "description": "Lookback window in hours (1-72). Default 24.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 72,
-            "default": 24,
-            "description": "Lookback window in hours (1-72). Default 24."
+            "maximum": 72
           },
           "units": {
+            "default": "imperial",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "default": "imperial"
+            ]
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -5054,6 +5111,7 @@
             "type": "array",
             "items": {
               "type": "object",
+              "properties": {},
               "additionalProperties": {}
             }
           },
@@ -5072,6 +5130,7 @@
           },
           "unit_labels": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "string"
             }
@@ -5080,6 +5139,7 @@
             "type": "array",
             "items": {
               "type": "object",
+              "properties": {},
               "additionalProperties": {}
             }
           }
@@ -5093,8 +5153,8 @@
           "unit_labels",
           "features"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Get tropical observations",
@@ -5135,12 +5195,11 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "include_freshness": {
-            "type": "boolean",
             "default": true,
-            "description": "Include latest model run and data age where tracked. Default true."
+            "description": "Include latest model run and data age where tracked. Default true.",
+            "type": "boolean"
           }
         },
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -5180,6 +5239,7 @@
           },
           "datasets": {
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "object",
               "properties": {
@@ -5198,7 +5258,9 @@
                 "data_age_seconds": {
                   "anyOf": [
                     {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
                     },
                     {
                       "type": "null"
@@ -5221,16 +5283,17 @@
             "type": "string"
           },
           "data_status": {
+            "description": "Present only when freshness was asked for and the data service did not provide it, or answered from a cached copy.",
             "type": "object",
-            "additionalProperties": {},
-            "description": "Present only when freshness was asked for and the data service did not provide it, or answered from a cached copy."
+            "properties": {},
+            "additionalProperties": {}
           }
         },
         "required": [
           "datasets"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "List datasets",
@@ -5272,60 +5335,59 @@
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "dataset_id": {
+            "description": "Default: the NBM dataset for the location (nbm_conus/nbm_alaska/nbm_hawaii). Discover with list_datasets.",
             "type": "string",
             "minLength": 1,
-            "maxLength": 80,
-            "description": "Default: the NBM dataset for the location (nbm_conus/nbm_alaska/nbm_hawaii). Discover with list_datasets."
+            "maxLength": 80
           },
           "variables": {
+            "minItems": 1,
+            "maxItems": 20,
             "type": "array",
             "items": {
               "type": "string"
             },
-            "minItems": 1,
-            "maxItems": 20,
             "description": "Standard names (e.g. temperature_2m, precipitation); see describe_dataset."
           },
           "hours": {
+            "description": "Hours from now (1-264): ahead, or back on analyses (default: newest 166 frames); from the run start with reference_time.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 264,
-            "description": "Hours from now (1-264): ahead, or back on analyses (default: newest 166 frames); from the run start with reference_time."
+            "maximum": 264
           },
           "time_start": {
-            "type": "string",
-            "description": "ISO 8601 window start (with time_end)."
+            "description": "ISO 8601 window start (with time_end).",
+            "type": "string"
           },
           "time_end": {
-            "type": "string",
-            "description": "ISO 8601 window end (with time_start)."
+            "description": "ISO 8601 window end (with time_start).",
+            "type": "string"
           },
           "latest": {
-            "type": "boolean",
             "default": false,
-            "description": "Only the newest value (analyses like RTMA/MRMS)."
+            "description": "Only the newest value (analyses like RTMA/MRMS).",
+            "type": "boolean"
           },
           "reference_time": {
-            "type": "string",
-            "description": "Pin a specific model run (ISO 8601). Default: latest run."
+            "description": "Pin a specific model run (ISO 8601). Default: latest run.",
+            "type": "string"
           },
           "units": {
+            "default": "imperial",
             "type": "string",
             "enum": [
               "imperial",
               "metric"
-            ],
-            "default": "imperial"
+            ]
           },
           "cursor": {
-            "type": "string",
-            "description": "next_cursor of the previous page."
+            "description": "next_cursor of the previous page.",
+            "type": "string"
           }
         },
         "required": [
           "variables"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -5380,6 +5442,7 @@
                 },
                 "data": {
                   "type": "object",
+                  "properties": {},
                   "additionalProperties": {
                     "type": "array",
                     "items": {
@@ -5392,6 +5455,7 @@
                 },
                 "unit_labels": {
                   "type": "object",
+                  "properties": {},
                   "additionalProperties": {
                     "type": [
                       "string",
@@ -5401,28 +5465,30 @@
                   "description": "Unit of each variable in data."
                 },
                 "reference_time": {
-                  "type": "string",
-                  "description": "Model run behind every value in this series."
+                  "description": "Model run behind every value in this series.",
+                  "type": "string"
                 },
                 "reference_times": {
+                  "description": "Distinct runs, when this series mixes more than one.",
                   "type": "array",
                   "items": {
                     "type": "string"
-                  },
-                  "description": "Distinct runs, when this series mixes more than one."
+                  }
                 },
                 "status": {
                   "type": "string",
                   "description": "ok, unavailable, out_of_domain (see related) or not_public."
                 },
                 "related": {
-                  "type": "string",
-                  "description": "With out_of_domain: a dataset that covers the point."
+                  "description": "With out_of_domain: a dataset that covers the point.",
+                  "type": "string"
                 },
                 "data_age_seconds": {
                   "anyOf": [
                     {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
                     },
                     {
                       "type": "null"
@@ -5467,13 +5533,14 @@
             ]
           },
           "data_status": {
+            "description": "Present only when the data service did not answer and a cached copy was served.",
             "type": "object",
-            "additionalProperties": {},
-            "description": "Present only when the data service did not answer and a cached copy was served."
+            "properties": {},
+            "additionalProperties": {}
           },
           "attribution": {
-            "type": "string",
-            "description": "Attribution the dataset licence requires. Cite it when quoting these values."
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
+            "type": "string"
           }
         },
         "required": [
@@ -5483,8 +5550,8 @@
           "truncated",
           "next_cursor"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Query dataset",
@@ -5533,7 +5600,6 @@
           "lat",
           "lon"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -5564,7 +5630,7 @@
                 "type": "string"
               }
             },
-            "additionalProperties": true
+            "additionalProperties": {}
           }
         },
         "required": [
@@ -5572,8 +5638,8 @@
           "lon",
           "place"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Reverse geocode",
@@ -5603,18 +5669,19 @@
             "description": "The question or keywords, in the user's words."
           },
           "lat": {
+            "description": "Latitude of the place (with lon).",
             "type": "number",
             "minimum": -90,
-            "maximum": 90,
-            "description": "Latitude of the place (with lon)."
+            "maximum": 90
           },
           "lon": {
+            "description": "Longitude of the place (with lat).",
             "type": "number",
             "minimum": -180,
-            "maximum": 180,
-            "description": "Longitude of the place (with lat)."
+            "maximum": 180
           },
           "domain": {
+            "description": "Coverage filter when there is no point; not with lat/lon.",
             "type": "string",
             "enum": [
               "conus",
@@ -5622,36 +5689,34 @@
               "hawaii",
               "carib",
               "global"
-            ],
-            "description": "Coverage filter when there is no point; not with lat/lon."
+            ]
           },
           "kind": {
+            "description": "Only this dataset kind.",
             "type": "string",
             "enum": [
               "grid",
               "snapshot",
               "feature",
               "text"
-            ],
-            "description": "Only this dataset kind."
+            ]
           },
           "family": {
+            "description": "Only this source family (e.g. \"nbm\", \"mrms\").",
             "type": "string",
-            "maxLength": 40,
-            "description": "Only this source family (e.g. \"nbm\", \"mrms\")."
+            "maxLength": 40
           },
           "limit": {
+            "default": 5,
+            "description": "Hits to return (1-10, default 5).",
             "type": "integer",
             "minimum": 1,
-            "maximum": 10,
-            "default": 5,
-            "description": "Hits to return (1-10, default 5)."
+            "maximum": 10
           }
         },
         "required": [
           "query"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -5661,8 +5726,8 @@
             "type": "string"
           },
           "domain": {
-            "type": "string",
-            "description": "The coverage filter applied: the point's domain, or `domain`."
+            "description": "The coverage filter applied: the point's domain, or `domain`.",
+            "type": "string"
           },
           "note": {
             "type": "string"
@@ -5688,16 +5753,16 @@
                   ]
                 },
                 "variable": {
-                  "type": "string",
-                  "description": "Best-matching standard variable name."
+                  "description": "Best-matching standard variable name.",
+                  "type": "string"
                 },
                 "units": {
-                  "type": "string",
-                  "description": "Served units of `variable`."
+                  "description": "Served units of `variable`.",
+                  "type": "string"
                 },
                 "cadence": {
-                  "type": "string",
-                  "description": "ISO 8601 update interval."
+                  "description": "ISO 8601 update interval.",
+                  "type": "string"
                 },
                 "entitlement": {
                   "type": "string"
@@ -5706,6 +5771,7 @@
                   "type": "string"
                 },
                 "call": {
+                  "description": "The exact call that answers from this dataset. Absent when that tool is not on this connection; see `connect`.",
                   "type": "object",
                   "properties": {
                     "tool": {
@@ -5713,6 +5779,7 @@
                     },
                     "arguments": {
                       "type": "object",
+                      "properties": {},
                       "additionalProperties": {}
                     }
                   },
@@ -5720,16 +5787,15 @@
                     "tool",
                     "arguments"
                   ],
-                  "additionalProperties": false,
-                  "description": "The exact call that answers from this dataset. Absent when that tool is not on this connection; see `connect`."
+                  "additionalProperties": false
                 },
                 "toolset": {
-                  "type": "string",
-                  "description": "With no `call`: the toolset whose tool answers this dataset."
+                  "description": "With no `call`: the toolset whose tool answers this dataset.",
+                  "type": "string"
                 },
                 "connect": {
-                  "type": "string",
-                  "description": "With no `call`: the path that serves this connection's toolsets plus that one, e.g. /x/core,catalog,guidance."
+                  "description": "With no `call`: the path that serves this connection's toolsets plus that one, e.g. /x/core,catalog,guidance.",
+                  "type": "string"
                 }
               },
               "required": [
@@ -5746,8 +5812,8 @@
           "query",
           "hits"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Search catalog",
@@ -5785,22 +5851,22 @@
             "description": "Place query: city, \"city, state\", ZIP, partial text, or venue/address where enabled."
           },
           "fuzzy": {
-            "type": "boolean",
             "default": false,
-            "description": "Autosuggest mode for partial/misspelled input. Default false (exact search)."
+            "description": "Autosuggest mode for partial/misspelled input. Default false (exact search).",
+            "type": "boolean"
           },
           "limit": {
+            "default": 5,
+            "description": "Maximum candidates to return (1-10). Default 5.",
             "type": "integer",
             "minimum": 1,
-            "maximum": 10,
-            "default": 5,
-            "description": "Maximum candidates to return (1-10). Default 5."
+            "maximum": 10
           },
           "near_lat": {
+            "description": "Rank venues/addresses near this point; pair with near_lon.",
             "type": "number",
             "minimum": -90,
-            "maximum": 90,
-            "description": "Rank venues/addresses near this point; pair with near_lon."
+            "maximum": 90
           },
           "near_lon": {
             "type": "number",
@@ -5811,7 +5877,6 @@
         "required": [
           "query"
         ],
-        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "outputSchema": {
@@ -5871,28 +5936,29 @@
                   "type": "string"
                 },
                 "matched_via": {
+                  "description": "Set on exact-search rows found by the venue/address fallback.",
                   "type": "string",
-                  "const": "autosuggest",
-                  "description": "Set on exact-search rows found by the venue/address fallback."
+                  "const": "autosuggest"
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": {}
             }
           },
           "partial": {
+            "description": "Sections that did not finish, e.g. {\"poi\": \"timeout\"}; the list may be incomplete.",
             "type": "object",
+            "properties": {},
             "additionalProperties": {
               "type": "string"
-            },
-            "description": "Sections that did not finish, e.g. {\"poi\": \"timeout\"}; the list may be incomplete."
+            }
           }
         },
         "required": [
           "query",
           "candidates"
         ],
-        "additionalProperties": false,
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Search locations",
