@@ -145,9 +145,8 @@ Pick one:
 never echo it into chat, logs, or a commit. Use `sw_test_*` keys in CI.
 If a key ever lands in a repository, rotate it from the dashboard.
 
-Your key is tied to a **tier** (free, developer, professional,
-enterprise) which dictates your rate limit, monthly request allowance,
-and overage pricing. See [pricing](https://developers.smarterweather.com/pricing)
+Your key belongs to a **plan**, which sets its rate limits and daily
+cap, and on paid plans a monthly credit allowance and overage price. See [pricing](https://developers.smarterweather.com/pricing)
 for the current numbers.
 
 ## 2. Make your first call
@@ -221,9 +220,9 @@ Every success response is JSON (`application/json`, or
 `application/geo+json` on the routes that return map features) with a
 schema documented in [`openapi.yaml`](https://developers.smarterweather.com/openapi.yaml). The shape is
 stable within a major version; breaking changes bump the version
-prefix (`/v1/...` -> `/v2/...`) and run on an at-least-12-month
-overlap. Every `/v1/weather` field, with its type and whether it can
-be null, is in the [Weather field reference](https://developers.smarterweather.com/build-a-weather-app#fields).
+prefix (`/v1/...` -> `/v2/...`) and follow the notice periods in the
+[Developer Terms, "Deprecation and breaking changes"](https://developers.smarterweather.com/legal/terms#deprecation). Every `/v1/weather`
+field, with its type and whether it can be null, is in the [Weather field reference](https://developers.smarterweather.com/build-a-weather-app#fields).
 
 ## 4. Handle rate limits
 

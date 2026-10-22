@@ -4,7 +4,8 @@ The Smarter Weather REST API returns errors as [RFC 9457
 `application/problem+json`](https://www.rfc-editor.org/rfc/rfc9457)
 documents (RFC 9457 obsoletes RFC 7807 with the same wire format). This
 doc covers the canonical `Problem` shape, the `next_steps` extension
-that tells you what to do about a `401`, `402`, `403`, or `429`, the stable
+that tells you what to do about a `401`, `402`, `403`, `429`, or a `404`
+for a point or place outside coverage or a place not found, the stable
 error `type` URIs the platform emits, and how clients should react to
 each class.
 
@@ -21,8 +22,8 @@ Every 4xx or 5xx response body is a JSON object with:
 | `instance`  | string | no       | The request path the failure occurred on (e.g. `/v1/weather`). Pair it with the `X-Request-Id` response header in support tickets. |
 
 Extension members beyond these five may appear (RFC 9457 §3.2); today
-`401`, `402`, `403`, and `429` carry `next_steps` (below). Ignore members you
-do not understand.
+`401`, `402`, `403`, `429`, and a `404` for a point or place outside
+coverage or a place not found carry `next_steps` (below). Ignore members you do not understand.
 
 <a id="reason"></a>`reason` is an optional extension member: a snake_case
 machine code from a bounded list, more specific than `type` (for example
@@ -84,8 +85,9 @@ Retry-After: 1
 
 ## `next_steps`: the error tells you what to do
 
-<a id="next-steps"></a>A `401`, `402`, `403`, or `429` is where a first
-integration most often stalls, so those statuses carry a `next_steps`
+<a id="next-steps"></a>A `401`, `402`, `403`, `429`, or a `404` for a point
+or place outside coverage or a place not found is where a first integration most often
+stalls, so those statuses carry a `next_steps`
 extension member: a map of link relations, each `{ href, description }`
 plus optional grant fields, plus `recommended` naming the one to take
 first. When present, `if_no_human_present` names the relation an
@@ -97,7 +99,8 @@ now. Relations today: `device_flow` (401 recommended; also carries
 `mint_endpoint`), `get_key`, `quickstart`, `agents`,
 `onboarding_mcp`, `keyless_x402`, `key_handling`, `errors` (on `401`;
 `403` recommends `get_key`), `claim` (on `402` and trial-route `403`),
-and `upgrade`, `pricing`, `usage`, `errors` (on `429`). New relations
+`upgrade`, `pricing`, `usage`, `errors` (on `429`), and `coverage`,
+`errors` (on `404`; `coverage` recommended). New relations
 may be added; ignore unknown ones. Every `href` carries
 `utm_source=api&utm_medium=problem-json&utm_campaign=<status>`. Grant
 endpoints on `device_flow` do not get UTM. When a trial key's free value
@@ -206,8 +209,8 @@ human does open it.
 | <a id="trial-ended"></a>`trial-ended` | 402  | A trial key's free value ended (lifetime call cap spent or key clock expired) while the claim window is still open. Body carries `reason` (`exhausted` \| `expired`), `claim_expires_at`, and `next_steps.recommended = claim`. | Follow `next_steps.claim` (portal page with a claim ticket in the URL fragment). Do not treat as a rate limit; a wait will not restore free value. |
 | <a id="payment-required"></a>`payment-required` | 402 | MCP only: a keyless call to a paid tool carried no valid [x402](https://www.x402.org/) payment. The text block also carries the x402 `PaymentRequired` members (`x402Version`, `accepts`, `resource`), and `structuredContent` is the bare `PaymentRequired`; a payment proof the server cannot use gets the same, re-quoted, with the reason in `detail`. `next_steps` names the free-key paths. | Pay one of `accepts` and retry with the payment, or follow `next_steps` for a key. Do not retry as-is. |
 | <a id="forbidden"></a>`forbidden` | 403  | The key authenticates but its scopes or tier do not grant access to the requested resource.               | Surface with an upgrade CTA; `next_steps` carries the links. |
-| <a id="trial-route-not-allowed"></a>`trial-route-not-allowed` | 403  | A trial key authenticated but is not allowed to call this route. `next_steps.recommended = claim`. | Claim the key for full API access, or call a trial-allowed route (`/v1/weather`, `/v1/geocode`, `/v1/alerts`, and `/v1/catalog`, which spends no trial call). A trial key minted before `/v1/catalog` opened to trials gets this error on `/v1/catalog`: mint a new trial key. |
-| <a id="not-found"></a>`not-found` | 404  | The resource does not exist.                                                                             | Treat as permanent.                                                                   |
+| <a id="trial-route-not-allowed"></a>`trial-route-not-allowed` | 403  | A trial key authenticated but is not allowed to call this route. `next_steps.recommended = claim`. | Claim the key for full API access, or call a route under `/v1/weather`, `/v1/geocode`, `/v1/alerts`, or `/v1/catalog` (which spends no trial call). A trial key minted before `/v1/catalog` opened to trials gets this error on `/v1/catalog`: mint a new trial key. |
+| <a id="not-found"></a>`not-found` | 404  | The resource does not exist. A place that matches no US location also carries `next_steps.coverage`.      | Treat as permanent.                                                                   |
 | <a id="outside-coverage"></a>`outside-coverage` | 404 | The point or place is outside the 50 US states and DC. | Do not retry; follow `next_steps.coverage`. |
 | <a id="too-many-requests"></a>`too-many-requests` | 429 | Generic per-minute or per-day quota exhaustion on surfaces that are not key-scoped. | Honor `Retry-After`; exponential backoff on subsequent hits. |
 | <a id="rate-limit-exceeded"></a>`rate-limit-exceeded` | 429 | Your API key exceeded its per-minute or per-day limit. `RateLimit-*` headers say which; `next_steps` says how to lift it. | Honor `Retry-After` / `RateLimit-Reset`; follow `next_steps.upgrade` to raise the limit. |
@@ -306,7 +309,8 @@ still have settled: check your wallet before paying again.
   caller may have no key. `search_locations` does not fail in that case: it
   returns place and ZIP rows without address or POI rows.
 - `next_steps` appears on `401`, `402` (`trial-ended`, `payment-required`),
-  `403` (trial keys), `429` (`rate-limit-exceeded`) and on the `503` a
+  `403` (trial keys), `404` (`outside-coverage`, and `not-found` for a
+  place), `429` (`rate-limit-exceeded`) and on the `503` a
   keyless x402 call gets while the payment rail is unavailable.
 - `rate-limit-exceeded` covers a key over its limit and a keyless x402
   wallet over its per-minute limit; it carries `retry_after_seconds` in
