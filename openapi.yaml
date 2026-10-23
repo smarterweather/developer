@@ -7522,8 +7522,12 @@ components:
             `areas[i]` does not pair with a raw UGC list or an
             `area_desc` segment), and present even when
             `representative_place` is not. A code the platform cannot
-            resolve is named by its UGC and has no `lat`/`lon`; resolved
-            zones, marine zones included, carry a point inside the zone.
+            resolve is named by its UGC and has no `lat`/`lon`. A
+            resolved zone, marine zones included, carries a point inside
+            both the zone and the alert's area, so the point's location
+            page shows the alert; it has no `lat`/`lon` when the zone does
+            not overlap the alert's area, or when no such point could be
+            computed.
             Omitted when no usable entry exists (an alert with no UGC
             codes included) or when the value is unavailable; clients
             fall back to `area_desc`.
@@ -7590,7 +7594,8 @@ components:
         90-day breaking-change commitment.
 
         One UGC zone of an alert. See `AlertDetail.areas`. `lat` and
-        `lon` are present together or not at all.
+        `lon` are present together or not at all. When present, the point
+        lies inside both the zone and the alert's area.
       required: [ugc, name]
       dependentRequired:
         lat: [lon]
@@ -7608,13 +7613,15 @@ components:
           type: number
           format: double
           description: |
-            Latitude of a point inside the zone. Omitted, with `lon`, for
-            a UGC code the platform cannot resolve.
+            Latitude of a point inside both the zone and the alert's area.
+            Omitted, with `lon`, for a UGC code the platform cannot
+            resolve, for a zone that does not overlap the alert's area, and
+            when no such point could be computed.
           example: 35.3957
         lon:
           type: number
           format: double
-          description: Longitude of a point inside the zone; omitted with `lat`.
+          description: Longitude of a point inside both the zone and the alert's area; omitted with `lat`.
           example: -109.4888
       example:
         ugc: "AZC001"
