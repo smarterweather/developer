@@ -39,9 +39,9 @@ as outside_coverage, and /v1/point with points and /v1/series/batch mark
 such points out_of_domain, as they do a point the check could not reach
 in time (retry it). If the location lookup is unavailable, the check can
 briefly fail open. Routes keyed by a station, radar site, forecast
-office or alert id, and nationwide lists, are not filtered by point, so
-do not treat an empty result as an all-clear. Do not retry an
-outside-coverage response.
+office or alert id, and lists that cover the whole country, are not
+filtered by point, so do not treat an empty result as an all-clear. Do
+not retry an outside-coverage response.
 
 ## Authentication — required reading
 
@@ -210,7 +210,7 @@ up what happened.
 
 <!-- generated:example rate-limit-headers -->
 
-A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only when the key has a daily cap). A response to a request without a valid key, such as a `401`, carries none, and neither does one for a first-party key that is exempt from rate limiting. The examples are a free key after its first call; `Retry-After` is from a `429`:
+A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only when the key has a daily cap). A response to a request without a valid key, such as a `401`, carries none. The examples are a free key after its first call; `Retry-After` is from a `429`:
 
 | Header | Example | Meaning |
 | ------ | ------- | ------- |

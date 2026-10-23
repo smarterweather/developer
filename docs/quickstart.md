@@ -23,7 +23,7 @@ Create a key in the dashboard. You need a free account; no card.
 2. Verify your email if the dashboard asks. Until you do, creating a key
    returns `403 email_not_verified`.
 3. Open [API keys](https://developers.smarterweather.com/dashboard/api-keys)
-   in the dashboard and click **Create Key**. Name the key, then click
+   in the dashboard and click **Create key**. Name the key, then click
    **Create**.
 4. Copy the key; the dashboard shows it once. Add it to `.env` as
    `SMARTERWEATHER_API_KEY=sw_live_...` and add `.env` to `.gitignore`.
@@ -319,7 +319,7 @@ field, with its type and whether it can be null, is in the [Weather field refere
 
 <!-- generated:example rate-limit-headers -->
 
-A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only when the key has a daily cap). A response to a request without a valid key, such as a `401`, carries none, and neither does one for a first-party key that is exempt from rate limiting. The examples are a free key after its first call; `Retry-After` is from a `429`:
+A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only when the key has a daily cap). A response to a request without a valid key, such as a `401`, carries none. The examples are a free key after its first call; `Retry-After` is from a `429`:
 
 | Header | Example | Meaning |
 | ------ | ------- | ------- |
