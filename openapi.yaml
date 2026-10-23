@@ -8859,8 +8859,8 @@ components:
         subtitle:
           type: string
           description: |
-            Secondary two-line copy (city, state, ZIP).
-          example: "Naperville, IL 60540"
+            Secondary two-line copy (city, state).
+          example: "Naperville, IL"
       additionalProperties: true
 
     StormTrackFeature:
