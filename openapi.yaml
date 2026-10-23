@@ -7161,15 +7161,20 @@ components:
           type: string
           enum: ["", none, rain, snow, mix, sleet, freezing_rain, unknown]
           description: |
-            Precipitation type for the period, from the hourly forecast
-            within `hourly_hours` (whether or not `hourly` is included).
-            Omitted for a period those hours do not type, which includes
-            periods past `hourly_hours`, even when `conditions` names
-            precipitation. `mix` is rain and snow, or a wintry mix; `sleet`
-            is ice pellets. `""`, `none` and `unknown` are reserved and not
-            currently served. Thunder is never a type: it is reported in
-            `conditions` and `thunderstorm_probability` (`thunder_possible`
-            flags thunder with snow).
+            Precipitation type for the period: the precipitation its
+            `conditions` and `narrative` report, read from the hours ending
+            within the period (06:00 to 18:00 local for `day`, 18:00 to
+            06:00 for `night`). Where daily forecast products cover the
+            location, every such hour counts, within `hourly_hours` or past
+            it; otherwise only the hours within `hourly_hours` do. `hourly`
+            need not be included. Omitted when the period reports no
+            precipitation (PoP under 15, or no type covering enough of its
+            hours) and for a period none of those hours reach. `mix` is
+            rain and snow, or a wintry mix; `sleet` is ice pellets. `""`,
+            `none` and `unknown` are reserved and not currently served.
+            Thunder is never a type: it is reported in `conditions` and
+            `thunderstorm_probability` (`thunder_possible` flags thunder
+            with snow).
         thunder_possible:
           type: boolean
           default: false
