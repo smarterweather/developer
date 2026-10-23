@@ -27,21 +27,13 @@ The platform offers two surfaces; pick the right one for the user's goal:
 When in doubt, default to REST for code-generation tasks and MCP for
 agent-runtime tool calls.
 
-**Coverage:** Smarter Weather covers the 50 US states and DC only. The
-US territories (Puerto Rico, the US Virgin Islands, Guam, the Northern
-Mariana Islands and American Samoa) and other countries are outside it.
-Every route that takes a point (lat and lon, zip or location) returns
-404 outside-coverage for a point outside the 50 states and DC.
-/v1/alerts and /v1/observations return it for a bounding box that
-touches no US domain (CONUS, Alaska, Hawaii); a box that touches one may
-still include area outside the US. /v1/weather/batch reports it per item
-as outside_coverage, and /v1/point with points and /v1/series/batch mark
-such points out_of_domain, as they do a point the check could not reach
-in time (retry it). If the location lookup is unavailable, the check can
-briefly fail open. Routes keyed by a station, radar site, forecast
-office or alert id, and lists that cover the whole country, are not
-filtered by point, so do not treat an empty result as an all-clear. Do
-not retry an outside-coverage response.
+**Coverage:**
+
+<!-- generated:example coverage -->
+
+Smarter Weather covers the 50 US states and DC only. The US territories (Puerto Rico, the US Virgin Islands, Guam, the Northern Mariana Islands and American Samoa) and other countries are outside it. Every route that takes a point (lat and lon, zip or location) returns 404 outside-coverage for a point outside the 50 states and DC. /v1/alerts and /v1/observations return it for a bounding box that touches no US domain (CONUS, Alaska, Hawaii); a box that touches one may still include area outside the US. /v1/weather/batch reports it per item as outside_coverage, and /v1/point with points and /v1/series/batch mark such points out_of_domain, as they do a point the check could not reach in time (retry it). If the location lookup is unavailable, the check can briefly fail open. Routes keyed by a station, radar site, forecast office or alert id, and lists that cover the whole country, are not filtered by point, so do not treat an empty result as an all-clear. Do not retry a response with type `outside-coverage`.
+
+<!-- /generated -->
 
 ## Authentication — required reading
 
