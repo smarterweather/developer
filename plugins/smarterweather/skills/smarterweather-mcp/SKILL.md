@@ -33,7 +33,7 @@ lat,lon.
 
 | Server | Endpoint | Auth | Purpose |
 | --- | --- | --- | --- |
-| Weather MCP | `https://mcp.smarterweather.com` | API key Bearer or keyless x402 | Hosted weather tools. The root URL serves the `core` and `catalog` toolsets: forecasts, current conditions, alerts, observed rain, probabilities, catalog search and raw dataset queries. Outlooks and forecaster text (`guidance`), rendered radar/satellite/sounding imagery (`visual`) and the other toolsets are at `/x/all`, or `/x/<toolset>[,<toolset>]` (also `X-SW-Toolsets`). |
+| Weather MCP | `https://mcp.smarterweather.com` | API key Bearer or keyless x402 | Hosted weather tools. The root URL serves the `core` and `catalog` toolsets: forecasts, current conditions, alerts, observed rain, probabilities, catalog search and raw dataset queries. Claude Code connected over HTTP (`claude mcp add --transport http`) gets every toolset at the root URL; through the stdio bridge it gets `core` and `catalog`. Outlooks and forecaster text (`guidance`), rendered radar/satellite/sounding imagery (`visual`) and the other toolsets are at `/x/all`, or `/x/<toolset>[,<toolset>]` (also `X-SW-Toolsets`). |
 | Onboarding MCP | `https://mcp.developers.smarterweather.com` | Anonymous for discovery; OAuth for account tools | One-time onboarding: `get_plans`, `get_documentation`, `sign_up`, then `create_api_key`, `configure_mcp`, usage + billing |
 
 Tool descriptors for the weather MCP:
