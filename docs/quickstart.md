@@ -1,31 +1,179 @@
-# Smarter Weather Developer Platform - Quickstart
+# Get an API key and call the API
 
-Three requests from zero to a live forecast call. Nothing to install for REST.
-Works for a person with a terminal and for a coding agent acting on
-their behalf; agents should also read
+Create a key, make one request, and read the forecast it returns. REST
+needs nothing installed. Working through a coding agent? Step 5 is
+written for it, and
 [`llms.txt`](https://developers.smarterweather.com/llms.txt) (served
-identically as `/AGENTS.md`).
+identically as `/AGENTS.md`) covers the whole platform.
 
-Coverage: Smarter Weather covers the 50 US states and DC only. The US
-territories (Puerto Rico, the US Virgin Islands, Guam, the Northern
-Mariana Islands and American Samoa) and other countries are outside it.
-Every route that takes a point (lat and lon, zip or location) returns
-404 outside-coverage for a point outside the 50 states and DC.
-/v1/alerts and /v1/observations return it for a bounding box that
-touches no US domain (CONUS, Alaska, Hawaii); a box that touches one may
-still include area outside the US. /v1/weather/batch reports it per item
-as outside_coverage, and /v1/point with points and /v1/series/batch mark
-such points out_of_domain, as they do a point the check could not reach
-in time (retry it). If the location lookup is unavailable, the check can
-briefly fail open. Routes keyed by a station, radar site, forecast
-office or alert id, and nationwide lists, are not filtered by point, so
-do not treat an empty result as an all-clear. Do not retry an
-[`outside-coverage`](https://developers.smarterweather.com/errors#outside-coverage)
-response.
+Smarter Weather covers the 50 US states and DC only. The US territories
+(Puerto Rico, the US Virgin Islands, Guam, the Northern Mariana Islands
+and American Samoa) and other countries are outside it. A point outside
+returns 404 outside-coverage; see
+[coverage details](https://developers.smarterweather.com/errors#outside-coverage).
 
-## 0. Agents: start here
+<a id="get-api-key"></a>
 
-Call the API before you have a key. The response tells you what to do:
+## 1. Get an API key
+
+Create a key in the dashboard. You need a free account; no card.
+
+1. Create a free account at
+   <https://developers.smarterweather.com/sign-up>.
+2. Verify your email if the dashboard asks. Until you do, creating a key
+   returns `403 email_not_verified`.
+3. Open [API keys](https://developers.smarterweather.com/dashboard/api-keys)
+   in the dashboard and click **Create key**. Name the key, then click
+   **Create**.
+4. Copy the key; the dashboard shows it once. Add it to `.env` as
+   `SMARTERWEATHER_API_KEY=sw_live_...` and add `.env` to `.gitignore`.
+
+Result: `.env` holds your live key.
+
+**From a terminal.** Run
+`npx -y @smarterweather/mcp-onboarding@latest login`. You need Node.js 22 or later. It
+shows a link and a code to approve in the browser, then writes the key
+to `.env` (mode `0600`, gitignored). It prints only a key prefix, never
+the key ([key handling](https://developers.smarterweather.com/agents#key-handling)).
+
+**No account yet.** Run
+`npx -y @smarterweather/mcp-onboarding@latest trial` for a trial key
+with no account and no browser step. It writes `.env` the same way.
+A trial key allows 300 requests over 72 hours, 10 a minute (burst 5); `/v1/catalog` requests don't count toward the 300.
+
+Keep the key only in `.env`, read it from the environment in code, and
+never echo it into chat, logs, or a commit. Use `sw_test_*` keys in CI.
+If a key lands in a repository, rotate it from the dashboard. Your key
+belongs to a plan, which sets its rate limits and daily cap, and on paid
+plans its monthly credits and overage price; see
+[pricing](https://developers.smarterweather.com/pricing).
+
+<a id="call-with-key"></a>
+
+## 2. Call the weather endpoint
+
+Run this from the folder that holds `.env`. The first line reads
+`SMARTERWEATHER_API_KEY` from `.env` without running the file, and keeps
+a key you already exported.
+
+```bash
+[ -n "$SMARTERWEATHER_API_KEY" ] || export SMARTERWEATHER_API_KEY="$(sed -n 's/^\(export \)\{0,1\}SMARTERWEATHER_API_KEY=//p' .env | tail -n 1 | tr -d "\r\"' ")"
+curl -sS 'https://api.smarterweather.com/v1/weather?lat=42.3601&lon=-71.0589' \
+  -H "Authorization: Bearer ${SMARTERWEATHER_API_KEY:?set SMARTERWEATHER_API_KEY first, see developers.smarterweather.com/quickstart}"
+```
+
+Result: HTTP 200 with the forecast for Boston. Any other status returns a
+problem document whose `next_steps` says what to do. Send the key as a
+Bearer token in the `Authorization` header; a request that sends
+`X-API-Key` instead gets a `401`.
+
+## 3. Call it from your code
+
+The same request in JavaScript, Python, or Go. Each reads
+`SMARTERWEATHER_API_KEY` from the environment. To look a place up by
+name, pass `location=City, ST` instead of `lat` and `lon`. The response
+then adds `country`, `zip`, and `gis.population`, at the geocoder's
+centroid for the place. A `lat`/`lon` call adds the nearest radar and
+station.
+
+```bash
+curl "https://api.smarterweather.com/v1/weather?lat=42.3601&lon=-71.0589" \
+  -H "Authorization: Bearer ${SMARTERWEATHER_API_KEY:?set SMARTERWEATHER_API_KEY first, see developers.smarterweather.com/quickstart}"
+```
+
+```js
+// save as sample.mjs; run: node --env-file=.env sample.mjs (Node 20.6+, ESM top-level await)
+const res = await fetch(
+  "https://api.smarterweather.com/v1/weather?lat=42.3601&lon=-71.0589",
+  { headers: { Authorization: `Bearer ${process.env.SMARTERWEATHER_API_KEY}` } },
+);
+if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+const data = await res.json();
+console.log(JSON.stringify(data, null, 2));
+```
+
+```python
+# pip install requests python-dotenv
+import os, sys, requests
+from dotenv import load_dotenv
+
+load_dotenv(".env")  # ./.env in the current directory; variables already set are kept
+
+r = requests.get(
+    "https://api.smarterweather.com/v1/weather",
+    params={"lat":"42.3601","lon":"-71.0589"},
+    headers={"Authorization": f"Bearer {os.environ['SMARTERWEATHER_API_KEY']}"},
+)
+if not r.ok:
+    sys.exit(f"{r.status_code} {r.text}")
+data = r.json()
+print(data)
+```
+
+```go
+package main
+
+import (
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+)
+
+func main() {
+	req, err := http.NewRequest("GET", "https://api.smarterweather.com/v1/weather?lat=42.3601&lon=-71.0589", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("SMARTERWEATHER_API_KEY"))
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		log.Fatalf("%s %s", res.Status, body)
+	}
+	fmt.Println(string(body))
+}
+```
+
+Result: the same JSON as step 2.
+
+## 4. Give your agent weather tools
+
+If your agent runs in an MCP client, give it the onboarding skill
+(<https://developers.smarterweather.com/.well-known/skills/smarterweather-onboarding/SKILL.md>).
+It signs you up, creates an API key, and sets up the Weather MCP in your
+client. You approve once in the browser.
+
+The same key works on the hosted Weather MCP at
+`https://mcp.smarterweather.com`. For clients that only speak stdio, run
+the bridge from the project whose `.env` holds the key. It reads
+`SMARTERWEATHER_API_KEY`, then `SMARTERWEATHER_ENV_FILE`, then `./.env`:
+
+```bash
+npx -y @smarterweather/mcp-weather@latest
+```
+
+Agents with a wallet can pay per call on the Weather MCP with
+[x402](https://developers.smarterweather.com/agents#x402) instead. The
+REST API always needs a key. Client set-up:
+[MCP setup guide](https://developers.smarterweather.com/mcp-server/setup).
+
+Result: the Weather MCP tools show up in your client.
+
+<a id="device-flow"></a>
+
+## 5. Let an agent get the key
+
+An agent can start with no key: the API answers with a 401 that says
+what to do next.
 
 ```bash
 curl -sS -D - 'https://api.smarterweather.com/v1/weather?lat=42.3601&lon=-71.0589'
@@ -105,131 +253,73 @@ When trial keys are enabled, the 401's `next_steps` also carries `if_no_human_pr
 <!-- /generated -->
 
 `next_steps.recommended` names the link to take first. Every `401`,
-`402`, `403`, and `429` carries this block (see [errors](https://developers.smarterweather.com/errors)), so
-an agent never has to guess where to go.
+`402`, `403`, and `429` carries this block (see
+[errors](https://developers.smarterweather.com/errors)).
 
-## 1. Get an API key
+**A person is present.** Run
+`npx -y @smarterweather/mcp-onboarding@latest login` in the background
+or with a long shell timeout, and relay the link and code it prints. It
+blocks until the person approves, then writes `SMARTERWEATHER_API_KEY`
+to `./.env` (mode `0600`, gitignored) and prints only a key prefix. The
+401's `next_steps.device_flow.command` names this command. You need Node.js 22 or later.
 
-Pick one:
-
-- **Human present (recommended).**
-  `npx -y @smarterweather/mcp-onboarding@latest login` — RFC 8628 device
-  grant; writes `SMARTERWEATHER_API_KEY` to `./.env` (0600, gitignored)
-  and prints only a key prefix. Named by `next_steps.device_flow.command`.
-- **No human present.**
-  `npx -y @smarterweather/mcp-onboarding@latest trial` (or stdio
-  `start_trial`) — same sink; named by `next_steps.trial.command` when
-  trial is advertised. Its terms (calls, rate, claim window) are in
-  [`llms.txt`](https://developers.smarterweather.com/llms.txt) and on
-  the [quickstart page](https://developers.smarterweather.com/quickstart).
-- **Dashboard.** Sign in at
-  <https://developers.smarterweather.com/dashboard/api-keys> (free, no
-  card) and click **New key**. Write the shown-once value straight to
-  `.env`.
-- **Onboarding MCP.** Connect anonymously to
-  `https://mcp.developers.smarterweather.com`; after OAuth, via the stdio
-  bridge `create_api_key` sinks into `.env`. Call `configure_mcp` for
-  paste-ready Cursor (`envFile`) / Claude Desktop configs. See
-  [the onboarding MCP](https://developers.smarterweather.com/agents).
-- **Wallet, no account.** Agents holding USDC on Base can pay per call
-  on the weather MCP via x402 (MCP-only; the REST API always needs a
-  key); see <https://developers.smarterweather.com/agents#x402>.
-- **Raw HTTP (curl / conformance only).** `POST /developer/keys` and
-  `POST /developer/keys/trial` return the bearer in the body (`key` /
-  `api_key`) — write only that field to `.env` as
-  `SMARTERWEATHER_API_KEY=`; never print it. Recipe:
-  <https://developers.smarterweather.com/quickstart#device-flow>.
-
-**Key handling, every time:** keep the key only in `.env` as
-`SMARTERWEATHER_API_KEY=...`, read it from the environment in code, and
-never echo it into chat, logs, or a commit. Use `sw_test_*` keys in CI.
-If a key ever lands in a repository, rotate it from the dashboard.
-
-Your key is tied to a **tier** (free, developer, professional,
-enterprise) which dictates your rate limit, monthly request allowance,
-and overage pricing. See [pricing](https://developers.smarterweather.com/pricing)
-for the current numbers.
-
-## 2. Make your first call
-
-Every request carries your key as an HTTP Bearer token in the
-`Authorization` header. The base URL is
-`https://api.smarterweather.com`. The `X-API-Key` header is **not**
-supported — requests that send it instead of `Authorization` are
-rejected with `401` (whose `next_steps` will tell you so). Each sample
-reads `SMARTERWEATHER_API_KEY` from the environment and shows how to
-load it from `.env`.
-
-### curl
-
-The first line reads only the key from `.env` (never `source` it as
-shell) and keeps a key you already exported. If the key is still unset,
-the call stops with a message instead of sending an empty token.
+Without Node.js, use the device grant directly. Write only the `key`
+field of the `POST api_keys_endpoint` response to `.env` as
+`SMARTERWEATHER_API_KEY=`, and never print the key or the access token.
 
 ```bash
-[ -n "$SMARTERWEATHER_API_KEY" ] || export SMARTERWEATHER_API_KEY="$(sed -n 's/^\(export \)\{0,1\}SMARTERWEATHER_API_KEY=//p' .env | tail -n 1 | tr -d "\r\"' ")"
-curl -sS https://api.smarterweather.com/v1/weather \
-  -H "Authorization: Bearer ${SMARTERWEATHER_API_KEY:?set SMARTERWEATHER_API_KEY first, see developers.smarterweather.com/quickstart}" \
-  --get \
-  --data-urlencode "lat=42.3601" \
-  --data-urlencode "lon=-71.0589"
+npx -y @smarterweather/mcp-onboarding@latest login
+# Preferred: the one command above. Shows the human a URL, writes ./.env
+# (0600, gitignored), prints only a key prefix.
+
+# Raw recipe (no Node): reference only, not a runnable script; step 2 needs
+# your own poll loop. Stop if .env already has SMARTERWEATHER_API_KEY.
+# 1. Ask Clerk for a device code (client_id is public; it is in the 401 body).
+curl -sS -X POST 'https://clerk.smarterweather.com/oauth/device_authorization' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'client_id=k2h05BUoTP393zcD' \
+  --data-urlencode 'scope=openid email'
+
+# 2. Show the human verification_uri + user_code. Poll until they approve.
+#    grant_type=urn:ietf:params:oauth:grant-type:device_code
+#    handle authorization_pending / slow_down / expired_token.
+
+# 3. Create a key and write ONLY its key field to .env. Nothing reaches the terminal.
+# (umask 077; curl -sS -X POST 'https://api.smarterweather.com/developer/keys' \
+#   -H "Authorization: Bearer $ACCESS_TOKEN" \
+#   -H "Idempotency-Key: $(uuidgen)" \
+#   -H 'Content-Type: application/json' \
+#   -d '{"name":"cli my-project","origin":{"channel":"device_flow"}}' \
+#   | jq -er '"SMARTERWEATHER_API_KEY=" + .key' >> .env)
+# grep -qx '.env' .gitignore 2>/dev/null || echo .env >> .gitignore
+
+# 4. Discard the access token (unset ACCESS_TOKEN).
 ```
 
-### JavaScript (Node 20.6+ / fetch)
+**No one is present.** Run
+`npx -y @smarterweather/mcp-onboarding@latest trial`, named by
+`next_steps.trial.command`. A trial key allows 300 requests over 72 hours, 10 a minute (burst 5); `/v1/catalog` requests don't count toward the 300. A person can claim the key later
+from the printed claim link. Without Node.js, follow the `trial` link's
+`description` above: solve the challenge, POST to `mint_endpoint`, and
+write only the `api_key` field to `.env`.
 
-```js
-// Save as app.mjs; run: node --env-file=.env app.mjs
-const res = await fetch(
-  `https://api.smarterweather.com/v1/weather?lat=42.3601&lon=-71.0589`,
-  {
-    headers: {
-      Authorization: `Bearer ${process.env.SMARTERWEATHER_API_KEY}`,
-    },
-  },
-);
-if (!res.ok) {
-  throw new Error(`smarterweather ${res.status}: ${await res.text()}`);
-}
-const weather = await res.json();
-console.log(weather);
-```
+Result: `.env` holds a key and the terminal shows only its prefix.
 
-### Python (requests)
-
-```python
-# pip install requests python-dotenv
-import os, requests
-from dotenv import load_dotenv
-
-load_dotenv(".env")  # ./.env in the current directory; variables already set are kept
-
-res = requests.get(
-    "https://api.smarterweather.com/v1/weather",
-    params={"lat": 42.3601, "lon": -71.0589},
-    headers={
-        "Authorization": f"Bearer {os.environ['SMARTERWEATHER_API_KEY']}"
-    },
-    timeout=10,
-)
-res.raise_for_status()
-print(res.json())
-```
-
-## 3. Understand the response shape
+## Response shape
 
 Every success response is JSON (`application/json`, or
 `application/geo+json` on the routes that return map features) with a
 schema documented in [`openapi.yaml`](https://developers.smarterweather.com/openapi.yaml). The shape is
 stable within a major version; breaking changes bump the version
-prefix (`/v1/...` -> `/v2/...`) and run on an at-least-12-month
-overlap. Every `/v1/weather` field, with its type and whether it can
-be null, is in the [Weather field reference](https://developers.smarterweather.com/build-a-weather-app#fields).
+prefix (`/v1/...` -> `/v2/...`) and follow the notice periods in the
+[Developer Terms, "Deprecation and breaking changes"](https://developers.smarterweather.com/legal/terms#deprecation). Every `/v1/weather`
+field, with its type and whether it can be null, is in the [Weather field reference](https://developers.smarterweather.com/build-a-weather-app#fields).
 
-## 4. Handle rate limits
+## Rate limits
 
 <!-- generated:example rate-limit-headers -->
 
-A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only when the key has a daily cap). A response to a request without a valid key, such as a `401`, carries none, and neither does one for a first-party key that is exempt from rate limiting. The examples are a free key after its first call; `Retry-After` is from a `429`:
+A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only when the key has a daily cap). A response to a request without a valid key, such as a `401`, carries none. The examples are a free key after its first call; `Retry-After` is from a `429`:
 
 | Header | Example | Meaning |
 | ------ | ------- | ------- |
@@ -246,10 +336,9 @@ A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only
 
 When you exceed the limit the API returns **HTTP 429** with a
 `Retry-After` header (seconds) and a `next_steps` block whose
-`recommended` link (`upgrade`) is how to raise the limit. Your client
-should back off for that many seconds before retrying. Don't retry
-tighter than the header says; repeated violations surface as a support
-flag.
+`recommended` link (`upgrade`) is how to raise the limit. Back off for
+that many seconds before you retry. Don't retry sooner than the header
+says; repeated violations raise a support flag.
 
 ```ts
 if (res.status === 429) {
@@ -258,22 +347,6 @@ if (res.status === 429) {
   // retry once, then surface the error if it still 429s.
 }
 ```
-
-## 5. Give your agent weather tools (optional)
-
-If you're integrating with Cursor, Claude Desktop, Claude Code, or any
-MCP-compatible client, the same key works on the hosted weather MCP at
-`https://mcp.smarterweather.com`. For clients that only speak stdio, run
-the bridge from the project whose `.env` holds the key. It reads
-`SMARTERWEATHER_API_KEY`, then `SMARTERWEATHER_ENV_FILE`, then `./.env`:
-
-```bash
-npx -y @smarterweather/mcp-weather@latest
-```
-
-See the [MCP setup guide](https://developers.smarterweather.com/mcp-server/setup) for client-specific
-configuration snippets and [the onboarding MCP](https://developers.smarterweather.com/agents)
-for the agent-driven signup path.
 
 ## Next steps
 

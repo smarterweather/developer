@@ -1,12 +1,14 @@
-# Smarter Weather Developer Platform - Error Model
+# Errors and rate limits
 
-The Smarter Weather REST API returns errors as [RFC 9457
-`application/problem+json`](https://www.rfc-editor.org/rfc/rfc9457)
-documents (RFC 9457 obsoletes RFC 7807 with the same wire format). This
-doc covers the canonical `Problem` shape, the `next_steps` extension
-that tells you what to do about a `401`, `402`, `403`, or `429`, the stable
-error `type` URIs the platform emits, and how clients should react to
-each class.
+Every error is a JSON problem document with a stable `type`. For errors
+you can act on, a `next_steps` field tells you or your agent what to do.
+This page lists each error type, what it means, and how to respond, plus
+how rate limits work (each plan's numbers are on the [pricing
+page](https://developers.smarterweather.com/pricing/#rate-limits)).
+
+Problem documents follow [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
+and use the `application/problem+json` media type. RFC 9457 obsoletes RFC
+7807 with the same wire format.
 
 ## The `Problem` shape
 
@@ -14,17 +16,24 @@ Every 4xx or 5xx response body is a JSON object with:
 
 | Field       | Type   | Required | Meaning                                                                 |
 | ----------- | ------ | -------- | ----------------------------------------------------------------------- |
-| `type`      | string | yes      | Stable URI identifying the error class. Clients SHOULD switch on this. |
+| `type`      | string | yes      | Stable URI identifying the error class. Switch on this.                |
 | `title`     | string | yes      | Short human-readable label. Safe to display to end users as-is.        |
 | `status`    | number | yes      | HTTP status code. Matches the response line.                           |
 | `detail`    | string | no       | Free-form description with request-specific context. May change between releases. |
 | `instance`  | string | no       | The request path the failure occurred on (e.g. `/v1/weather`). Pair it with the `X-Request-Id` response header in support tickets. |
 
 Extension members beyond these five may appear (RFC 9457 §3.2); today
-`401`, `402`, `403`, and `429` carry `next_steps` (below). Ignore members you
-do not understand.
+`401`, `402`, `403`, `429`, and a `404` for a point or place outside
+coverage or a place not found carry `next_steps` (below). Ignore members you do not understand.
 
-Errors sw-api itself returns are **`application/problem+json`**.
+<a id="reason"></a>`reason` is an optional extension member: a snake_case
+machine code from a bounded list, more specific than `type` (for example
+`location_ambiguous` on a `bad-request`). Today it appears on
+`trial-ended` (`exhausted` or `expired`) and on [MCP](#mcp) tool results.
+Branch on `type` first; use `reason` only to refine it, and treat a value
+you do not know as absent.
+
+Errors the API itself returns are **`application/problem+json`**.
 Responses that never reach it (an unknown route, a wrong method, a
 gateway or throttling error in front of it) can be `text/plain` or
 `application/json`, so accept both: branch on the HTTP status, then
@@ -77,8 +86,9 @@ Retry-After: 1
 
 ## `next_steps`: the error tells you what to do
 
-<a id="next-steps"></a>A `401`, `402`, `403`, or `429` is where a first
-integration most often stalls, so those statuses carry a `next_steps`
+<a id="next-steps"></a>A `401`, `402`, `403`, `429`, or a `404` for a point
+or place outside coverage or a place not found is where a first integration most often
+stalls, so those statuses carry a `next_steps`
 extension member: a map of link relations, each `{ href, description }`
 plus optional grant fields, plus `recommended` naming the one to take
 first. When present, `if_no_human_present` names the relation an
@@ -90,15 +100,16 @@ now. Relations today: `device_flow` (401 recommended; also carries
 `mint_endpoint`), `get_key`, `quickstart`, `agents`,
 `onboarding_mcp`, `keyless_x402`, `key_handling`, `errors` (on `401`;
 `403` recommends `get_key`), `claim` (on `402` and trial-route `403`),
-and `upgrade`, `pricing`, `usage`, `errors` (on `429`). New relations
+`upgrade`, `pricing`, `usage`, `errors` (on `429`), and `coverage`,
+`errors` (on `404`; `coverage` recommended). New relations
 may be added; ignore unknown ones. Every `href` carries
 `utm_source=api&utm_medium=problem-json&utm_campaign=<status>`. Grant
 endpoints on `device_flow` do not get UTM. When a trial key's free value
-ends, the response is `402` with `next_steps.recommended = claim` (see
-ADR 071); the per-key claim href uses a claim ticket in the URL fragment
+ends, the response is `402` with `next_steps.recommended = claim`; the
+per-key claim href uses a claim ticket in the URL fragment
 (`https://developers.smarterweather.com/claim#ticket=<ticket>`).
-The raw trial mint (`POST /developer/keys/trial`) also carries
-`next_steps` on its `400` (`recommended = trial`, the exact mint recipe),
+The trial key endpoint (`POST /developer/keys/trial`) also carries
+`next_steps` on its `400` (`recommended = trial`, the exact request to send),
 `429` and `503` (`recommended = device_flow`).
 
 The keyless `401` (links other than the recommended one shortened to
@@ -192,27 +203,33 @@ human does open it.
 | `type` (URI suffix)     | HTTP | When                                                                                                     | Client reaction                                                                       |
 | ----------------------- | ---- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | <a id="bad-request"></a>`bad-request` | 400  | Malformed query string, missing required parameter, invalid lat/lon.                                     | Fix the request. Do not retry.                                                        |
-| <a id="invalid-request"></a>`invalid-request` | 400 | A key-API request body is malformed: not JSON, not an object, or a field is missing or has the wrong shape. `field` names the offending field (for example `client.name`) when there is one. | Fix the body. On the trial mint, start from the challenge's `request_example` (set `accept_terms` to `true` once you accept the terms). Do not retry as-is. |
-| <a id="trial-challenge-invalid"></a>`trial-challenge-invalid` | 400 | Trial mint: the challenge token is invalid, expired, or bound to another IP, or the proof-of-work solution is wrong. | GET a fresh challenge, solve it, and mint again. |
-| <a id="terms-not-accepted"></a>`terms-not-accepted` | 400 | Trial mint or claim: `accept_terms` is not `true`. | Read the terms (the challenge's `terms_url`) and send `"accept_terms": true`. |
+| <a id="invalid-request"></a>`invalid-request` | 400 | A key-API request body is malformed: not JSON, not an object, or a field is missing or has the wrong shape. `field` names the offending field (for example `client.name`) when there is one. | Fix the body. When creating a trial key, start from the challenge's `request_example` (set `accept_terms` to `true` once you accept the terms). Do not retry as-is. |
+| <a id="trial-challenge-invalid"></a>`trial-challenge-invalid` | 400 | Trial key creation: the challenge token is invalid, expired, or bound to another IP, or the proof-of-work solution is wrong. | GET a fresh challenge, solve it, and try again. |
+| <a id="terms-not-accepted"></a>`terms-not-accepted` | 400 | Trial key creation or claim: `accept_terms` is not `true`. | Read the terms (the challenge's `terms_url`) and send `"accept_terms": true`. |
 | <a id="unauthorized"></a>`unauthorized` | 401  | `Authorization: Bearer` header missing or malformed, or the key is unrecognized, revoked, or expired.     | Follow `next_steps.recommended` (get a key at the dashboard, or one of the agent paths). Do not retry. Read `detail` for which case it was. |
-| <a id="trial-ended"></a>`trial-ended` | 402  | A trial key's free value ended (lifetime call cap spent or key clock expired) while the claim window is still open. Body carries `reason` (`exhausted` \| `expired`), `claim_expires_at`, and `next_steps.recommended = claim`. | Follow `next_steps.claim` (portal page with a claim ticket in the URL fragment). Do not treat as a rate limit; a wait will not restore free value. |
+| <a id="trial-ended"></a>`trial-ended` | 402  | A trial key's free value ended (lifetime call cap spent or key clock expired) while the claim window is still open. Body carries `reason` (`exhausted` \| `expired`), `claim_expires_at`, and `next_steps.recommended = claim`. | Follow `next_steps.claim` (a developer site page with a claim ticket in the URL fragment). Do not treat as a rate limit; a wait will not restore free value. |
 | <a id="payment-required"></a>`payment-required` | 402 | MCP only: a keyless call to a paid tool carried no valid [x402](https://www.x402.org/) payment. The text block also carries the x402 `PaymentRequired` members (`x402Version`, `accepts`, `resource`), and `structuredContent` is the bare `PaymentRequired`; a payment proof the server cannot use gets the same, re-quoted, with the reason in `detail`. `next_steps` names the free-key paths. | Pay one of `accepts` and retry with the payment, or follow `next_steps` for a key. Do not retry as-is. |
-| <a id="forbidden"></a>`forbidden` | 403  | The key authenticates but its scopes or tier do not grant access to the requested resource.               | Surface with an upgrade CTA; `next_steps` carries the links. |
-| <a id="trial-route-not-allowed"></a>`trial-route-not-allowed` | 403  | A trial key authenticated but is not allowed to call this route. `next_steps.recommended = claim`. | Claim the key for full API access, or call a trial-allowed route (`/v1/weather`, `/v1/geocode`, `/v1/alerts`, and `/v1/catalog`, which spends no trial call). A trial key minted before `/v1/catalog` opened to trials gets this error on `/v1/catalog`: mint a new trial key. |
-| <a id="not-found"></a>`not-found` | 404  | The resource does not exist.                                                                             | Treat as permanent.                                                                   |
+| <a id="forbidden"></a>`forbidden` | 403  | The key authenticates but its scopes or plan do not grant access to the requested resource.               | Surface with an upgrade CTA; `next_steps` carries the links. |
+| <a id="trial-route-not-allowed"></a>`trial-route-not-allowed` | 403  | A trial key authenticated but is not allowed to call this route. `next_steps.recommended = claim`. | Claim the key for full API access, or call a route under `/v1/weather`, `/v1/geocode`, `/v1/alerts`, or `/v1/catalog` (which spends no trial call). A trial key created before `/v1/catalog` opened to trials gets this error on `/v1/catalog`: create a new trial key. |
+| <a id="not-found"></a>`not-found` | 404  | The resource does not exist. A place that matches no US location also carries `next_steps.coverage`.      | Treat as permanent.                                                                   |
 | <a id="outside-coverage"></a>`outside-coverage` | 404 | The point or place is outside the 50 US states and DC. | Do not retry; follow `next_steps.coverage`. |
-| <a id="too-many-requests"></a>`too-many-requests` | 429 | Generic per-minute or per-day quota exhaustion on surfaces that are not key-scoped. | Honor `Retry-After`; exponential backoff on subsequent hits. |
+| <a id="too-many-requests"></a>`too-many-requests` | 429 | A per-minute or per-day limit reached on a surface that is not scoped to a key. | Honor `Retry-After`; exponential backoff on subsequent hits. |
 | <a id="rate-limit-exceeded"></a>`rate-limit-exceeded` | 429 | Your API key exceeded its per-minute or per-day limit. `RateLimit-*` headers say which; `next_steps` says how to lift it. | Honor `Retry-After` / `RateLimit-Reset`; follow `next_steps.upgrade` to raise the limit. |
-| <a id="trial-mint-rate-limited"></a>`trial-mint-rate-limited` | 429 | Trial mint: this IP reached its daily trial-mint cap. `Retry-After` counts down to UTC midnight. | Reuse the trial key you already minted, or follow `next_steps.recommended` (`device_flow`) to get a regular key. |
+| <a id="trial-mint-rate-limited"></a>`trial-mint-rate-limited` | 429 | Trial key creation: this IP reached its daily cap on new trial keys. `Retry-After` counts down to UTC midnight. | Reuse the trial key you already created, or follow `next_steps.recommended` (`device_flow`) to get a regular key. |
 | <a id="payload-too-large"></a>`payload-too-large` | 413 | The request body exceeded the endpoint's cap (1 MiB on `POST /v1/pois/exposure`). | Split the request. Do not retry as-is. |
-| <a id="conflict"></a>`conflict` | 409 | The write conflicts with current state (for example an App Attest key already registered). | Re-read state and retry once if the conflict is stale. |
-| <a id="flag-disabled"></a>`flag-disabled` | 403 | The endpoint exists but is behind a feature flag that is off for your account or tier. | Treat as not available for this key. |
+| <a id="conflict"></a>`conflict` | 409 | The write conflicts with current state. | Re-read state and retry once if the conflict is stale. |
+| <a id="flag-disabled"></a>`flag-disabled` | 403 | The endpoint exists but is not enabled for this key. | Treat as not available for this key. |
 | <a id="internal"></a>`internal` | 500  | Unhandled server error. Logged with a request id we can look up.                                         | Retry with exponential backoff (max 3); on persistent failure, open a support ticket.  |
 | <a id="upstream"></a>`upstream` | 502  | A backing data source returned an error or an undecodable response.                                      | Retry with exponential backoff. Usually transient.                                    |
 | <a id="service-unavailable"></a>`service-unavailable` | 503  | A dependency needed to authorize or serve the request is temporarily unreachable.                        | Retry with exponential backoff. Never treat as an auth failure.                        |
-| <a id="trial-mint-unavailable"></a>`trial-mint-unavailable` | 503 | Trial mint: the global daily trial-mint cap is reached. `Retry-After: 3600`. | Follow `next_steps.recommended` (`device_flow`) for a regular key, or retry after `Retry-After`. |
+| <a id="trial-mint-unavailable"></a>`trial-mint-unavailable` | 503 | Trial key creation: the daily cap on new trial keys across all callers is reached. `Retry-After: 3600`. | Follow `next_steps.recommended` (`device_flow`) for a regular key, or retry after `Retry-After`. |
 | <a id="timeout"></a>`timeout` | 504  | The handler deadline elapsed before a downstream response arrived.                                       | Retry with exponential backoff. Usually transient.                                    |
+
+<!-- generated:example coverage -->
+
+Smarter Weather covers the 50 US states and DC only. The US territories (Puerto Rico, the US Virgin Islands, Guam, the Northern Mariana Islands and American Samoa) and other countries are outside it. Every route that takes a point (lat and lon, zip or location) returns 404 outside-coverage for a point outside the 50 states and DC. /v1/alerts and /v1/observations return it for a bounding box that touches no US domain (CONUS, Alaska, Hawaii); a box that touches one may still include area outside the US. /v1/weather/batch reports it per item as outside_coverage, and /v1/point with points and /v1/series/batch mark such points out_of_domain, as they do a point the check could not reach in time (retry it). If the location lookup is unavailable, the check can briefly fail open. Routes keyed by a station, radar site, forecast office or alert id, and lists that cover the whole country, are not filtered by point, so do not treat an empty result as an all-clear. Do not retry a response with type `outside-coverage`.
+
+<!-- /generated -->
 
 Note that **401 is a single type**. The API deliberately does not
 distinguish "unknown key" from "revoked key" in the `type` URI, because
@@ -234,9 +251,31 @@ control flow.
 | `conflict` | Once, after re-reading state. |
 | `internal`, `upstream`, `service-unavailable`, `timeout`            | Exponential backoff, max 3 retries. |
 
-Retries SHOULD use at least 250ms of initial backoff and double each
-attempt (up to ~2s cap) to avoid thundering-herd restarts after a
-transient upstream outage.
+Start retries at 250 ms, double the wait each time up to about 2 s, and
+stop after 3. Spacing retries this way keeps clients from retrying all at
+once after a short upstream outage.
+
+## Rate limits
+
+Limits depend on your plan and apply per key: a per-minute limit and a
+daily cap. Both count requests; billing counts credits. Every request
+your key makes counts, whatever its status, except requests to the
+health, status and deprecations endpoints (`/v1/health`, `/v1/status`
+and `/.well-known/deprecations`), which are not rate limited. Two more
+exceptions:
+
+- A request rejected with a `429` uses nothing. A per-minute `429` does
+  not use a daily request, and a daily-cap `429` does not use the
+  per-minute allowance.
+- A trial key's `403` `trial-route-not-allowed` on a route the API
+  serves gets its per-minute token back. That refund is itself
+  rate-limited per route.
+
+Daily caps reset at 00:00 UTC. The `RateLimit-*`
+headers on each response show what is left. On a `429`, wait for
+`Retry-After` before you send the next request. Each plan's numbers are
+in the [rate limits table](https://developers.smarterweather.com/pricing/#rate-limits)
+on the pricing page.
 
 ## Rate-limit headers
 
@@ -244,7 +283,7 @@ transient upstream outage.
 
 <!-- generated:example rate-limit-headers -->
 
-A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only when the key has a daily cap). A response to a request without a valid key, such as a `401`, carries none, and neither does one for a first-party key that is exempt from rate limiting. The examples are a free key after its first call; `Retry-After` is from a `429`:
+A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only when the key has a daily cap). A response to a request without a valid key, such as a `401`, carries none. The examples are a free key after its first call; `Retry-After` is from a `429`:
 
 | Header | Example | Meaning |
 | ------ | ------- | ------- |
@@ -261,23 +300,37 @@ A request with a valid key gets these headers (the `RateLimit-Daily-*` ones only
 
 ## On MCP
 
-<a id="mcp"></a>The Smarter Weather MCP server (`mcp.smarterweather.com`) uses
+<a id="mcp"></a>The Weather MCP (`mcp.smarterweather.com`) uses
 this same model. A failed `tools/call` is a result with `isError: true`
 whose first text block is one of these `Problem` objects, serialized as
 JSON, with the same `type` URIs. It carries no `structuredContent`, with one
 exception: on `payment-required` the text block also carries the x402
 `PaymentRequired` members and `structuredContent` is the bare
 `PaymentRequired`, the two places x402 clients read it. There is no HTTP
-status per tool call, so key on `type`, then `status`.
+status per tool call, so key on `type`, then `status`. Argument, location,
+dataset and rate-limit problems add a [`reason`](#reason): `input_validation`,
+`location_required`, `location_conflict`,
+`coordinates_incomplete`, `coordinates_out_of_range`, `location_not_found`,
+`location_ambiguous`, `unknown_dataset`, `rpm_exceeded`, `daily_exceeded`,
+`wallet_limited`, or `output_validation` on a `500`. A `payment-required`
+quote carries none. A re-quote after settlement failed carries
+`settlement_rejected` (the facilitator refused your authorization, for
+example a used nonce or low balance) or `settlement_failed` (the
+facilitator or chain failed). After `settlement_failed` the payment may
+still have settled: check your wallet before paying again.
 
 - Argument errors (a value that fails the tool's input schema, or a
   precondition such as an ambiguous place name) are `bad-request` with the
-  reason in `detail`; an unknown tool is `not-found`. An ambiguous place
+  reason in `detail`. A tool the connection does not serve is not a tool
+  result: it is a JSON-RPC error `-32602` whose message names the path that
+  serves it (`connect to /x/...`). An ambiguous place
   name adds `candidates`, an array of `{name}` objects to offer the user
   (names only, no coordinates).
 - A `400` or `404` problem from the API behind a tool reaches you as the
   API sent it, `next_steps` included (for example `outside-coverage`).
-- Every `5xx` carries a fixed, generic `detail`.
+- Every `5xx` carries a fixed, generic `detail`. When the API behind a tool
+  answers `503` or `429` with `Retry-After`, the problem carries it as
+  `retry_after_seconds`, as `rate-limit-exceeded` does.
 - `get_path_exposure` returns `flag-disabled` (`403`, no `next_steps`)
   when civic place counts are not enabled for the caller, without calling
   the API behind it. A second text block tells a model not to retry. The
@@ -285,7 +338,8 @@ status per tool call, so key on `type`, then `status`.
   caller may have no key. `search_locations` does not fail in that case: it
   returns place and ZIP rows without address or POI rows.
 - `next_steps` appears on `401`, `402` (`trial-ended`, `payment-required`),
-  `403` (trial keys), `429` (`rate-limit-exceeded`) and on the `503` a
+  `403` (trial keys), `404` (`outside-coverage`, and `not-found` for a
+  place), `429` (`rate-limit-exceeded`) and on the `503` a
   keyless x402 call gets while the payment rail is unavailable.
 - `rate-limit-exceeded` covers a key over its limit and a keyless x402
   wallet over its per-minute limit; it carries `retry_after_seconds` in
@@ -293,13 +347,11 @@ status per tool call, so key on `type`, then `status`.
   clients do not treat it as payable.
 - A result for a call with a key carries `_meta["smarterweather.dev/budget"]`
   holding the [rate-limit header](#rate-limit-headers) values under their
-  REST names. Internal keys and other keys exempt from rate limiting carry
-  no budget. On a trial key, a served, failed or `trial-ended` result also
+  REST names. On a trial key, a served, failed or `trial-ended` result also
   carries `X-Trial-Calls-Remaining` and `X-Trial-Expires-At`. They are
   absent on `rate-limit-exceeded`, `trial-route-not-allowed`,
   `unauthorized` and the `service-unavailable` answered while trial
-  enforcement is unavailable, when the key is no longer a trial key, and
-  while trial enforcement runs in shadow mode. A trial call that fails,
+  enforcement is unavailable, and when the key is no longer a trial key. A trial call that fails,
   including a result that fails the tool's output schema, is not counted
   against the trial, and the count shows it. An argument error from the
   tool's input schema carries no budget and is not counted against the
@@ -310,9 +362,8 @@ status per tool call, so key on `type`, then `status`.
 
 Retry by the table above.
 
-## Including errors in support tickets
+## Including errors in support requests
 
-When contacting support, include the `X-Request-Id` response header
-along with the `instance` path from the body. That request id resolves
-to the full request trace on our side and cuts triage time from hours
-to minutes.
+When you email [developers@smarterweather.com](mailto:developers@smarterweather.com),
+send the `X-Request-Id` header value and the `instance` path from the
+body. We use them to find your request.

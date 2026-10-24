@@ -32,8 +32,8 @@ outside_coverage, and /v1/point with points and /v1/series/batch mark
 such points out_of_domain, as they do a point the check could not reach
 in time (retry it). If the location lookup is unavailable, the check can
 briefly fail open. Routes keyed by a station, radar site, forecast
-office or alert id, and nationwide lists, are not filtered by point, so
-do not treat an empty result as an all-clear.
+office or alert id, and lists that cover the whole country, are not
+filtered by point, so do not treat an empty result as an all-clear.
 
 ## Flow
 

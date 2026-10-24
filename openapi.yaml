@@ -684,6 +684,186 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/weather/route:
+    post:
+      operationId: postWeatherRoute
+      x-stability: experimental
+      summary: Forecast hazards along a route at each point's arrival time.
+      description: |
+        Samples a caller-supplied path and returns the National Blend of
+        Models forecast at each sample's estimated time of arrival (ETA),
+        for up to three departure times, with hazard codes, crosswind,
+        hazard segments and the best departure.
+
+        ### Path
+
+        Exactly one of `geometry` (a GeoJSON LineString, `[lon, lat]`) or
+        `polyline` (an encoded polyline; `polyline_precision` 5, the
+        default, or 6, which most routing engines emit). The path has 2 to
+        10,000 vertices and is at most 5,000 km long. Samples are spaced
+        evenly by distance, endpoints included: one every 10 km, from 2 up
+        to 100 samples, so paths over 990 km are sampled more sparsely (about
+        50.5 km apart at 5,000 km). The samples are the same for every
+        departure; only their ETAs differ.
+
+        ### Arrival times
+
+        With `times` (one RFC 3339 instant per vertex, non-decreasing), a
+        sample's ETA is interpolated by distance between the vertex times,
+        and each departure shifts the whole schedule by
+        `departure - times[0]`. A wait (a repeated vertex) is not travel: it
+        never counts as hazard time, and the last sample's ETA is the first
+        arrival at the end, while `arrival` is the last vertex time. Without
+        `times`, ETAs are distance over `speed`.
+        `departures` defaults to `times[0]`, else to now. Each departure is
+        between 1 hour ago and 168 hours ahead, the departures are within
+        24 hours of each other, and the trip takes at most 72 hours.
+
+        ### Samples
+
+        Each sample takes the forecast hour nearest its ETA, echoed as
+        `valid_time`, with no interpolation. Later in the forecast the
+        steps can be 3- or 6-hourly, so `valid_time` may sit up to 3 hours
+        from `eta`, before or after it (an early ETA of a departure in the
+        past hour can take the first forecast hour); a sample whose nearest
+        forecast hour is farther away is `unavailable`. A field missing at
+        that hour is omitted. `heading` is
+        the direction of travel over a 1 km baseline; `crosswind` and
+        `crosswind_gust` are the wind components across it.
+
+        `status` is `ok`; `partial` (a forecast whose inputs cannot rule
+        out every hazard, which `unevaluated_hazards` lists; for example the
+        hourly precipitation amount is not forecast everywhere at every
+        hour); `outside_coverage` (outside the 50 US states and DC);
+        `beyond_horizon` (the ETA is more than 30 minutes past the last
+        forecast hour); `unavailable` (no forecast for that sample, for
+        example when part of the forecast could not be loaded, for one
+        region or one hour); or `unchecked` (whether the sample is inside
+        the states could not be checked in time, so no forecast is served;
+        retrying usually checks it). Only `ok` and `partial` samples carry
+        weather fields and hazards. If no sample could be checked, the
+        request returns `503` with `Retry-After`.
+
+        ### Hazards
+
+        Fixed thresholds, listed worst first. This order ranks
+        `worst_hazard` and `best`.
+
+        1. `freezing_rain`: a freezing-rain precipitation type probability
+           of 30% or more with a precipitation probability of 30% or more,
+           or 0.01 in (0.25 mm) or more of freezing rain in the hour.
+        2. `snow`: a snow precipitation type probability of 50% or more
+           with a precipitation probability of 40% or more, or 0.1 in
+           (2.5 mm) or more of snowfall in the hour.
+        3. `thunderstorms`: a thunderstorm probability of 30% or more.
+        4. `low_visibility`: a probability of visibility under 1 mile of 30%
+           or more, or visibility under 1 mile (1,609 m).
+        5. `high_wind`: a gust of 40 mph (17.9 m/s) or more, or a crosswind
+           gust of 30 mph (13.4 m/s) or more.
+        6. `heavy_rain`: 0.30 in (7.6 mm) or more of precipitation in the
+           hour.
+
+        Consecutive samples with the same code merge into `segments`; a
+        sample can carry several codes. Each sample owns the travel time
+        from the midpoint with its previous sample to the midpoint with its
+        next one, on the travel clock (waits left out), and
+        `hazard_minutes` totals it over the samples with any code. `best` ranks the departures by data completeness first (the
+        fewest `missing_samples`, so missing forecast hours never look like
+        calm weather), then by the fewest `hazard_minutes`, then by the less
+        severe `worst_hazard`, then by the earlier arrival. Alerts along the
+        route are not included yet.
+
+        A path with no sample inside the 50 US states and DC returns `404`
+        `outside-coverage` with `next_steps`. A body over 1 MiB returns
+        `413`; an unknown field or a broken limit returns `400` naming it.
+
+        ### Auth and cost
+
+        Standard sw-api Bearer auth and rate limits apply. Cost class
+        `compute`, weight 2 per call: the departures, samples and path
+        length never change it.
+
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment. Not yet enabled for every API
+        key; a key without access gets `403` with problem type
+        `flag-disabled`. If access cannot be checked, the API returns
+        `503` `service-unavailable`; retry with backoff.
+      tags: [Weather]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteWeatherRequest'
+            examples:
+              chicagoToDenver:
+                summary: A drive with three departures two hours apart.
+                value:
+                  geometry:
+                    type: LineString
+                    coordinates:
+                      - [-87.6298, 41.8781]
+                      - [-93.6091, 41.5868]
+                      - [-96.7026, 40.8136]
+                      - [-104.9903, 39.7392]
+                  departures:
+                    - '2026-11-02T13:00:00Z'
+                    - '2026-11-02T15:00:00Z'
+                    - '2026-11-02T17:00:00Z'
+              routedPolyline:
+                summary: A routed path with per-vertex times.
+                value:
+                  polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@'
+                  times:
+                    - '2026-11-02T13:00:00Z'
+                    - '2026-11-02T16:10:00Z'
+                    - '2026-11-02T22:40:00Z'
+                  units: metric
+      responses:
+        '200':
+          description: The forecast along the path for each departure.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteWeatherResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '413':
+          $ref: '#/components/responses/Problem413'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/alerts:
     get:
       operationId: searchAlerts
@@ -911,6 +1091,13 @@ paths:
         Clients should treat it as opaque GeoJSON: forward-compat
         fields the upstream pipeline adds without a sw-api release
         pass through unchanged.
+
+        ### Places and areas (experimental)
+
+        `representative_place` is a named point inside the alert area
+        and `areas` lists each UGC zone the alert names, with a point
+        inside each resolved zone. Both are `x-stability: experimental`,
+        optional, and returned only by this endpoint.
 
         ### Auth
 
@@ -4110,11 +4297,15 @@ paths:
         ### Units and raw values
 
         `units` is `si`, `metric` or `imperial`. `si` serves stored values
-        (K, m/s, mm, Pa, percent, and the stored SI unit for anything
-        else). The chosen system is echoed at the top level and each
-        element's `units` names every variable's unit; a percentage is
-        always labelled `percent`. Values without a
-        display unit are served raw, as stored, with no decode: `astro`
+        labelled with the variable's catalog `units` (K, m/s, mm, Pa,
+        kg/m2/s, percent, ...). `metric` and `imperial` convert to the
+        catalog `display_units`, labelled `C`, `F`, `delta_C`, `delta_F`,
+        `kph`, `mph`, `mm`, `in`, `hPa`, `inHg`, `m`, `ft`, `km`, `mi`,
+        `kft`, `mm/hr` or `in/hr` (a precipitation rate in kg/m2/s); a unit
+        with no display unit keeps its catalog spelling. The chosen system
+        is echoed at the top level and each element's `units` names every
+        variable's unit; a percentage is always labelled `percent`. Values
+        without a display unit are served raw, as stored, with no decode: `astro`
         sun and moon times are seconds after the row's UTC midnight (they
         can be negative or above 86400), moon values are x1000, and
         `day_length` -1 means no event. `GET /v1/catalog/{product_id}`
@@ -4860,8 +5051,10 @@ components:
       required: true
       description: |
         Units system, required on this route while experimental. `si`
-        serves stored values; `metric` and `imperial` convert to each
-        variable's catalog display unit.
+        serves stored values labelled with the catalog `units` spelling;
+        `metric` and `imperial` convert to each variable's catalog display
+        unit (`C`, `F`, `delta_C`, `delta_F`, `kph`, `mph`, `mm`, `in`,
+        `hPa`, `inHg`, `m`, `ft`, `km`, `mi`, `kft`, `mm/hr`, `in/hr`).
       schema:
         type: string
         enum: [si, metric, imperial]
@@ -6101,6 +6294,280 @@ components:
           type: string
           enum: [none, light, moderate, heavy]
 
+    RouteWeatherRequest:
+      type: object
+      additionalProperties: false
+      description: Exactly one of `geometry` or `polyline`.
+      properties:
+        geometry:
+          type: object
+          description: A GeoJSON LineString of 2 to 10,000 `[lon, lat]` positions (RFC 7946). An altitude, if present, is ignored.
+          required: [type, coordinates]
+          properties:
+            type:
+              type: string
+              enum: [LineString]
+            coordinates:
+              type: array
+              minItems: 2
+              maxItems: 10000
+              items:
+                type: array
+                minItems: 2
+                maxItems: 3
+                items:
+                  type: number
+            bbox:
+              type: array
+              items:
+                type: number
+        polyline:
+          type: string
+          description: An encoded polyline of 2 to 10,000 vertices.
+        polyline_precision:
+          type: integer
+          enum: [5, 6]
+          default: 5
+          description: Decimal places the polyline was encoded with. Only with `polyline`.
+        times:
+          type: array
+          description: |
+            One RFC 3339 instant per path vertex (after decoding a
+            `polyline`), non-decreasing. Sets the ETAs; `speed` is then
+            ignored.
+          items:
+            type: string
+            format: date-time
+        departures:
+          type: array
+          minItems: 1
+          maxItems: 3
+          description: |
+            1 to 3 distinct departure instants, each between 1 hour ago and
+            168 hours ahead and all within 24 hours of each other. Default:
+            `times[0]` with `times`, else now.
+          items:
+            type: string
+            format: date-time
+        speed:
+          type: number
+          format: double
+          description: |
+            Average speed in the selected `units`: 5 to 100 mph (default 55)
+            or 8 to 160 kph (default 89). Ignored with `times`.
+        units:
+          type: string
+          enum: [imperial, metric]
+          default: imperial
+
+    RouteWeatherResponse:
+      type: object
+      required: [units, path, best, departures, meta]
+      description: |
+        Values are in the selected `units`: imperial is °F, mph, miles and
+        inches; metric is °C, kph, kilometres and millimetres.
+        Probabilities are percent and directions are degrees clockwise
+        from north.
+      properties:
+        units:
+          type: string
+          enum: [imperial, metric]
+        path:
+          type: object
+          required: [length, vertices, samples, spacing]
+          properties:
+            length:
+              type: number
+              description: Path length (mi or km).
+            vertices:
+              type: integer
+              description: Vertex count after decoding.
+            samples:
+              type: integer
+              minimum: 2
+              maximum: 100
+            spacing:
+              type: number
+              description: Distance between samples (mi or km).
+        best:
+          type: string
+          format: date-time
+          description: The `departure` of the best departure.
+        departures:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteDeparture'
+        meta:
+          type: object
+          required: [sources, data_age_seconds]
+          properties:
+            sources:
+              type: array
+              description: Each forecast product used, with the newest model run used.
+              items:
+                type: object
+                required: [product, run]
+                properties:
+                  product:
+                    type: string
+                    examples: [nbm_conus]
+                  run:
+                    type: [string, "null"]
+                    format: date-time
+            data_age_seconds:
+              type: [integer, "null"]
+              description: Age of the newest model run used, in seconds. `null` when unknown.
+
+    RouteDeparture:
+      type: object
+      required: [departure, arrival, eta_source, summary, segments, samples]
+      properties:
+        departure:
+          type: string
+          format: date-time
+          description: The departure, in UTC.
+        arrival:
+          type: string
+          format: date-time
+          description: |
+            The end of the trip. With `times`, the last vertex time, so a
+            wait at the destination is included; the last sample's `eta` is
+            the first arrival there.
+        eta_source:
+          type: string
+          enum: [speed, times]
+        summary:
+          type: object
+          required: [missing_samples, hazard_minutes, worst_hazard, max_wind_gust, max_crosswind_gust, min_visibility, max_precipitation_probability]
+          description: Over the `ok` samples; a value is `null` when no sample has it.
+          properties:
+            missing_samples:
+              type: integer
+              minimum: 0
+              description: |
+                Samples inside coverage without a full forecast for this
+                departure (`partial`, `beyond_horizon`, `unavailable` or
+                `unchecked`). `best` ranks on it first.
+            hazard_minutes:
+              type: integer
+              minimum: 0
+            worst_hazard:
+              oneOf:
+                - $ref: '#/components/schemas/RouteHazard'
+                - type: 'null'
+            max_wind_gust:
+              type: [number, "null"]
+            max_crosswind_gust:
+              type: [number, "null"]
+            min_visibility:
+              type: [number, "null"]
+            max_precipitation_probability:
+              type: [number, "null"]
+        segments:
+          type: array
+          description: Runs of consecutive samples sharing a hazard, by start distance then severity.
+          items:
+            type: object
+            required: [hazard, from_distance, to_distance, start, end]
+            properties:
+              hazard:
+                $ref: '#/components/schemas/RouteHazard'
+              from_distance:
+                type: number
+              to_distance:
+                type: number
+              start:
+                type: string
+                format: date-time
+              end:
+                type: string
+                format: date-time
+        samples:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteSample'
+
+    RouteHazard:
+      type: string
+      enum: [freezing_rain, snow, thunderstorms, low_visibility, high_wind, heavy_rain]
+
+    RouteSample:
+      type: object
+      required: [distance, lat, lon, eta, heading, status, hazards]
+      properties:
+        distance:
+          type: number
+          description: Distance from the start of the path (mi or km).
+        lat:
+          type: number
+        lon:
+          type: number
+        eta:
+          type: string
+          format: date-time
+        valid_time:
+          type: string
+          format: date-time
+          description: The forecast hour used. Only on `ok` samples.
+        heading:
+          type: number
+          description: Direction of travel.
+        status:
+          type: string
+          enum: [ok, partial, outside_coverage, beyond_horizon, unavailable, unchecked]
+        temperature:
+          type: number
+        apparent_temperature:
+          type: number
+        precipitation_probability:
+          type: number
+        precipitation:
+          type: number
+          description: Precipitation in the hour.
+        snowfall:
+          type: number
+          description: Snowfall in the hour.
+        freezing_rain:
+          type: number
+          description: Freezing rain in the hour.
+        precip_type_rain_prob:
+          type: number
+        precip_type_snow_prob:
+          type: number
+        precip_type_freezing_rain_prob:
+          type: number
+        precip_type_ice_pellets_prob:
+          type: number
+        visibility:
+          type: number
+        visibility_prob_below_1mi:
+          type: number
+        wind_speed:
+          type: number
+        wind_gust:
+          type: number
+        wind_direction:
+          type: number
+          description: Direction the wind blows from.
+        crosswind:
+          type: number
+          description: Sustained wind across the direction of travel.
+        crosswind_gust:
+          type: number
+          description: Gust across the direction of travel.
+        thunderstorm_probability:
+          type: number
+        hazards:
+          type: array
+          description: Hazard codes at this sample, worst first. Empty unless `status` is `ok` or `partial`.
+          items:
+            $ref: '#/components/schemas/RouteHazard'
+        unevaluated_hazards:
+          type: array
+          description: On `partial` samples, the hazards the forecast at this hour cannot rule out because their inputs are missing, worst first.
+          items:
+            $ref: '#/components/schemas/RouteHazard'
+
     WindowsResponse:
       type: object
       required:
@@ -6261,38 +6728,61 @@ components:
         temperature:
           type: [number, "null"]
           format: double
-          description: Temperature (unit per `units.temperature`).
+          description: >-
+            Temperature (unit per `units.temperature`). Null only when no
+            source in the current chain resolves it.
         feels_like:
           type: [number, "null"]
           format: double
           description: >-
             Feels-like temperature: the air temperature unless wind chill
             (50°F or below, wind 3 mph or more) or heat index (80°F or above,
-            relative humidity 40% or more) applies.
+            relative humidity 40% or more) applies. Null when the index that
+            applies lacks its input and no forecast apparent temperature
+            covers now; never derived from an unknown value.
         humidity:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
-          description: Relative humidity, percent.
+          description: Relative humidity, percent. Null only when no source in the current chain resolves it.
         dew_point:
           type: [number, "null"]
           format: double
+          description: >-
+            Dew point (unit per `units.temperature`). Null only when no
+            source in the current chain resolves it, or its derivation lacks
+            the temperature or humidity.
         pressure:
           type: [number, "null"]
           format: double
-          description: Atmospheric pressure (unit per `units.pressure`).
+          description: >-
+            Sea-level pressure (unit per `units.pressure`): the quantity US
+            NWS stations report in the METAR SLP group. From the
+            observation-anchored RTMA analysis, its station pressure reduced
+            to sea level with the WMO CIMO Guide 3.11 formula and the FMH-1
+            12-hour mean temperature; else the GFS mean-sea-level pressure
+            field at now. Not the altimeter setting and not station pressure.
+            Null only when neither source is fresh.
         wind_speed:
           type: [number, "null"]
           format: double
+          description: >-
+            Sustained wind speed; `0` is calm (below 1 knot, FMH-1 5.5.2: served as `0` in every unit system). Null only when no source in the
+            current chain resolves it.
         wind_gust:
           type: [number, "null"]
           format: double
+          description: >-
+            Wind gust, served only next to a non-calm `wind_speed`. Null when
+            no source carries a gust, or the wind is calm or unknown.
         wind_direction:
           type: [integer, "null"]
           minimum: 0
           maximum: 360
-          description: Wind direction in degrees (0 = N, 90 = E).
+          description: >-
+            Wind direction in degrees (0 = N, 90 = E). Null when calm
+            (`wind_speed` 0) and when no source resolves it.
         visibility:
           type: [number, "null"]
           format: double
@@ -6302,7 +6792,7 @@ components:
           format: double
           minimum: 0
           maximum: 100
-          description: Cloud cover, percent.
+          description: Cloud cover, percent. Null only when no source in the current chain resolves it.
         cloud_ceiling:
           type: [number, "null"]
           format: double
@@ -6401,13 +6891,23 @@ components:
         precip_rate:
           type: [number, "null"]
           format: double
-          description: Current precipitation rate.
+          description: >-
+            Current precipitation rate per hour. `0` when dry (`precip_type`
+            `none`); null when neither radar nor a forecast source covers the
+            point now.
         precip_type:
           type: string
-          enum: [none, rain, snow, mix, hail, unknown]
+          enum: [none, rain, snow, mix, freezing_rain, hail, unknown]
           description: |
-            Current precipitation type. Omitted when no precipitation data
-            is available for the location.
+            Current precipitation type: MRMS radar where it covers the point,
+            else the current chain's forecast type at now, which is served
+            only with a measurable rate (0.01 in per hour); below it, `none`.
+            `none` is a known dry reading. Omitted when neither radar nor a
+            forecast source covers the point now. Radar serves
+            `freezing_rain` and `mix` where its rain or snow is reclassified
+            by the analysis wet-bulb. `mix` is rain and snow, ice pellets,
+            or a wintry mix; `hail` and `unknown` are reserved and not
+            currently served.
         precip_24h:
           type: [number, "null"]
           format: double
@@ -6435,11 +6935,13 @@ components:
           description: Lightning probability, percent.
         conditions:
           type: string
-          description: Human-readable weather description.
+          description: >-
+            Human-readable weather description. Empty string when neither the
+            sky (cloud cover) nor precipitation is known.
           example: "Partly Cloudy"
         icon:
           type: string
-          description: Icon slug for UI rendering.
+          description: Icon slug for UI rendering. Empty string exactly when `conditions` is.
           example: "partly-cloudy-day"
         severe:
           type: boolean
@@ -6448,7 +6950,18 @@ components:
 
     Hourly:
       type: object
-      description: Single hourly forecast point.
+      description: |
+        Single hourly forecast point.
+
+        The Now hour (the first row, when its `time` is in the current
+        hour) carries the current observation where `include=current`
+        resolves it, so it matches `current`: `temperature`, and each of
+        `feels_like`, `humidity`, `dew_point`, `wind_speed` with
+        `wind_direction`, `wind_gust`, `pressure`, `visibility`,
+        `cloud_ceiling`, `cloud_cover`, `aqi`, `uv_index`, `conditions`
+        with `precip_type`, and `icon` that the current observation
+        resolved. A field it did not resolve keeps the forecast's value.
+        Later hours are the forecast.
       required: [time]
       properties:
         time:
@@ -6469,10 +6982,16 @@ components:
         wind_speed:
           type: [number, "null"]
           format: double
+          description: >-
+            Sustained wind speed; `0` is calm (below 1 knot, FMH-1 5.5.2: served as `0` in every unit system). Null only when no forecast
+            source covers the hour.
         wind_direction:
           type: [integer, "null"]
           minimum: 0
           maximum: 360
+          description: >-
+            Wind direction in degrees (0 = N). Null when calm (`wind_speed`
+            0) and when no forecast source covers the hour.
         precip_probability:
           type: [number, "null"]
           format: double
@@ -6503,6 +7022,9 @@ components:
         wind_gust:
           type: [number, "null"]
           format: double
+          description: >-
+            Wind gust, served only next to a non-calm `wind_speed`. Null when
+            no source carries a gust, or the wind is calm or unknown.
         dew_point:
           type: [number, "null"]
           format: double
@@ -6514,10 +7036,20 @@ components:
         visibility:
           type: [number, "null"]
           format: double
+          description: >-
+            Visibility distance. Null past the blend's visibility horizon,
+            about 3 days.
 
         pressure:
           type: [number, "null"]
           format: double
+          description: >-
+            Sea-level pressure (unit per `units.pressure`): the quantity US
+            NWS stations report in the METAR SLP group, from the GFS
+            mean-sea-level pressure field at the row's time. On the Now
+            hour with `include=current` it is the current observation's
+            value (`Current.pressure`, the reduced RTMA analysis) when that
+            resolved. Not the altimeter setting and not station pressure.
         thunderstorm_probability:
           type: [number, "null"]
           format: double
@@ -6530,7 +7062,15 @@ components:
           type: [number, "null"]
         precip_type:
           type: string
-          enum: [none, rain, snow, mix, hail, unknown]
+          enum: [none, rain, snow, mix, sleet, freezing_rain, hail, unknown]
+          description: |
+            Precipitation type for the hour. Omitted when the hour has no
+            type, or has neither a precipitation chance nor an amount.
+            `mix` is rain and snow, or a wintry mix; `sleet` is ice pellets.
+            `none`, `hail` and `unknown` are reserved and not currently
+            served. Thunder is never a type: it is reported in `conditions`
+            and `thunderstorm_probability` (`thunder_possible` flags thunder
+            with snow).
         precip_type_rain_prob:
           type: [number, "null"]
           format: double
@@ -6559,7 +7099,9 @@ components:
         snow_amount:
           type: [number, "null"]
           format: double
-          description: Null when no snow is forecast or no source covers the hour.
+          description: >-
+            Snow for the hour ending at `time`. `0` on a dry hour a snow
+            source covers; null only when no source covers the hour.
         cloud_ceiling:
           type: [number, "null"]
           format: double
@@ -6596,6 +7138,10 @@ components:
         snow_level:
           type: [number, "null"]
           format: double
+          description: >-
+            Snow level above mean sea level (unit per `units.altitude`); `0`
+            is a real value. Null only when no forecast source covers the
+            hour.
         thunder_possible:
           type: boolean
           default: false
@@ -6737,8 +7283,20 @@ components:
       type: object
       description: |
         Single daily forecast entry. Per-period weather (temperature, wind,
-        precipitation, narrative) lives in `day` / `night`; top-level
-        fields are aggregate values for the full calendar day.
+        precipitation, narrative) lives in `day` / `night`, the row's local
+        06:00-18:00 and 18:00-06:00 halves, so a row spans 06:00 local on
+        `date` to 06:00 local the next day rather than the calendar day.
+        Precipitation, snow and ice totals are built on that window; the
+        other top-level aggregates come from the daily model product for
+        `date`, sub-daily guidance, or both, and promise no window. The row
+        that holds the response time may cover only the remainder of its
+        window, and the overnight row before 06:00 (`relative_day: -1`)
+        carries only its overnight portion. A row built from the hourly
+        forecast alone (no daily product and no 6 h precipitation buckets
+        in the response) uses the local calendar day for its top-level
+        values instead. `high` is the daytime maximum (on hourly-only rows,
+        the calendar day's maximum); `low` is the overnight minimum described
+        on that field and is not bounded by the row's window.
       required: [date]
       properties:
         date:
@@ -6750,7 +7308,8 @@ components:
           type: [number, "null"]
           format: double
           description: |
-            Daytime maximum. May be null on the `relative_day: -1` overnight
+            Daytime maximum (on hourly-only rows, the calendar day's maximum).
+            May be null on the `relative_day: -1` overnight
             row, whose daytime is already past: that row reports a maximum only
             when the forecast cycle still carries one for the date, and never
             estimates it from the overnight minimum. When `high` is null the
@@ -6759,9 +7318,13 @@ components:
           type: [number, "null"]
           format: double
           description: |
-            Overnight minimum, covering 00:00–05:59 of the following calendar
-            date. Present on the `relative_day: -1` row, whose remaining
-            overnight hours are still ahead.
+            Overnight minimum temperature for `date`: the lower of the
+            morning-of-`date` and night-after-`date` minima where the source
+            carries both. The source decides the exact hours (NBM MinT
+            periods, or hourly minima over those night hours); it is not
+            bounded by the row's 06:00-06:00 window. Present on the
+            `relative_day: -1` row, whose remaining overnight hours are
+            still ahead.
         conditions:
           type: string
         icon:
@@ -6774,44 +7337,56 @@ components:
           format: double
           minimum: 0
           maximum: 100
+          description: Probability of measurable precipitation for the row; `0` is a dry row. Null only when no forecast source covers the row.
         precip_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source covers any hour of the day.
+          description: Null when no forecast source provides precipitation for the row.
         snow_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source covers any hour of the day.
+          description: Null when `precip_total` is null and no source provides snowfall for the row.
         ice_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source covers any hour of the day.
+          description: Null when `precip_total` is null and no source provides ice for the row.
         wind_speed_max:
           type: [number, "null"]
           format: double
+          description: >-
+            Maximum sustained wind for the row; `0` is calm (below 1 knot, FMH-1 5.5.2: served as `0` in every unit system). Null only when no
+            forecast source covers the row.
         wind_gust_max:
           type: [number, "null"]
           format: double
-          description: Maximum sustained-gust value across the calendar day.
+          description: >-
+            Maximum gust for the row, served only next to a non-calm
+            `wind_speed_max`. Null when no source carries a gust, or the
+            row's wind is calm or unknown.
         wind_direction:
           type: [integer, "null"]
           minimum: 0
           maximum: 360
+          description: >-
+            Dominant wind direction in degrees (0 = N). Null when calm
+            (`wind_speed_max` 0) and when no forecast source covers the row.
         humidity_avg:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: Mean relative humidity, percent. Null only when no forecast source covers the row.
         cloud_cover_avg:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: Mean cloud cover, percent; `0` is clear. Null only when no forecast source covers the row.
         uv_index_max:
           type: [number, "null"]
           format: double
           description: |
-            The day's maximum UV index. It is worked out from the hourly
+            The row's maximum UV index. It is worked out from the hourly
             forecast the server builds for the request, `hourly_hours` long,
             even when `include` omits `hourly`. On a day that forecast covers
             from 06:00 to 18:00 local, it is the highest hourly UV index. On
@@ -6820,12 +7395,13 @@ components:
             in the day, today's value reflects the remaining forecast, not the
             observed peak: after 18:00 local the estimate can use tonight's
             forecast cloud, so a clear day followed by a cloudy evening can
-            report a low maximum. Any day's value can change between requests
+            report a low maximum. Any row's value can change between requests
             as the hours the forecast covers move. Null when it can't be
             determined.
         cape_max:
           type: [number, "null"]
           format: double
+          description: Maximum convective available potential energy (J/kg). Null only when no forecast source covers the row.
         dew_point_max:
           type: [number, "null"]
           format: double
@@ -6835,6 +7411,12 @@ components:
         pressure_avg:
           type: [number, "null"]
           format: double
+          description: >-
+            Mean sea-level pressure (unit per `units.pressure`) over the
+            row's remaining 06:00-06:00 window: the quantity US NWS stations
+            report in the METAR SLP group, from the GFS mean-sea-level
+            pressure field. Not the altimeter setting and not station
+            pressure. Null when GFS does not cover the window.
         visibility_min:
           type: [number, "null"]
           format: double
@@ -6858,14 +7440,17 @@ components:
         solar_radiation_max:
           type: [number, "null"]
           format: double
-          description: Peak downward shortwave radiation across the day (W/m^2).
+          description: Peak downward shortwave radiation for the row (W/m^2).
         snow_level:
           type: [number, "null"]
           format: double
+          description: >-
+            Mean snow level above mean sea level (unit per `units.altitude`);
+            `0` is a real value. Null only when no forecast source covers the row.
         thunder_possible:
           type: boolean
           default: false
-          description: Distilled flag; true if any hour in the day crosses the blender's lightning-risk threshold.
+          description: Distilled flag; true when the row crosses the blender's lightning-risk threshold.
         astro:
           $ref: '#/components/schemas/Astro'
         day:
@@ -6975,28 +7560,28 @@ components:
           description: |
             Day-mean ensemble standard deviation of temperature, in the
             requested temperature unit (offset-free).
-            Catalog: `temperature_2m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+            Catalog: `temperature_2m_stddev_mean` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         dew_point_stddev_avg:
           type: [number, "null"]
           format: double
           description: |
             Day-mean ensemble standard deviation of dew point, in the
             requested temperature unit (offset-free).
-            Catalog: `dew_point_2m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+            Catalog: `dew_point_2m_stddev_mean` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         wind_speed_stddev_avg:
           type: [number, "null"]
           format: double
           description: |
             Day-mean ensemble standard deviation of wind speed, in the
             requested wind speed unit.
-            Catalog: `wind_speed_10m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+            Catalog: `wind_speed_10m_stddev_mean` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         wind_gust_stddev_avg:
           type: [number, "null"]
           format: double
           description: |
             Day-mean ensemble standard deviation of wind gust, in the
             requested wind speed unit.
-            Catalog: `wind_gusts_10m_stddev` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+            Catalog: `wind_gusts_10m_stddev_mean` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         temperature_max_stddev:
           type: [number, "null"]
           format: double
@@ -7025,7 +7610,7 @@ components:
           maximum: 100
           description: |
             Day-maximum probability (percent) that visibility is below 1 mi.
-            Catalog: `visibility_prob_below_1mi` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+            Catalog: `visibility_prob_below_1mi_max` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
         ceiling_prob_below_1000ft_max:
           type: [number, "null"]
           format: double
@@ -7034,7 +7619,7 @@ components:
           description: |
             Day-maximum probability (percent) that the cloud ceiling is below
             1000 ft AGL.
-            Catalog: `ceiling_prob_below_1000ft` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
+            Catalog: `ceiling_prob_below_1000ft_max` on `nbm_daily_surface` / `nbm_daily_surface_ak` / `nbm_daily_surface_hi`.
 
     DailyPeriod:
       type: object
@@ -7049,10 +7634,16 @@ components:
         wind_speed:
           type: [number, "null"]
           format: double
+          description: >-
+            Sustained wind speed for the half; `0` is calm (below 1 knot, FMH-1 5.5.2: served as `0` in every unit system). Null only when no
+            forecast source covers the half.
         wind_direction:
           type: [integer, "null"]
           minimum: 0
           maximum: 360
+          description: >-
+            Wind direction in degrees (0 = N). Null when calm (`wind_speed`
+            0) and when no forecast source covers the half.
         precip_probability:
           type: [number, "null"]
           format: double
@@ -7063,31 +7654,38 @@ components:
             period. When `include=nowcast` is requested, the active near-term
             period may be raised or lowered from hourly values reconciled against
             the radar nowcast (NWS longer-period ≥ subperiod consistency).
+            `0` is a dry period. Null only when no forecast source covers the half.
         precip_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source covers any hour of the day.
+          description: Null when the row's `precip_total` is null.
         snow_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source covers any hour of the day.
+          description: Null when the row's `snow_total` is null.
         ice_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source covers any hour of the day.
+          description: Null when the row's `ice_total` is null.
         humidity:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: Relative humidity, percent. Null only when no forecast source covers the half.
         cloud_cover:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: Cloud cover, percent; `0` is clear. Null only when no forecast source covers the half.
         wind_gust:
           type: [number, "null"]
           format: double
+          description: >-
+            Maximum gust for the half, served only next to a non-calm
+            `wind_speed`. Null when no source carries a gust, or the wind is
+            calm or unknown.
         dew_point:
           type: [number, "null"]
           format: double
@@ -7101,6 +7699,11 @@ components:
         pressure:
           type: [number, "null"]
           format: double
+          description: >-
+            Mean of the half's hourly sea-level pressure (see
+            `Hourly.pressure`): GFS PRMSL, except that a half holding the
+            Now hour includes that hour's current observation when
+            `include=current` resolves it.
         cloud_ceiling:
           type: [number, "null"]
           format: double
@@ -7116,12 +7719,28 @@ components:
         cape:
           type: [number, "null"]
           format: double
+          description: Maximum convective available potential energy (J/kg). Null only when no forecast source covers the half.
         aqi:
           type: [number, "null"]
           format: double
         precip_type:
           type: string
-          enum: ["", none, rain, snow, mix, sleet, freezing_rain, thunderstorms, unknown]
+          enum: ["", none, rain, snow, mix, sleet, freezing_rain, unknown]
+          description: |
+            Precipitation type for the period: the precipitation its
+            `conditions` and `narrative` report, read from the hours ending
+            within the period (06:00 to 18:00 local for `day`, 18:00 to
+            06:00 for `night`). Where daily forecast products cover the
+            location, every such hour counts, within `hourly_hours` or past
+            it; otherwise only the hours within `hourly_hours` do. `hourly`
+            need not be included. Omitted when the period reports no
+            precipitation (PoP under 15, or no type covering enough of its
+            hours) and for a period none of those hours reach. `mix` is
+            rain and snow, or a wintry mix; `sleet` is ice pellets. `""`,
+            `none` and `unknown` are reserved and not currently served.
+            Thunder is never a type: it is reported in `conditions` and
+            `thunderstorm_probability` (`thunder_possible` flags thunder
+            with snow).
         thunder_possible:
           type: boolean
           default: false
@@ -7438,6 +8057,143 @@ components:
               type: array
               items:
                 type: object
+        representative_place:
+          x-stability: experimental
+          allOf:
+            - $ref: '#/components/schemas/AlertRepresentativePlace'
+          description: |
+            **Experimental** (`x-stability: experimental`): excluded from the
+            90-day breaking-change commitment; the selection rule may be
+            tuned.
+
+            A named point inside the alert area, for landing a map or a
+            location page on the alert. `source: census_place` is the most
+            populous Census place inside the area; otherwise
+            `source: area_point` is a point inside the area named for its
+            zone. Omitted when the alert has no geometry, when no name
+            resolves, or when the value is unavailable. Independent of
+            `areas`: either can be present without the other.
+
+            Detail-only: never returned by `GET /v1/alerts`, including
+            as-of (`at=`) reads.
+        areas:
+          x-stability: experimental
+          type: array
+          description: |
+            **Experimental** (`x-stability: experimental`): excluded from the
+            90-day breaking-change commitment.
+
+            One entry per UGC code the alert names, in first-seen order.
+            Derived from the alert's UGC codes only: deduplicated (so
+            `areas[i]` does not pair with a raw UGC list or an
+            `area_desc` segment), and present even when
+            `representative_place` is not. A code the platform cannot
+            resolve is named by its UGC and has no `lat`/`lon`. A
+            resolved zone, marine zones included, carries a point inside
+            both the zone and the alert's area, so the point's location
+            page shows the alert; it has no `lat`/`lon` when the zone does
+            not overlap the alert's area, or when no such point could be
+            computed.
+            Omitted when no usable entry exists (an alert with no UGC
+            codes included) or when the value is unavailable; clients
+            fall back to `area_desc`.
+
+            Typically a handful of entries; can reach about 100 for large
+            advisories (at most 1000).
+
+            Detail-only: never returned by `GET /v1/alerts`, including
+            as-of (`at=`) reads.
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/AlertArea'
+
+    AlertRepresentativePlace:
+      type: object
+      x-stability: experimental
+      description: |
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment.
+
+        A named point inside an alert area. See `AlertDetail.representative_place`.
+      required: [name, lat, lon, source]
+      properties:
+        name:
+          type: string
+          description: |
+            Census place name with state (`census_place`), or the zone
+            name for an `area_point`.
+          example: "Whiteriver, AZ"
+        lat:
+          type: number
+          format: double
+          example: 33.837
+        lon:
+          type: number
+          format: double
+          example: -109.9643
+        population:
+          type: integer
+          description: |
+            Census population of the place. Present only for
+            `source: census_place` when the Census row carries one.
+          example: 4520
+        source:
+          type: string
+          enum: [census_place, area_point]
+          description: |
+            `census_place`: the most populous Census place inside the
+            alert area. `area_point`: a point inside the area named for
+            the zone that contains it (or the alert's first area).
+          example: census_place
+      example:
+        name: "Whiteriver, AZ"
+        lat: 33.837
+        lon: -109.9643
+        population: 4520
+        source: census_place
+
+    AlertArea:
+      type: object
+      x-stability: experimental
+      description: |
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment.
+
+        One UGC zone of an alert. See `AlertDetail.areas`. `lat` and
+        `lon` are present together or not at all. When present, the point
+        lies inside both the zone and the alert's area.
+      required: [ugc, name]
+      dependentRequired:
+        lat: [lon]
+        lon: [lat]
+      properties:
+        ugc:
+          type: string
+          description: NWS UGC code (zone `..Z###` or county `..C###`).
+          example: "AZC001"
+        name:
+          type: string
+          description: Zone name; the UGC itself when the code is unresolved.
+          example: "Apache"
+        lat:
+          type: number
+          format: double
+          description: |
+            Latitude of a point inside both the zone and the alert's area.
+            Omitted, with `lon`, for a UGC code the platform cannot
+            resolve, for a zone that does not overlap the alert's area, and
+            when no such point could be computed.
+          example: 35.3957
+        lon:
+          type: number
+          format: double
+          description: Longitude of a point inside both the zone and the alert's area; omitted with `lat`.
+          example: -109.4888
+      example:
+        ugc: "AZC001"
+        name: "Apache"
+        lat: 35.3957
+        lon: -109.4888
 
     Outlook:
       type: object
@@ -8039,7 +8795,9 @@ components:
           type: [string, "null"]
         units:
           type: [string, "null"]
-          description: Units of the stored values.
+          description: |
+            Units of the stored values, in the catalog unit vocabulary
+            (assets/data-catalog/README.md).
           example: K
         display_units:
           type: object
@@ -8095,7 +8853,9 @@ components:
           type: array
           description: |
             Value buckets in ascending `max` order; the last bucket has
-            `max: null` (the catch-all).
+            `max: null` (the catch-all). A value takes the label of the first
+            bucket whose `max` is greater than or equal to it, or the
+            catch-all's label when it exceeds every `max`.
           items:
             type: object
             required: [max, label]
@@ -8677,8 +9437,8 @@ components:
         subtitle:
           type: string
           description: |
-            Secondary two-line copy (city, state, ZIP).
-          example: "Naperville, IL 60540"
+            Secondary two-line copy (city, state).
+          example: "Naperville, IL"
       additionalProperties: true
 
     StormTrackFeature:
@@ -10443,8 +11203,8 @@ components:
             $ref: '#/components/schemas/Problem'
     Problem413:
       description: |
-        Payload too large. The request body exceeded the 1 MiB cap on
-        `POST /v1/pois/exposure`.
+        Payload too large. The request body exceeded the route's size cap
+        (1 MiB on `POST /v1/pois/exposure` and `POST /v1/weather/route`).
       content:
         application/problem+json:
           schema:
