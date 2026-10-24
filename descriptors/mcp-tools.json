@@ -5814,7 +5814,7 @@
                   "type": "string"
                 },
                 "call": {
-                  "description": "The exact call that answers from this dataset. Absent when that tool is not on this connection; see `connect`.",
+                  "description": "The exact call that answers from this dataset; through call_tool when that tool is not on this connection.",
                   "type": "object",
                   "properties": {
                     "tool": {
@@ -5833,11 +5833,11 @@
                   "additionalProperties": false
                 },
                 "toolset": {
-                  "description": "With no `call`: the toolset whose tool answers this dataset.",
+                  "description": "When this connection does not list that tool: its toolset.",
                   "type": "string"
                 },
                 "connect": {
-                  "description": "With no `call`: the path that serves this connection's toolsets plus that one, e.g. /x/core,catalog,guidance.",
+                  "description": "With `toolset`: the path that serves this connection's toolsets plus that one, e.g. /x/core,catalog,guidance.",
                   "type": "string"
                 }
               },
