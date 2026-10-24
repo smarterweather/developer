@@ -6728,38 +6728,61 @@ components:
         temperature:
           type: [number, "null"]
           format: double
-          description: Temperature (unit per `units.temperature`).
+          description: >-
+            Temperature (unit per `units.temperature`). Null only when no
+            source in the current chain resolves it.
         feels_like:
           type: [number, "null"]
           format: double
           description: >-
             Feels-like temperature: the air temperature unless wind chill
             (50°F or below, wind 3 mph or more) or heat index (80°F or above,
-            relative humidity 40% or more) applies.
+            relative humidity 40% or more) applies. Null when the index that
+            applies lacks its input and no forecast apparent temperature
+            covers now; never derived from an unknown value.
         humidity:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
-          description: Relative humidity, percent.
+          description: Relative humidity, percent. Null only when no source in the current chain resolves it.
         dew_point:
           type: [number, "null"]
           format: double
+          description: >-
+            Dew point (unit per `units.temperature`). Null only when no
+            source in the current chain resolves it, or its derivation lacks
+            the temperature or humidity.
         pressure:
           type: [number, "null"]
           format: double
-          description: Atmospheric pressure (unit per `units.pressure`).
+          description: >-
+            Sea-level pressure (unit per `units.pressure`): the quantity US
+            NWS stations report in the METAR SLP group. From the
+            observation-anchored RTMA analysis, its station pressure reduced
+            to sea level with the WMO CIMO Guide 3.11 formula and the FMH-1
+            12-hour mean temperature; else the GFS mean-sea-level pressure
+            field at now. Not the altimeter setting and not station pressure.
+            Null only when neither source is fresh.
         wind_speed:
           type: [number, "null"]
           format: double
+          description: >-
+            Sustained wind speed; `0` is calm (below 1 knot, FMH-1 5.5.2: served as `0` in every unit system). Null only when no source in the
+            current chain resolves it.
         wind_gust:
           type: [number, "null"]
           format: double
+          description: >-
+            Wind gust, served only next to a non-calm `wind_speed`. Null when
+            no source carries a gust, or the wind is calm or unknown.
         wind_direction:
           type: [integer, "null"]
           minimum: 0
           maximum: 360
-          description: Wind direction in degrees (0 = N, 90 = E).
+          description: >-
+            Wind direction in degrees (0 = N, 90 = E). Null when calm
+            (`wind_speed` 0) and when no source resolves it.
         visibility:
           type: [number, "null"]
           format: double
@@ -6769,7 +6792,7 @@ components:
           format: double
           minimum: 0
           maximum: 100
-          description: Cloud cover, percent.
+          description: Cloud cover, percent. Null only when no source in the current chain resolves it.
         cloud_ceiling:
           type: [number, "null"]
           format: double
@@ -6868,13 +6891,23 @@ components:
         precip_rate:
           type: [number, "null"]
           format: double
-          description: Current precipitation rate.
+          description: >-
+            Current precipitation rate per hour. `0` when dry (`precip_type`
+            `none`); null when neither radar nor a forecast source covers the
+            point now.
         precip_type:
           type: string
-          enum: [none, rain, snow, mix, hail, unknown]
+          enum: [none, rain, snow, mix, freezing_rain, hail, unknown]
           description: |
-            Current precipitation type. Omitted when no precipitation data
-            is available for the location.
+            Current precipitation type: MRMS radar where it covers the point,
+            else the current chain's forecast type at now, which is served
+            only with a measurable rate (0.01 in per hour); below it, `none`.
+            `none` is a known dry reading. Omitted when neither radar nor a
+            forecast source covers the point now. Radar serves
+            `freezing_rain` and `mix` where its rain or snow is reclassified
+            by the analysis wet-bulb. `mix` is rain and snow, ice pellets,
+            or a wintry mix; `hail` and `unknown` are reserved and not
+            currently served.
         precip_24h:
           type: [number, "null"]
           format: double
@@ -6902,11 +6935,13 @@ components:
           description: Lightning probability, percent.
         conditions:
           type: string
-          description: Human-readable weather description.
+          description: >-
+            Human-readable weather description. Empty string when neither the
+            sky (cloud cover) nor precipitation is known.
           example: "Partly Cloudy"
         icon:
           type: string
-          description: Icon slug for UI rendering.
+          description: Icon slug for UI rendering. Empty string exactly when `conditions` is.
           example: "partly-cloudy-day"
         severe:
           type: boolean
@@ -6915,7 +6950,18 @@ components:
 
     Hourly:
       type: object
-      description: Single hourly forecast point.
+      description: |
+        Single hourly forecast point.
+
+        The Now hour (the first row, when its `time` is in the current
+        hour) carries the current observation where `include=current`
+        resolves it, so it matches `current`: `temperature`, and each of
+        `feels_like`, `humidity`, `dew_point`, `wind_speed` with
+        `wind_direction`, `wind_gust`, `pressure`, `visibility`,
+        `cloud_ceiling`, `cloud_cover`, `aqi`, `uv_index`, `conditions`
+        with `precip_type`, and `icon` that the current observation
+        resolved. A field it did not resolve keeps the forecast's value.
+        Later hours are the forecast.
       required: [time]
       properties:
         time:
@@ -6936,10 +6982,16 @@ components:
         wind_speed:
           type: [number, "null"]
           format: double
+          description: >-
+            Sustained wind speed; `0` is calm (below 1 knot, FMH-1 5.5.2: served as `0` in every unit system). Null only when no forecast
+            source covers the hour.
         wind_direction:
           type: [integer, "null"]
           minimum: 0
           maximum: 360
+          description: >-
+            Wind direction in degrees (0 = N). Null when calm (`wind_speed`
+            0) and when no forecast source covers the hour.
         precip_probability:
           type: [number, "null"]
           format: double
@@ -6970,6 +7022,9 @@ components:
         wind_gust:
           type: [number, "null"]
           format: double
+          description: >-
+            Wind gust, served only next to a non-calm `wind_speed`. Null when
+            no source carries a gust, or the wind is calm or unknown.
         dew_point:
           type: [number, "null"]
           format: double
@@ -6981,10 +7036,20 @@ components:
         visibility:
           type: [number, "null"]
           format: double
+          description: >-
+            Visibility distance. Null past the blend's visibility horizon,
+            about 3 days.
 
         pressure:
           type: [number, "null"]
           format: double
+          description: >-
+            Sea-level pressure (unit per `units.pressure`): the quantity US
+            NWS stations report in the METAR SLP group, from the GFS
+            mean-sea-level pressure field at the row's time. On the Now
+            hour with `include=current` it is the current observation's
+            value (`Current.pressure`, the reduced RTMA analysis) when that
+            resolved. Not the altimeter setting and not station pressure.
         thunderstorm_probability:
           type: [number, "null"]
           format: double
@@ -7034,7 +7099,9 @@ components:
         snow_amount:
           type: [number, "null"]
           format: double
-          description: Null when no snow is forecast or no source covers the hour.
+          description: >-
+            Snow for the hour ending at `time`. `0` on a dry hour a snow
+            source covers; null only when no source covers the hour.
         cloud_ceiling:
           type: [number, "null"]
           format: double
@@ -7071,6 +7138,10 @@ components:
         snow_level:
           type: [number, "null"]
           format: double
+          description: >-
+            Snow level above mean sea level (unit per `units.altitude`); `0`
+            is a real value. Null only when no forecast source covers the
+            hour.
         thunder_possible:
           type: boolean
           default: false
@@ -7266,6 +7337,7 @@ components:
           format: double
           minimum: 0
           maximum: 100
+          description: Probability of measurable precipitation for the row; `0` is a dry row. Null only when no forecast source covers the row.
         precip_total:
           type: [number, "null"]
           format: double
@@ -7281,24 +7353,35 @@ components:
         wind_speed_max:
           type: [number, "null"]
           format: double
+          description: >-
+            Maximum sustained wind for the row; `0` is calm (below 1 knot, FMH-1 5.5.2: served as `0` in every unit system). Null only when no
+            forecast source covers the row.
         wind_gust_max:
           type: [number, "null"]
           format: double
-          description: Maximum sustained-gust value for the row.
+          description: >-
+            Maximum gust for the row, served only next to a non-calm
+            `wind_speed_max`. Null when no source carries a gust, or the
+            row's wind is calm or unknown.
         wind_direction:
           type: [integer, "null"]
           minimum: 0
           maximum: 360
+          description: >-
+            Dominant wind direction in degrees (0 = N). Null when calm
+            (`wind_speed_max` 0) and when no forecast source covers the row.
         humidity_avg:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: Mean relative humidity, percent. Null only when no forecast source covers the row.
         cloud_cover_avg:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: Mean cloud cover, percent; `0` is clear. Null only when no forecast source covers the row.
         uv_index_max:
           type: [number, "null"]
           format: double
@@ -7318,6 +7401,7 @@ components:
         cape_max:
           type: [number, "null"]
           format: double
+          description: Maximum convective available potential energy (J/kg). Null only when no forecast source covers the row.
         dew_point_max:
           type: [number, "null"]
           format: double
@@ -7327,6 +7411,12 @@ components:
         pressure_avg:
           type: [number, "null"]
           format: double
+          description: >-
+            Mean sea-level pressure (unit per `units.pressure`) over the
+            row's remaining 06:00-06:00 window: the quantity US NWS stations
+            report in the METAR SLP group, from the GFS mean-sea-level
+            pressure field. Not the altimeter setting and not station
+            pressure. Null when GFS does not cover the window.
         visibility_min:
           type: [number, "null"]
           format: double
@@ -7354,6 +7444,9 @@ components:
         snow_level:
           type: [number, "null"]
           format: double
+          description: >-
+            Mean snow level above mean sea level (unit per `units.altitude`);
+            `0` is a real value. Null only when no forecast source covers the row.
         thunder_possible:
           type: boolean
           default: false
@@ -7541,10 +7634,16 @@ components:
         wind_speed:
           type: [number, "null"]
           format: double
+          description: >-
+            Sustained wind speed for the half; `0` is calm (below 1 knot, FMH-1 5.5.2: served as `0` in every unit system). Null only when no
+            forecast source covers the half.
         wind_direction:
           type: [integer, "null"]
           minimum: 0
           maximum: 360
+          description: >-
+            Wind direction in degrees (0 = N). Null when calm (`wind_speed`
+            0) and when no forecast source covers the half.
         precip_probability:
           type: [number, "null"]
           format: double
@@ -7555,6 +7654,7 @@ components:
             period. When `include=nowcast` is requested, the active near-term
             period may be raised or lowered from hourly values reconciled against
             the radar nowcast (NWS longer-period ≥ subperiod consistency).
+            `0` is a dry period. Null only when no forecast source covers the half.
         precip_total:
           type: [number, "null"]
           format: double
@@ -7572,14 +7672,20 @@ components:
           format: double
           minimum: 0
           maximum: 100
+          description: Relative humidity, percent. Null only when no forecast source covers the half.
         cloud_cover:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
+          description: Cloud cover, percent; `0` is clear. Null only when no forecast source covers the half.
         wind_gust:
           type: [number, "null"]
           format: double
+          description: >-
+            Maximum gust for the half, served only next to a non-calm
+            `wind_speed`. Null when no source carries a gust, or the wind is
+            calm or unknown.
         dew_point:
           type: [number, "null"]
           format: double
@@ -7593,6 +7699,11 @@ components:
         pressure:
           type: [number, "null"]
           format: double
+          description: >-
+            Mean of the half's hourly sea-level pressure (see
+            `Hourly.pressure`): GFS PRMSL, except that a half holding the
+            Now hour includes that hour's current observation when
+            `include=current` resolves it.
         cloud_ceiling:
           type: [number, "null"]
           format: double
@@ -7608,6 +7719,7 @@ components:
         cape:
           type: [number, "null"]
           format: double
+          description: Maximum convective available potential energy (J/kg). Null only when no forecast source covers the half.
         aqi:
           type: [number, "null"]
           format: double
