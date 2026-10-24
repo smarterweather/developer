@@ -886,6 +886,54 @@
             "description": "Echo of at when an as-of snapshot was requested.",
             "type": "string"
           },
+          "_sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "product": {
+                  "type": "string"
+                },
+                "office": {
+                  "type": "string"
+                },
+                "dataset_id": {
+                  "type": "string"
+                },
+                "dataset_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "issued_at": {
+                  "type": "string"
+                },
+                "time_zone": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "provider",
+                "label"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Per-source provenance: what produced these values and when."
+          },
           "widget": {
             "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore.",
             "type": "object",
@@ -1292,6 +1340,54 @@
                 "type": "null"
               }
             ]
+          },
+          "_sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "product": {
+                  "type": "string"
+                },
+                "office": {
+                  "type": "string"
+                },
+                "dataset_id": {
+                  "type": "string"
+                },
+                "dataset_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "issued_at": {
+                  "type": "string"
+                },
+                "time_zone": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "provider",
+                "label"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Per-source provenance: what produced these values and when."
           }
         },
         "required": [
@@ -1429,6 +1525,54 @@
             "type": "object",
             "properties": {},
             "additionalProperties": {}
+          },
+          "_sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "product": {
+                  "type": "string"
+                },
+                "office": {
+                  "type": "string"
+                },
+                "dataset_id": {
+                  "type": "string"
+                },
+                "dataset_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "issued_at": {
+                  "type": "string"
+                },
+                "time_zone": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "provider",
+                "label"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Per-source provenance: what produced these values and when."
           },
           "widget": {
             "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore.",
@@ -2828,6 +2972,54 @@
             "properties": {},
             "additionalProperties": {}
           },
+          "_sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "product": {
+                  "type": "string"
+                },
+                "office": {
+                  "type": "string"
+                },
+                "dataset_id": {
+                  "type": "string"
+                },
+                "dataset_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "issued_at": {
+                  "type": "string"
+                },
+                "time_zone": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "provider",
+                "label"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Per-source provenance: what produced these values and when."
+          },
           "widget": {
             "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore.",
             "type": "object",
@@ -3496,13 +3688,22 @@
             "items": {
               "type": "object",
               "properties": {
+                "type": {
+                  "type": "string"
+                },
                 "provider": {
+                  "type": "string"
+                },
+                "label": {
                   "type": "string"
                 },
                 "product": {
                   "type": "string"
                 },
-                "method": {
+                "office": {
+                  "type": "string"
+                },
+                "dataset_id": {
                   "type": "string"
                 },
                 "dataset_ids": {
@@ -3510,16 +3711,25 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "issued_at": {
+                  "type": "string"
+                },
+                "time_zone": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
                 }
               },
               "required": [
+                "type",
                 "provider",
-                "product",
-                "method",
-                "dataset_ids"
+                "label"
               ],
               "additionalProperties": false
-            }
+            },
+            "description": "Per-source provenance: what produced these values and when."
           },
           "data_status": {
             "type": "object",
