@@ -9767,7 +9767,12 @@ components:
           description: Server time at which this response body was generated.
         freshness:
           type: array
-          description: Freshness metadata for each upstream data source used.
+          description: >-
+            Freshness metadata for each upstream data source used. It never
+            omits a product whose data produced a forecast row or section
+            this response serves, and may list one whose contribution is not
+            visible: attribution is per row, so a masked value or a field
+            projection (`fields`, `view`) does not narrow it.
           items:
             $ref: '#/components/schemas/SourceFreshness'
         warnings:
@@ -9872,7 +9877,9 @@ components:
 
     SourceFreshness:
       type: object
-      description: Freshness metadata for a single upstream data source.
+      description: >-
+        Freshness metadata for a single upstream data source that supplied
+        data to a forecast row or section in this response.
       required: [source, product_id, age_seconds]
       properties:
         source:
