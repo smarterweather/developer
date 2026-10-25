@@ -706,42 +706,6 @@
               ],
               "additionalProperties": false
             }
-          },
-          "widget": {
-            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore.",
-            "type": "object",
-            "properties": {
-              "spec": {
-                "type": "string",
-                "const": "sw-ui-spec"
-              },
-              "entries": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "component": {
-                      "type": "string"
-                    },
-                    "props": {
-                      "type": "object",
-                      "properties": {},
-                      "additionalProperties": {}
-                    }
-                  },
-                  "required": [
-                    "component",
-                    "props"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            },
-            "required": [
-              "spec",
-              "entries"
-            ],
-            "additionalProperties": false
           }
         },
         "required": [
@@ -759,9 +723,9 @@
       },
       "_meta": {
         "ui": {
-          "resourceUri": "ui://weather-widget/v1/index.html"
+          "resourceUri": "ui://weather-widget/v2/index.html"
         },
-        "ui/resourceUri": "ui://weather-widget/v1/index.html",
+        "ui/resourceUri": "ui://weather-widget/v2/index.html",
         "smarterweather.dev/required_one_of": [
           [
             "location"
@@ -933,42 +897,6 @@
               "additionalProperties": false
             },
             "description": "Per-source provenance: what produced these values and when."
-          },
-          "widget": {
-            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore.",
-            "type": "object",
-            "properties": {
-              "spec": {
-                "type": "string",
-                "const": "sw-ui-spec"
-              },
-              "entries": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "component": {
-                      "type": "string"
-                    },
-                    "props": {
-                      "type": "object",
-                      "properties": {},
-                      "additionalProperties": {}
-                    }
-                  },
-                  "required": [
-                    "component",
-                    "props"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            },
-            "required": [
-              "spec",
-              "entries"
-            ],
-            "additionalProperties": false
           }
         },
         "additionalProperties": false
@@ -982,9 +910,9 @@
       },
       "_meta": {
         "ui": {
-          "resourceUri": "ui://weather-widget/v1/index.html"
+          "resourceUri": "ui://weather-widget/v2/index.html"
         },
-        "ui/resourceUri": "ui://weather-widget/v1/index.html",
+        "ui/resourceUri": "ui://weather-widget/v2/index.html",
         "smarterweather.dev/required_one_of": [
           [
             "location"
@@ -1573,42 +1501,6 @@
               "additionalProperties": false
             },
             "description": "Per-source provenance: what produced these values and when."
-          },
-          "widget": {
-            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore.",
-            "type": "object",
-            "properties": {
-              "spec": {
-                "type": "string",
-                "const": "sw-ui-spec"
-              },
-              "entries": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "component": {
-                      "type": "string"
-                    },
-                    "props": {
-                      "type": "object",
-                      "properties": {},
-                      "additionalProperties": {}
-                    }
-                  },
-                  "required": [
-                    "component",
-                    "props"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            },
-            "required": [
-              "spec",
-              "entries"
-            ],
-            "additionalProperties": false
           }
         },
         "required": [
@@ -1627,9 +1519,9 @@
       },
       "_meta": {
         "ui": {
-          "resourceUri": "ui://weather-widget/v1/index.html"
+          "resourceUri": "ui://weather-widget/v2/index.html"
         },
-        "ui/resourceUri": "ui://weather-widget/v1/index.html",
+        "ui/resourceUri": "ui://weather-widget/v2/index.html",
         "smarterweather.dev/required_one_of": [
           [
             "location"
@@ -3019,42 +2911,6 @@
               "additionalProperties": false
             },
             "description": "Per-source provenance: what produced these values and when."
-          },
-          "widget": {
-            "description": "sw-ui-spec widget block rendered by the MCP Apps weather widget (ui://weather-widget/v1/index.html). Additive; safe to ignore.",
-            "type": "object",
-            "properties": {
-              "spec": {
-                "type": "string",
-                "const": "sw-ui-spec"
-              },
-              "entries": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "component": {
-                      "type": "string"
-                    },
-                    "props": {
-                      "type": "object",
-                      "properties": {},
-                      "additionalProperties": {}
-                    }
-                  },
-                  "required": [
-                    "component",
-                    "props"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            },
-            "required": [
-              "spec",
-              "entries"
-            ],
-            "additionalProperties": false
           }
         },
         "required": [
@@ -3073,9 +2929,9 @@
       },
       "_meta": {
         "ui": {
-          "resourceUri": "ui://weather-widget/v1/index.html"
+          "resourceUri": "ui://weather-widget/v2/index.html"
         },
-        "ui/resourceUri": "ui://weather-widget/v1/index.html",
+        "ui/resourceUri": "ui://weather-widget/v2/index.html",
         "smarterweather.dev/required_one_of": [
           [
             "location"
