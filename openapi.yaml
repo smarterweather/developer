@@ -738,11 +738,10 @@ paths:
         `beyond_horizon` (the ETA is more than 30 minutes past the last
         forecast hour); `unavailable` (no forecast for that sample, for
         example when part of the forecast could not be loaded, for one
-        region or one hour); or `unchecked` (whether the sample is inside
-        the states could not be checked in time, so no forecast is served;
-        retrying usually checks it). Only `ok` and `partial` samples carry
-        weather fields and hazards. If no sample could be checked, the
-        request returns `503` with `Retry-After`.
+        region or one hour). Only `ok` and `partial` samples carry weather
+        fields and hazards. If coverage along the route cannot be checked
+        in time, the request returns `503` with `Retry-After`; a retry is
+        usually answered.
 
         ### Hazards
 
@@ -6446,8 +6445,8 @@ components:
               minimum: 0
               description: |
                 Samples inside coverage without a full forecast for this
-                departure (`partial`, `beyond_horizon`, `unavailable` or
-                `unchecked`). `best` ranks on it first.
+                departure (`partial`, `beyond_horizon` or `unavailable`).
+                `best` ranks on it first.
             hazard_minutes:
               type: integer
               minimum: 0
@@ -6514,7 +6513,7 @@ components:
           description: Direction of travel.
         status:
           type: string
-          enum: [ok, partial, outside_coverage, beyond_horizon, unavailable, unchecked]
+          enum: [ok, partial, outside_coverage, beyond_horizon, unavailable]
         temperature:
           type: number
         apparent_temperature:
