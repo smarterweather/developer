@@ -337,6 +337,11 @@ still have settled: check your wallet before paying again.
   `detail` says "this caller" rather than "this API key", because an MCP
   caller may have no key. `search_locations` does not fail in that case: it
   returns place and ZIP rows without address or POI rows.
+- `get_route_weather` returns the same `flag-disabled` `403` when route
+  weather is not enabled for the caller, without calling the API behind it;
+  its second text block also tells a model not to retry. A tool whose API
+  answers `flag-disabled` itself returns the same `403` and stop, not a
+  retryable `503`.
 - `next_steps` appears on `401`, `402` (`trial-ended`, `payment-required`),
   `403` (trial keys), `404` (`outside-coverage`, and `not-found` for a
   place), `429` (`rate-limit-exceeded`) and on the `503` a
