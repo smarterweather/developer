@@ -421,10 +421,23 @@
                   "type": "string"
                 },
                 "end": {
+                  "type": "string",
+                  "description": "Valid time of the last passing sample."
+                },
+                "end_exclusive": {
+                  "description": "Where the window closes: the next sample's valid time (end plus the last step at the series end), or sunset with daylight_only.",
                   "type": "string"
                 },
                 "hours": {
-                  "type": "number"
+                  "type": "number",
+                  "description": "Elapsed hours from start to end_exclusive."
+                },
+                "unchecked": {
+                  "description": "Criteria with a missing value on a sample in the window: not checked there.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 },
                 "rating": {
                   "type": "string",
@@ -494,6 +507,22 @@
             }
           },
           "message": {
+            "type": "string"
+          },
+          "dataset_id": {
+            "description": "The forecast product scanned.",
+            "type": "string"
+          },
+          "reference_time": {
+            "description": "The run scanned, when the series is one run.",
+            "type": "string"
+          },
+          "coverage_start": {
+            "description": "Valid time of the first scanned sample.",
+            "type": "string"
+          },
+          "coverage_end": {
+            "description": "Exclusive end of the scanned samples: the last valid time plus the last sample step.",
             "type": "string"
           }
         },
