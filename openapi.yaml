@@ -693,14 +693,16 @@ paths:
         Samples a caller-supplied path and returns the National Blend of
         Models forecast at each sample's estimated time of arrival (ETA),
         for up to three departure times, with hazard codes, crosswind,
-        hazard segments and the best departure.
+        hazard segments, the National Weather Service alerts along the way
+        and the best departure.
 
         ### Path
 
         Exactly one of `geometry` (a GeoJSON LineString, `[lon, lat]`) or
         `polyline` (an encoded polyline; `polyline_precision` 5, the
         default, or 6, which most routing engines emit). The path has 2 to
-        10,000 vertices and is at most 5,000 km long. Samples are spaced
+        10,000 vertices, is at most 5,000 km long and spans less than 180°
+        of longitude. Samples are spaced
         evenly by distance, endpoints included: one every 10 km, from 2 up
         to 100 samples, so paths over 990 km are sampled more sparsely (about
         50.5 km apart at 5,000 km). The samples are the same for every
@@ -766,11 +768,41 @@ paths:
         sample can carry several codes. Each sample owns the travel time
         from the midpoint with its previous sample to the midpoint with its
         next one, on the travel clock (waits left out), and
-        `hazard_minutes` totals it over the samples with any code. `best` ranks the departures by data completeness first (the
-        fewest `missing_samples`, so missing forecast hours never look like
-        calm weather), then by the fewest `hazard_minutes`, then by the less
-        severe `worst_hazard`, then by the earlier arrival. Alerts along the
-        route are not included yet.
+        `hazard_minutes` totals it over the samples with any code. `best`
+        ranks the departures by data completeness first (the fewest
+        `missing_samples`, so missing forecast hours never look like calm
+        weather), then by the fewest `severe_alert_minutes`, then by the
+        fewest `hazard_minutes`, then by the less severe `worst_hazard`,
+        then by the fewest `alert_minutes`, then by the earlier arrival.
+
+        ### Alerts
+
+        Each departure lists the active National Weather Service alerts the
+        path crosses while they are in effect at your ETA there, with where
+        and when you enter and leave each one. An alert issued for a later
+        period counts from its onset. Alerts issued after the request, and
+        alerts that have already ended, cannot be known, even for a
+        departure in the past. Marine-zone and surf and beach alerts are
+        left out.
+
+        An alert counts while its window, from `onset` to `expiration`,
+        overlaps the time from `enter_time` to `exit_time`. An alert the
+        path crosses twice is listed twice with the same `id`; fetch its
+        text with `GET /v1/alerts/{id}`. `alert_minutes` is the wall-clock
+        time spent inside any listed alert while it is in effect, a wait
+        included, with overlapping alerts counted once;
+        `severe_alert_minutes` is the same over the Severe and Extreme
+        ones. Alerts are not hazard codes: they never add to `segments` or
+        `hazard_minutes`. Both alert minute counts are rounded up, so a
+        brief pass through a warning still counts. If the alerts cannot be
+        loaded, the request fails (`502`, or `504` on a timeout) rather
+        than answering without them.
+
+        A path over 2,000 vertices is simplified for the alerts lookup,
+        moving it by at most 1 km; the distances and times are still on
+        your path. A path that cannot be simplified to 2,000 vertices
+        within 1 km (one that folds back on itself thousands of times)
+        returns `400`.
 
         A path with no sample inside the 50 US states and DC returns `404`
         `outside-coverage` with `next_steps`. A body over 1 MiB returns
@@ -6300,7 +6332,7 @@ components:
       properties:
         geometry:
           type: object
-          description: A GeoJSON LineString of 2 to 10,000 `[lon, lat]` positions (RFC 7946). An altitude, if present, is ignored.
+          description: A GeoJSON LineString of 2 to 10,000 `[lon, lat]` positions (RFC 7946). An altitude, if present, is ignored. The positions must span less than 180° of longitude.
           required: [type, coordinates]
           properties:
             type:
@@ -6322,7 +6354,7 @@ components:
                 type: number
         polyline:
           type: string
-          description: An encoded polyline of 2 to 10,000 vertices.
+          description: An encoded polyline of 2 to 10,000 vertices. The positions must span less than 180° of longitude.
         polyline_precision:
           type: integer
           enum: [5, 6]
@@ -6391,7 +6423,7 @@ components:
         best:
           type: string
           format: date-time
-          description: The `departure` of the best departure.
+          description: The `departure` of the best departure (the ranking is in the operation description).
         departures:
           type: array
           items:
@@ -6402,14 +6434,14 @@ components:
           properties:
             sources:
               type: array
-              description: Each forecast product used, with the newest model run used.
+              description: 'Each product used: the forecast products with the newest model run used, and `nws_alerts` (alerts, `run` null).'
               items:
                 type: object
                 required: [product, run]
                 properties:
                   product:
                     type: string
-                    examples: [nbm_conus]
+                    examples: [nbm_conus, nws_alerts]
                   run:
                     type: [string, "null"]
                     format: date-time
@@ -6419,7 +6451,7 @@ components:
 
     RouteDeparture:
       type: object
-      required: [departure, arrival, eta_source, summary, segments, samples]
+      required: [departure, arrival, eta_source, summary, alerts, segments, samples]
       properties:
         departure:
           type: string
@@ -6437,8 +6469,8 @@ components:
           enum: [speed, times]
         summary:
           type: object
-          required: [missing_samples, hazard_minutes, worst_hazard, max_wind_gust, max_crosswind_gust, min_visibility, max_precipitation_probability]
-          description: Over the `ok` samples; a value is `null` when no sample has it.
+          required: [missing_samples, hazard_minutes, worst_hazard, max_wind_gust, max_crosswind_gust, min_visibility, max_precipitation_probability, worst_alert_severity, alert_minutes, severe_alert_minutes]
+          description: Forecast fields are over the `ok` samples, and alert fields over this departure's `alerts`; a value is `null` when none has it.
           properties:
             missing_samples:
               type: integer
@@ -6462,6 +6494,23 @@ components:
               type: [number, "null"]
             max_precipitation_probability:
               type: [number, "null"]
+            worst_alert_severity:
+              oneOf:
+                - $ref: '#/components/schemas/RouteAlertSeverity'
+                - type: 'null'
+            alert_minutes:
+              type: integer
+              minimum: 0
+              description: Wall-clock minutes inside any alert in `alerts` while it is in effect, overlaps counted once, rounded up (any time inside is at least 1).
+            severe_alert_minutes:
+              type: integer
+              minimum: 0
+              description: The same as `alert_minutes`, over the Severe and Extreme alerts only.
+        alerts:
+          type: array
+          description: The alerts the path crosses while they are in effect at this departure's ETA, by `enter_distance`, then severity (worst first), then `id`. Empty when none.
+          items:
+            $ref: '#/components/schemas/RouteAlert'
         segments:
           type: array
           description: Runs of consecutive samples sharing a hazard, by start distance then severity.
@@ -6489,6 +6538,52 @@ components:
     RouteHazard:
       type: string
       enum: [freezing_rain, snow, thunderstorms, low_visibility, high_wind, heavy_rain]
+
+    RouteAlertSeverity:
+      type: string
+      enum: [Extreme, Severe, Moderate, Minor, Unknown]
+
+    RouteAlert:
+      type: object
+      additionalProperties: false
+      description: One crossing of an alert in effect when this departure travels it.
+      required: [id, event, severity, headline, onset, expiration, enter_distance, exit_distance, enter_time, exit_time]
+      properties:
+        id:
+          type: string
+          description: The alert id for `GET /v1/alerts/{id}`.
+        event:
+          type: string
+          examples: [Winter Storm Warning]
+        severity:
+          $ref: '#/components/schemas/RouteAlertSeverity'
+        headline:
+          type: string
+          description: The alert headline; may be empty.
+        onset:
+          type: [string, "null"]
+          format: date-time
+          description: When the alert takes effect (its effective time when no onset is given). `null` when neither is known.
+        expiration:
+          type: string
+          format: date-time
+          description: The end of the alert's window for this crossing, the time the keep rule used. It is the event's end (the NWS event ending time, else the alert's `ends`); when neither is given, it is the product's expiry.
+        enter_distance:
+          type: number
+          minimum: 0
+          description: Distance from the start of the path where the crossing begins (mi or km); at most `exit_distance`.
+        exit_distance:
+          type: number
+          minimum: 0
+          description: Distance from the start of the path where the crossing ends (mi or km).
+        enter_time:
+          type: string
+          format: date-time
+          description: ETA at `enter_distance`.
+        exit_time:
+          type: string
+          format: date-time
+          description: ETA at `exit_distance`.
 
     RouteSample:
       type: object
