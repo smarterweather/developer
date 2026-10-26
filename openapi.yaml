@@ -693,8 +693,9 @@ paths:
         Samples a caller-supplied path and returns the National Blend of
         Models forecast at each sample's estimated time of arrival (ETA),
         for up to three departure times, with hazard codes, crosswind,
-        hazard segments, the National Weather Service alerts along the way
-        and the best departure.
+        hazard segments, the National Weather Service alerts along the way,
+        the Storm Prediction Center convective and Weather Prediction Center
+        excessive rainfall outlooks at each sample, and the best departure.
 
         ### Path
 
@@ -741,7 +742,8 @@ paths:
         forecast hour); `unavailable` (no forecast for that sample, for
         example when part of the forecast could not be loaded, for one
         region or one hour). Only `ok` and `partial` samples carry weather
-        fields and hazards. If coverage along the route cannot be checked
+        fields and hazards; the outlook fields are on every sample inside
+        coverage. If coverage along the route cannot be checked
         in time, the request returns `503` with `Retry-After`; a retry is
         usually answered.
 
@@ -797,6 +799,45 @@ paths:
         brief pass through a warning still counts. If the alerts cannot be
         loaded, the request fails (`502`, or `504` on a timeout) rather
         than answering without them.
+
+        ### Outlooks
+
+        `convective_outlook` is the Storm Prediction Center categorical
+        convective outlook band at the sample's place, in effect at its
+        ETA: `TSTM` (general thunderstorms), `MRGL`, `SLGT`, `ENH`, `MDT`,
+        `HIGH`, from least to most severe. `excessive_rainfall_outlook` is
+        the Weather Prediction Center excessive rainfall outlook band:
+        `MRGL`, `SLGT`, `MDT`, `HIGH`. An outlook counts from the start of
+        its period up to, not including, its end; an outlook already in
+        effect when you ask also covers earlier ETAs, such as those of a
+        departure in the past hour. When outlooks for different days cover
+        the same time, the one for the nearest day (the most recent
+        forecast) is used, and within it the most severe band the place
+        sits in. That day is chosen over the whole route: where the most
+        recent outlook draws an area somewhere along the route, an older
+        outlook's band is not shown at the places it leaves out. If the
+        most recent outlook draws nothing along the route, an older
+        outlook for a later day can still be shown for that time.
+        `worst_convective_outlook` and
+        `worst_excessive_rainfall_outlook` are the most severe bands over
+        the departure's samples.
+
+        A field is absent when no band of that kind covers the place at
+        the ETA: no area is drawn there; the ETA is past the last outlook
+        period (about three days out); or the place is in Alaska or
+        Hawaii, which these outlooks do not cover.
+
+        **Known gap.** For a request made between about 06:00 and 12:00
+        UTC (08:30 and 12:00 UTC for excessive rainfall), samples whose
+        ETA is before 12:00 UTC that day have no band even where one is
+        in effect: the overnight outlook still valid until 12:00 UTC is
+        not served during those hours. A missing band there does not mean
+        no risk; the alerts along the route still apply.
+
+        Outlooks are day-scale area risk, not conditions at the ETA: they
+        never change `best`, `hazard_minutes` or `segments`. If the
+        outlooks cannot be loaded, the request fails (`502`, or `504` on a
+        timeout) rather than answering without them.
 
         A path over 2,000 vertices is simplified for the alerts lookup,
         moving it by at most 1 km; the distances and times are still on
@@ -6434,14 +6475,14 @@ components:
           properties:
             sources:
               type: array
-              description: 'Each product used: the forecast products with the newest model run used, and `nws_alerts` (alerts, `run` null).'
+              description: 'Each product used: the forecast products with the newest model run used, `nws_alerts` (alerts, `run` null), and each outlook product with a band in the answer (`run` is its issue time). No outlook product means no band was found at the samples'' ETAs, not that there is no risk (see the known gap under Outlooks).'
               items:
                 type: object
                 required: [product, run]
                 properties:
                   product:
                     type: string
-                    examples: [nbm_conus, nws_alerts]
+                    examples: [nbm_conus, nws_alerts, spc_day1_categorical]
                   run:
                     type: [string, "null"]
                     format: date-time
@@ -6469,8 +6510,8 @@ components:
           enum: [speed, times]
         summary:
           type: object
-          required: [missing_samples, hazard_minutes, worst_hazard, max_wind_gust, max_crosswind_gust, min_visibility, max_precipitation_probability, worst_alert_severity, alert_minutes, severe_alert_minutes]
-          description: Forecast fields are over the `ok` samples, and alert fields over this departure's `alerts`; a value is `null` when none has it.
+          required: [missing_samples, hazard_minutes, worst_hazard, max_wind_gust, max_crosswind_gust, min_visibility, max_precipitation_probability, worst_alert_severity, alert_minutes, severe_alert_minutes, worst_convective_outlook, worst_excessive_rainfall_outlook]
+          description: Forecast fields are over the `ok` samples, alert fields over this departure's `alerts`, and outlook fields over the samples inside coverage; a value is `null` when none has it.
           properties:
             missing_samples:
               type: integer
@@ -6506,6 +6547,14 @@ components:
               type: integer
               minimum: 0
               description: The same as `alert_minutes`, over the Severe and Extreme alerts only.
+            worst_convective_outlook:
+              oneOf:
+                - $ref: '#/components/schemas/RouteConvectiveOutlook'
+                - type: 'null'
+            worst_excessive_rainfall_outlook:
+              oneOf:
+                - $ref: '#/components/schemas/RouteExcessiveRainfallOutlook'
+                - type: 'null'
         alerts:
           type: array
           description: The alerts the path crosses while they are in effect at this departure's ETA, by `enter_distance`, then severity (worst first), then `id`. Empty when none.
@@ -6542,6 +6591,16 @@ components:
     RouteAlertSeverity:
       type: string
       enum: [Extreme, Severe, Moderate, Minor, Unknown]
+
+    RouteConvectiveOutlook:
+      type: string
+      enum: [TSTM, MRGL, SLGT, ENH, MDT, HIGH]
+      description: 'Storm Prediction Center categorical convective outlook band, least to most severe: General thunderstorms, Marginal, Slight, Enhanced, Moderate, High.'
+
+    RouteExcessiveRainfallOutlook:
+      type: string
+      enum: [MRGL, SLGT, MDT, HIGH]
+      description: 'Weather Prediction Center excessive rainfall outlook band, least to most severe: Marginal, Slight, Moderate, High.'
 
     RouteAlert:
       type: object
@@ -6651,6 +6710,10 @@ components:
           description: Gust across the direction of travel.
         thunderstorm_probability:
           type: number
+        convective_outlook:
+          $ref: '#/components/schemas/RouteConvectiveOutlook'
+        excessive_rainfall_outlook:
+          $ref: '#/components/schemas/RouteExcessiveRainfallOutlook'
         hazards:
           type: array
           description: Hazard codes at this sample, worst first. Empty unless `status` is `ok` or `partial`.
