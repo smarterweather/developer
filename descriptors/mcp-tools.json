@@ -283,7 +283,7 @@
     {
       "name": "find_best_window",
       "title": "Find best weather window",
-      "description": "Find the optimal time window for an activity based on weather criteria. Scans the forecast and returns daylight-aware periods matching all conditions. Criteria are expressed in the selected `units` system (default imperial: °F, mph, miles, feet). Example: {\"location\": \"Boulder, CO\", \"criteria\": {\"min_temperature\": 55, \"max_wind_speed\": 15, \"max_precipitation_probability\": 20}, \"hours\": 72, \"activity_duration_hours\": 3}.",
+      "description": "Find the optimal time window for an activity based on weather criteria. Scans the forecast and returns periods in the asked light (day, night or any) matching all conditions. Criteria are expressed in the selected `units` system (default imperial: °F, mph, miles, feet). Example: {\"location\": \"Boulder, CO\", \"criteria\": {\"min_temperature\": 55, \"max_wind_speed\": 15}, \"hours\": 72, \"light\": \"day\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -347,6 +347,12 @@
               "min_ceiling": {
                 "description": "Minimum cloud ceiling in the selected units (feet / m / m).",
                 "type": "number"
+              },
+              "max_cloud_cover": {
+                "description": "Maximum acceptable total cloud cover (0-100%).",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
               }
             },
             "description": "Weather criteria defining acceptable conditions (all optional)."
@@ -365,10 +371,14 @@
             "minimum": 1,
             "maximum": 24
           },
-          "daylight_only": {
-            "default": true,
-            "description": "Only consider daylight hours (sunrise to sunset). Default true.",
-            "type": "boolean"
+          "light": {
+            "type": "string",
+            "enum": [
+              "day",
+              "night",
+              "any"
+            ],
+            "description": "Hours to consider. day: sunrise to sunset; night: sunset to sunrise; any: every hour."
           },
           "activity": {
             "description": "Free-form activity to rate the windows for (e.g. \"afternoon golf\"). Accepted even when rating is off so clients can send it.",
@@ -377,7 +387,8 @@
           }
         },
         "required": [
-          "criteria"
+          "criteria",
+          "light"
         ]
       },
       "outputSchema": {
@@ -419,7 +430,7 @@
               "properties": {
                 "start": {
                   "type": "string",
-                  "description": "Where the window opens: the first passing sample's valid time, or sunrise with daylight_only when that sample spans it (after end when that is the only sample)."
+                  "description": "Where the window opens: the first passing sample's valid time, or the sunrise or sunset at the light edge when that sample spans it (after end when that is the only sample)."
                 },
                 "end": {
                   "type": "string",
@@ -427,7 +438,7 @@
                 },
                 "end_exclusive": {
                   "type": "string",
-                  "description": "The window's exclusive close, authoritative over end: the valid time of the sample after the last passing one (end plus the last step at the series end), or sunset with daylight_only when that sample spans it."
+                  "description": "The window's exclusive close, authoritative over end: the valid time of the sample after the last passing one (end plus the last step at the series end), or the sunrise or sunset at the light edge when that sample spans it."
                 },
                 "hours": {
                   "type": "number",
@@ -476,15 +487,43 @@
             "properties": {},
             "additionalProperties": {}
           },
-          "daylight_only": {
-            "type": "boolean"
+          "light": {
+            "type": "string",
+            "enum": [
+              "day",
+              "night",
+              "any"
+            ],
+            "description": "The light applied: any when sunrise/sunset data was unavailable for the scanned hours."
           },
-          "daylight_filter": {
+          "light_filter": {
+            "description": "With light day or night: partial when sunrise/sunset data covered only some scanned hours (the rest are in no window).",
             "type": "string",
             "enum": [
               "applied",
+              "partial",
               "unavailable"
             ]
+          },
+          "light_unknown": {
+            "description": "With a partial light_filter: the scanned stretches that could not be told day or night.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "string"
+                },
+                "end": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "start",
+                "end"
+              ],
+              "additionalProperties": false
+            }
           },
           "activity_duration_hours": {
             "type": "number"
@@ -581,7 +620,7 @@
           "units",
           "windows",
           "criteria_applied",
-          "daylight_only",
+          "light",
           "activity_duration_hours"
         ],
         "additionalProperties": false
@@ -603,14 +642,15 @@
               "max_precipitation_probability": 20
             },
             "hours": 72,
-            "activity_duration_hours": 3
+            "activity_duration_hours": 3,
+            "light": "day"
           },
           {
-            "location": "Girdwood, AK",
+            "location": "Moab, UT",
             "criteria": {
-              "max_precipitation_probability": 30
+              "max_cloud_cover": 20
             },
-            "daylight_only": true
+            "light": "night"
           }
         ],
         "smarterweather.dev/required_one_of": [
