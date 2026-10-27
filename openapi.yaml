@@ -87,12 +87,27 @@ info:
     | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
     | `climate`     | no    | experimental | NCEI day-of-year normals for the location, plus per-day departure from normal on `daily[]`. |
     | `metar`       | no    | experimental | Nearest METAR sky layers and present weather for the photoreal canvas. |
+    | `sky`         | no    | experimental | Sunrise/sunset color forecast inside `astro` and `daily[].astro` (CONUS). Implies `astro`. Not enabled for every key: `not_enabled` warning. |
 
     `location` and `gis` are valid tokens, but every 200 response carries
     them whether or not `include` names them. Any `include` value replaces
     the default set: `include=current` returns `current` plus `location`,
     `gis`, `units`, `attribution` and `meta`, and `include=location`
     returns only `location`, `gis`, `units`, `attribution` and `meta`.
+
+    `sky` adds `astro.sky` and `daily[].astro.sky` (`Sky`) and implies
+    `astro`, so `include=sky` alone returns the `astro` block. It is not
+    yet enabled for every API key: when it is not enabled for yours, the
+    request still succeeds without `sky` (the `astro` block is unchanged)
+    and `meta.warnings[]` carries one `not_enabled` warning with `section`
+    `sky`; that is a stable state of your key, so do not retry. If access
+    cannot be checked right now, the request still succeeds without `sky`,
+    with an `upstream_unavailable` warning (`section` `sky`) instead and
+    `Cache-Control: no-store`; retry later. Outside
+    CONUS the response carries a `coverage_limited` warning (`section`
+    `sky`) instead, a forecast that could not be read fully carries
+    `partial_fetch` (`section` `sky`), and a date without a forecast yet
+    has no `sky`.
 
     `radar` and `products` (visual-products manifest) are **not** in the
     v1 token set. Radar imagery will ship later as a separate
@@ -9729,6 +9744,160 @@ components:
             (above the horizon all day; day_length is 86400) or polar_night
             (below it all day; day_length is 0). sunrise and sunset are then
             null. Null when the sun rises and sets.
+        sky:
+          x-stability: experimental
+          allOf:
+            - $ref: '#/components/schemas/Sky'
+          description: |
+            Sunrise and sunset color forecast for this date, present only
+            when `include=sky` is requested, enabled for the API key, and a
+            forecast exists for the date.
+
+            **Experimental** (`x-stability: experimental`): excluded from the
+            90-day breaking-change commitment.
+
+    Sky:
+      type: object
+      x-stability: experimental
+      description: |
+        Sunrise and sunset color forecast for this date (HRRR, CONUS).
+        Present only with `include=sky` when it is enabled for the API key
+        and a forecast exists for the date; an event is `null` when there is
+        no forecast for it.
+
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment.
+      required: [sunrise, sunset]
+      properties:
+        sunrise:
+          oneOf:
+            - $ref: '#/components/schemas/SkyEvent'
+            - type: "null"
+        sunset:
+          oneOf:
+            - $ref: '#/components/schemas/SkyEvent'
+            - type: "null"
+
+    SkyEvent:
+      type: object
+      x-stability: experimental
+      description: |
+        Color forecast of one sunrise or sunset. Offsets are signed minutes
+        from the event (negative before it). Scores are 0-100. A nullable
+        field is `null` when the forecast has no value for it.
+
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment.
+      required: [score, label, p_vivid, confidence, peak_at, peak_offset_min, window, overhead, horizon, horizon_occluded, curve, drivers, source]
+      properties:
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Peak color score.
+        label:
+          type: [string, "null"]
+          description: >-
+            Band of the score: `little color` (0-19), `some color` (20-39),
+            `good color` (40-59), `vivid` (60-79) or `exceptional` (80-100).
+            New bands may be added.
+          example: vivid
+        p_vivid:
+          type: [number, "null"]
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Likelihood of vivid color (a score of 60 or more).
+        confidence:
+          type: [string, "null"]
+          description: >-
+            Forecast confidence: `low`, `medium`, `medium-high` or `high`.
+          example: medium
+        peak_at:
+          type: [string, "null"]
+          format: date-time
+          description: >-
+            The astro block's own `sunrise` or `sunset` plus
+            `peak_offset_min`; null when that time is null.
+        peak_offset_min:
+          type: integer
+          description: >-
+            Minutes from the event to the peak score: -30 to 45 for sunset,
+            -45 to 30 for sunrise, in 5-minute steps.
+        window:
+          oneOf:
+            - $ref: '#/components/schemas/SkyWindow'
+            - type: "null"
+          description: Null when the peak score is under 40 (no good-color window).
+        overhead:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 100
+          description: Peak score of the sky overhead.
+        horizon:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 100
+          description: Peak score of the sky near the horizon.
+        horizon_occluded:
+          type: [boolean, "null"]
+          description: >-
+            True when low and mid cloud toward the sun covers most of the
+            horizon at the event time.
+        curve:
+          $ref: '#/components/schemas/SkyCurve'
+        drivers:
+          type: array
+          maxItems: 2
+          items:
+            type: string
+          description: >-
+            Main and secondary reasons for the score, most important first,
+            for example `high_lit`, `horizon_clear`, `low_overcast`,
+            `smoke_dim` or `precip`. Empty when none stands out. New values
+            may be added.
+        source:
+          type: [string, "null"]
+          description: Model source id (the product's catalog `source.id`).
+          example: hrrr
+
+    SkyWindow:
+      type: object
+      x-stability: experimental
+      description: |
+        Span of good color around the peak, in signed minutes from the
+        event, on the same axis as `peak_offset_min`.
+
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment.
+      required: [start_offset_min, end_offset_min]
+      properties:
+        start_offset_min:
+          type: integer
+        end_offset_min:
+          type: integer
+
+    SkyCurve:
+      type: object
+      x-stability: experimental
+      description: |
+        Score sampled at offsets from the event, in time order;
+        `offsets_min[i]` pairs with `score[i]`.
+
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment.
+      required: [offsets_min, score]
+      properties:
+        offsets_min:
+          type: array
+          items:
+            type: integer
+        score:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 100
 
     # -----------------------------------------------------------------------
     # GIS (scoped down), units, attribution, meta
@@ -9976,7 +10145,9 @@ components:
             - `upstream_timeout`: an upstream weather source timed out, so
               the section is missing or incomplete.
             - `upstream_unavailable`: an upstream weather source was
-              unreachable, so the section is missing or incomplete.
+              unreachable, or (for a section not enabled for every key,
+              such as `sky`) access could not be checked, so the section
+              is missing or incomplete; retry later.
             - `coverage_limited`: the data does not cover this location
               (for example no nearby station, or a product outside its
               domain); retrying will not help.
