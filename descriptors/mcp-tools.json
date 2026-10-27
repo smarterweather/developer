@@ -418,19 +418,20 @@
               "type": "object",
               "properties": {
                 "start": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Where the window opens: the first passing sample's valid time, or sunrise with daylight_only when that sample spans it (after end when that is the only sample)."
                 },
                 "end": {
                   "type": "string",
                   "description": "Valid time of the last passing sample."
                 },
                 "end_exclusive": {
-                  "description": "Where the window closes: the next sample's valid time (end plus the last step at the series end), or sunset with daylight_only.",
-                  "type": "string"
+                  "type": "string",
+                  "description": "The window's exclusive close, authoritative over end: the valid time of the sample after the last passing one (end plus the last step at the series end), or sunset with daylight_only when that sample spans it."
                 },
                 "hours": {
                   "type": "number",
-                  "description": "Elapsed hours from start to end_exclusive."
+                  "description": "Elapsed hours from start to end_exclusive, to 2 decimals."
                 },
                 "unchecked": {
                   "description": "Criteria with a missing value on a sample in the window: not checked there.",
@@ -464,6 +465,7 @@
               "required": [
                 "start",
                 "end",
+                "end_exclusive",
                 "hours"
               ],
               "additionalProperties": false
@@ -524,6 +526,54 @@
           "coverage_end": {
             "description": "Exclusive end of the scanned samples: the last valid time plus the last sample step.",
             "type": "string"
+          },
+          "_sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "product": {
+                  "type": "string"
+                },
+                "office": {
+                  "type": "string"
+                },
+                "dataset_id": {
+                  "type": "string"
+                },
+                "dataset_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "issued_at": {
+                  "type": "string"
+                },
+                "time_zone": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "provider",
+                "label"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Per-source provenance: what produced these values and when."
           }
         },
         "required": [
@@ -5726,6 +5776,54 @@
           "attribution": {
             "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
             "type": "string"
+          },
+          "_sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "product": {
+                  "type": "string"
+                },
+                "office": {
+                  "type": "string"
+                },
+                "dataset_id": {
+                  "type": "string"
+                },
+                "dataset_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "issued_at": {
+                  "type": "string"
+                },
+                "time_zone": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "provider",
+                "label"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Per-source provenance: what produced these values and when."
           }
         },
         "required": [
