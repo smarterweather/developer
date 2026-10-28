@@ -737,6 +737,31 @@ paths:
         between 1 hour ago and 168 hours ahead, the departures are within
         24 hours of each other, and the trip takes at most 72 hours.
 
+        ### Local times
+
+        Times are UTC. The times of the trip listed below also have a
+        `_local` sibling: the same instant in a local time zone, with that
+        zone's UTC offset at that instant (RFC 3339), so time zone lines and
+        daylight saving changes along the way are already applied. `best`
+        (it equals one departure's `departure`, next to its
+        `departure_local`), `valid_time` and `meta.sources[].run` are UTC
+        only. Zones are known only at samples inside coverage, and each
+        local time uses the zone of the nearest such sample:
+
+        - a sample has `eta_local` and its IANA `timezone`; a sample
+          outside coverage has neither;
+        - a segment has `start_local` and `end_local`, in the zones of its
+          first and last samples;
+        - an alert crossing has `enter_time_local` and `exit_time_local`,
+          in the zones of the covered samples nearest where you enter and
+          leave it, and `onset_local` and `expiration_local` in the zone
+          where you enter it;
+        - a departure has `departure_local` and `arrival_local`, in the
+          zones of the first and last samples inside coverage, named in
+          `origin_timezone` and `destination_timezone`. For a path that
+          starts or ends outside coverage, that is the zone where it
+          enters or leaves coverage, not the zone at the endpoint.
+
         ### Samples
 
         Each sample takes the forecast hour nearest its ETA, echoed as
@@ -6507,12 +6532,21 @@ components:
 
     RouteDeparture:
       type: object
-      required: [departure, arrival, eta_source, summary, alerts, segments, samples]
+      required: [departure, departure_local, origin_timezone, arrival, arrival_local, destination_timezone, eta_source, summary, alerts, segments, samples]
       properties:
         departure:
           type: string
           format: date-time
           description: The departure, in UTC.
+        departure_local:
+          type: string
+          format: date-time
+          description: The departure in `origin_timezone`, with its UTC offset.
+          examples: ['2026-11-02T07:00:00-06:00']
+        origin_timezone:
+          type: string
+          description: The IANA time zone of the first sample inside coverage (the start of the path when it is inside coverage).
+          examples: [America/Chicago]
         arrival:
           type: string
           format: date-time
@@ -6520,6 +6554,15 @@ components:
             The end of the trip. With `times`, the last vertex time, so a
             wait at the destination is included; the last sample's `eta` is
             the first arrival there.
+        arrival_local:
+          type: string
+          format: date-time
+          description: '`arrival` in `destination_timezone`, with its UTC offset.'
+          examples: ['2026-11-02T21:30:00-07:00']
+        destination_timezone:
+          type: string
+          description: The IANA time zone of the last sample inside coverage (the end of the path when it is inside coverage).
+          examples: [America/Denver]
         eta_source:
           type: string
           enum: [speed, times]
@@ -6580,7 +6623,7 @@ components:
           description: Runs of consecutive samples sharing a hazard, by start distance then severity.
           items:
             type: object
-            required: [hazard, from_distance, to_distance, start, end]
+            required: [hazard, from_distance, to_distance, start, start_local, end, end_local]
             properties:
               hazard:
                 $ref: '#/components/schemas/RouteHazard'
@@ -6591,9 +6634,17 @@ components:
               start:
                 type: string
                 format: date-time
+              start_local:
+                type: string
+                format: date-time
+                description: '`start` in the time zone of the segment''s first sample, with its UTC offset.'
               end:
                 type: string
                 format: date-time
+              end_local:
+                type: string
+                format: date-time
+                description: '`end` in the time zone of the segment''s last sample, with its UTC offset.'
         samples:
           type: array
           items:
@@ -6621,7 +6672,7 @@ components:
       type: object
       additionalProperties: false
       description: One crossing of an alert in effect when this departure travels it.
-      required: [id, event, severity, headline, onset, expiration, enter_distance, exit_distance, enter_time, exit_time]
+      required: [id, event, severity, headline, onset, onset_local, expiration, expiration_local, enter_distance, exit_distance, enter_time, enter_time_local, exit_time, exit_time_local]
       properties:
         id:
           type: string
@@ -6638,10 +6689,18 @@ components:
           type: [string, "null"]
           format: date-time
           description: When the alert takes effect (its effective time when no onset is given). `null` when neither is known.
+        onset_local:
+          type: [string, "null"]
+          format: date-time
+          description: '`onset` in the time zone of the covered sample nearest `enter_distance`, with its UTC offset at `onset`. `null` with `onset`.'
         expiration:
           type: string
           format: date-time
           description: The end of the alert's window for this crossing, the time the keep rule used. It is the event's end (the NWS event ending time, else the alert's `ends`); when neither is given, it is the product's expiry.
+        expiration_local:
+          type: string
+          format: date-time
+          description: '`expiration` in the time zone of the covered sample nearest `enter_distance`, with its UTC offset at `expiration`.'
         enter_distance:
           type: number
           minimum: 0
@@ -6654,10 +6713,18 @@ components:
           type: string
           format: date-time
           description: ETA at `enter_distance`.
+        enter_time_local:
+          type: string
+          format: date-time
+          description: '`enter_time` in the time zone of the covered sample nearest `enter_distance`, with its UTC offset.'
         exit_time:
           type: string
           format: date-time
           description: ETA at `exit_distance`.
+        exit_time_local:
+          type: string
+          format: date-time
+          description: '`exit_time` in the time zone of the covered sample nearest `exit_distance`, with its UTC offset.'
 
     RouteSample:
       type: object
@@ -6673,6 +6740,15 @@ components:
         eta:
           type: string
           format: date-time
+        timezone:
+          type: string
+          description: The IANA time zone at the sample. Absent outside coverage.
+          examples: [America/Chicago]
+        eta_local:
+          type: string
+          format: date-time
+          description: '`eta` in `timezone`, with its UTC offset. Absent outside coverage.'
+          examples: ['2026-11-02T09:15:00-06:00']
         valid_time:
           type: string
           format: date-time
