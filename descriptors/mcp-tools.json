@@ -4462,7 +4462,7 @@
     {
       "name": "get_route_weather",
       "title": "Get route weather",
-      "description": "Weather along a path: forecast hazards at each sample's ETA, the alerts and outlooks it crosses, and the best of up to 3 departures. Pass the route's own path (a routing engine's polyline, precision 6 for Valhalla or OSRM polyline6, or a GPS track); never draw straight lines between places. Without a path, use compare_locations on the stops. detail \"full\" adds up to 100 samples per departure (large: ask for one departure). Not enabled for every caller: when off it returns 403 flag-disabled. Example, a polyline from your routing engine or GPS track: {\"polyline\":\"o}g}FjppvPwBkiAcGwrAsD{uAR_yAnF{uA~CwwAcBcwA\"}.",
+      "description": "Weather along a path: forecast hazards at each sample's ETA, the alerts and outlooks it crosses, and the best of up to 3 departures. Pass the route's own path (a routing engine's polyline, precision 6 for Valhalla or OSRM polyline6, or a GPS track); never invent one from highway names or straight lines. Without a path, use compare_locations on the stops, labelled as checkpoints. detail \"full\" adds up to 100 samples per departure (large: ask for one departure). Not enabled for every caller: when off it returns 403 flag-disabled. Example: {\"polyline\":\"o}g}FjppvPwBkiAcGwrAsD{uAR_yAnF{uA~CwwAcBcwA\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
