@@ -837,6 +837,8 @@
           "resourceUri": "ui://weather-widget/v2/index.html"
         },
         "ui/resourceUri": "ui://weather-widget/v2/index.html",
+        "openai/toolInvocation/invoking": "Checking air quality…",
+        "openai/toolInvocation/invoked": "Air quality ready",
         "smarterweather.dev/required_one_of": [
           [
             "location"
