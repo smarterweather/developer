@@ -83,6 +83,7 @@ account and no API key. An unpaid `tools/call` returns **in-band**
 x402 payment requirements as a tool result (never a raw HTTP 402
 on `POST /mcp` — that breaks MCP clients). Settle in USDC on Base
 and retry the same call with the payment proof. Discovery tools
+(`find_places`, `search_data`, `describe_data`, `get_status`)
 stay free. Keyed and keyless rails are mutually exclusive per
 request. Under the Stripe payee the quote floors at **$0.01** per
 call. See <https://developers.smarterweather.com/agents>.
@@ -145,17 +146,25 @@ out-of-the-box; point it at the same `npx` command.
 
 ## Tool catalog (current)
 
-The hosted server exposes **33 tools** organized around
+The hosted server exposes **35 tools** organized around
 meteorologist workflows rather than raw endpoints. Every
 location-aware tool accepts either a free-text `location` string or
 explicit `lat`/`lon`. Call `tools/list` for the live, canonical
 catalog with full input/output schemas.
 
+The root URL lists the `core` and `catalog` toolsets (12 weather
+tools) plus `find_tools` and `call_tool`: `find_tools` lists the
+other toolsets' tools and `call_tool` runs one on the same
+connection. `/x/all`, or `/x/<toolset>[,<toolset>]`, lists toolsets
+directly.
+
 ### Location
 
-- `search_locations` — geocode a free-text query (city, ZIP,
-  landmark); supports fuzzy autosuggest.
-- `reverse_geocode` — nearest place name for a lat/lon.
+- `find_places` — pass `query` (place name, ZIP, venue or address;
+  `fuzzy` for partial input) for ranked candidates with lat/lon, or
+  `lat` + `lon` for the place and timezone at a point. Returns
+  `candidates[]`; in point mode each candidate carries
+  `relation: "in" | "near"`.
 
 ### Forecast
 
@@ -171,11 +180,15 @@ catalog with full input/output schemas.
 ### Current conditions and observations
 
 - `get_current_conditions` — real-time analysis conditions.
+- `get_observed_precipitation` — observed rain totals (MRMS QPE)
+  over 1–72 h windows.
 - `get_observations` — recent station observations.
 - `get_lightning_activity` — recent lightning strikes near a point.
 - `get_storm_reports` — local storm reports (wind, hail, tornado).
 - `get_sounding` — nearest model sounding profile with derived
   severe-weather parameters (CAPE, shear, SRH, ...).
+- `get_tropical_observations` — Hurricane Hunter reconnaissance
+  (center fixes and flight-level observations).
 
 ### Hazards and forecaster text
 
@@ -201,9 +214,12 @@ catalog with full input/output schemas.
 
 ### Data plane (raw grids)
 
-- `list_datasets` — discover available gridded datasets.
-- `describe_dataset` — variables, extent, and freshness for one
-  dataset.
+- `search_data` — which dataset answers a question (`query`), or,
+  without `query`, the datasets at a place with freshness. Returns
+  `hits[]`; with `query` each hit carries the exact `call` to run
+  next.
+- `describe_data` — variables, horizon, cadence, and freshness for
+  one dataset.
 - `query_dataset` — point-query any dataset variable time series.
 - `get_period_totals` — accumulations/aggregates over a period.
 
@@ -213,6 +229,8 @@ catalog with full input/output schemas.
   an event or trip.
 - `find_best_window` — rank time windows against weather criteria
   ("best 3-hour window for a run this week").
+- `get_route_weather` — forecast hazards, alerts, and outlooks along
+  a caller-supplied path, for up to 3 departures.
 - `get_forecast_skill` — how accurate our forecasts have been near a
   location, measured against observed analysis truth.
 - `get_forecast_skill_map` — the same skill measurement as hexes
@@ -220,7 +238,7 @@ catalog with full input/output schemas.
 
 ### Platform
 
-- `get_platform_status` — data-freshness state per source; check it
+- `get_status` — data-freshness state per source; check it
   before reporting data as current.
 
 ### Visual

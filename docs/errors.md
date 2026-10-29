@@ -335,7 +335,7 @@ still have settled: check your wallet before paying again.
   when civic place counts are not enabled for the caller, without calling
   the API behind it. A second text block tells a model not to retry. The
   `detail` says "this caller" rather than "this API key", because an MCP
-  caller may have no key. `search_locations` does not fail in that case: it
+  caller may have no key. `find_places` does not fail in that case: it
   returns place and ZIP rows without address or POI rows.
 - `get_route_weather` returns the same `flag-disabled` `403` when route
   weather is not enabled for the caller, without calling the API behind it;
