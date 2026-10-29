@@ -295,14 +295,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "units": {
@@ -680,14 +676,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "pollutants": {
@@ -872,14 +864,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "bbox": {
@@ -1065,14 +1053,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "start": {
@@ -1249,14 +1233,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "units": {
@@ -1480,14 +1460,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "days": {
@@ -1668,14 +1644,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "type": {
@@ -1811,14 +1783,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "aspect": {
@@ -2099,14 +2067,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "variable": {
@@ -2774,14 +2738,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "crop": {
@@ -2883,14 +2843,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "days": {
@@ -3078,14 +3034,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "units": {
@@ -3195,14 +3147,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "product": {
@@ -3293,14 +3241,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "n": {
@@ -3426,14 +3370,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "windows": {
@@ -3774,14 +3714,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "hazard": {
@@ -4045,14 +3981,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "variable": {
@@ -4477,7 +4409,13 @@
                 ]
               },
               "coordinates": {
-                "type": "array"
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                }
               },
               "bbox": {
                 "type": "array",
@@ -4494,20 +4432,14 @@
           },
           "polyline": {
             "description": "Encoded polyline, instead of geometry.",
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           },
           "polyline_precision": {
             "description": "Default 5.",
-            "anyOf": [
-              {
-                "type": "number",
-                "const": 5
-              },
-              {
-                "type": "number",
-                "const": 6
-              }
+            "type": "number",
+            "enum": [
+              5,
+              6
             ]
           },
           "times": {
@@ -4518,9 +4450,8 @@
             }
           },
           "departures": {
-            "description": "RFC 3339 with offset, 1 h ago to 168 h ahead, within 24 h of each other. Default times[0] with times (pass departures for a recorded track), else now.",
+            "description": "1 to 3 RFC 3339 times with offset, 1 h ago to 168 h ahead, within 24 h of each other. Default times[0] with times (pass departures for a recorded track), else now.",
             "minItems": 1,
-            "maxItems": 3,
             "type": "array",
             "items": {
               "type": "string"
@@ -4721,14 +4652,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "n": {
@@ -4840,14 +4767,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "units": {
@@ -4910,14 +4833,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "include": {
@@ -5051,14 +4970,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "hours": {
@@ -5178,14 +5093,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           }
         }
@@ -5465,14 +5376,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "include_freshness": {
@@ -5600,14 +5507,10 @@
           },
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           },
           "dataset_id": {
@@ -5904,14 +5807,10 @@
         "properties": {
           "lat": {
             "type": "number",
-            "minimum": -90,
-            "maximum": 90,
             "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
           },
           "lon": {
             "type": "number",
-            "minimum": -180,
-            "maximum": 180,
             "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
           }
         },
