@@ -28,7 +28,7 @@ The bridge resolves the key from:
 
 Unexpanded `${…}` placeholders count as unset. The bridge passes the key to `mcp-remote` as `Authorization:${SMARTERWEATHER_AUTH_HEADER}`, with the bearer only in the child process environment, never on argv.
 
-Without a key the bridge still connects, and discovery tools such as `search_locations` and `search_catalog` stay free. Other tool calls return x402 payment requirements (USDC on Base) with `next_steps` that point back to `login` and `trial`. OAuth sign-in through the bridge is not available yet; use an API key.
+Without a key the bridge still connects, and discovery tools such as `find_places` and `search_data` stay free. Other tool calls return x402 payment requirements (USDC on Base) with `next_steps` that point back to `login` and `trial`. OAuth sign-in through the bridge is not available yet; use an API key.
 
 ## Install
 
