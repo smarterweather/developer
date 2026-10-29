@@ -41,14 +41,14 @@ AIFS AI model forecasts.
 - Attribution: Based on data and products of the European Centre for Medium-Range Weather Forecasts (ECMWF). © ECMWF, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Source: www.ecmwf.int. Values regridded and quantized by Smarter Weather; ECMWF accepts no liability.
 - Terms: https://apps.ecmwf.int/datasets/licences/general/
 
-## Map data and distribution
+## Map, reference data and distribution
 
 ### OpenStreetMap contributors
 
 Map and geographic reference data.
 
 - License: Open Database License (ODbL) 1.0
-- Attribution: © OpenStreetMap contributors. Data available under the Open Database License (ODbL).
+- Attribution: © OpenStreetMap contributors. Available under the Open Database License.
 - Terms: https://www.openstreetmap.org/copyright
 
 ### NOAA Open Data Dissemination (NODD) on AWS
