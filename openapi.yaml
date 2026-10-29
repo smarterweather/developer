@@ -737,6 +737,31 @@ paths:
         between 1 hour ago and 168 hours ahead, the departures are within
         24 hours of each other, and the trip takes at most 72 hours.
 
+        ### Local times
+
+        Times are UTC. The times of the trip listed below also have a
+        `_local` sibling: the same instant in a local time zone, with that
+        zone's UTC offset at that instant (RFC 3339), so time zone lines and
+        daylight saving changes along the way are already applied. `best`
+        (it equals one departure's `departure`, next to its
+        `departure_local`), `valid_time` and `meta.sources[].run` are UTC
+        only. Zones are known only at samples inside coverage, and each
+        local time uses the zone of the nearest such sample:
+
+        - a sample has `eta_local` and its IANA `timezone`; a sample
+          outside coverage has neither;
+        - a segment has `start_local` and `end_local`, in the zones of its
+          first and last samples;
+        - an alert crossing has `enter_time_local` and `exit_time_local`,
+          in the zones of the covered samples nearest where you enter and
+          leave it, and `onset_local` and `expiration_local` in the zone
+          where you enter it;
+        - a departure has `departure_local` and `arrival_local`, in the
+          zones of the first and last samples inside coverage, named in
+          `origin_timezone` and `destination_timezone`. For a path that
+          starts or ends outside coverage, that is the zone where it
+          enters or leaves coverage, not the zone at the endpoint.
+
         ### Samples
 
         Each sample takes the forecast hour nearest its ETA, echoed as
@@ -6507,12 +6532,21 @@ components:
 
     RouteDeparture:
       type: object
-      required: [departure, arrival, eta_source, summary, alerts, segments, samples]
+      required: [departure, departure_local, origin_timezone, arrival, arrival_local, destination_timezone, eta_source, summary, alerts, segments, samples]
       properties:
         departure:
           type: string
           format: date-time
           description: The departure, in UTC.
+        departure_local:
+          type: string
+          format: date-time
+          description: The departure in `origin_timezone`, with its UTC offset.
+          examples: ['2026-11-02T07:00:00-06:00']
+        origin_timezone:
+          type: string
+          description: The IANA time zone of the first sample inside coverage (the start of the path when it is inside coverage).
+          examples: [America/Chicago]
         arrival:
           type: string
           format: date-time
@@ -6520,6 +6554,15 @@ components:
             The end of the trip. With `times`, the last vertex time, so a
             wait at the destination is included; the last sample's `eta` is
             the first arrival there.
+        arrival_local:
+          type: string
+          format: date-time
+          description: '`arrival` in `destination_timezone`, with its UTC offset.'
+          examples: ['2026-11-02T21:30:00-07:00']
+        destination_timezone:
+          type: string
+          description: The IANA time zone of the last sample inside coverage (the end of the path when it is inside coverage).
+          examples: [America/Denver]
         eta_source:
           type: string
           enum: [speed, times]
@@ -6580,7 +6623,7 @@ components:
           description: Runs of consecutive samples sharing a hazard, by start distance then severity.
           items:
             type: object
-            required: [hazard, from_distance, to_distance, start, end]
+            required: [hazard, from_distance, to_distance, start, start_local, end, end_local]
             properties:
               hazard:
                 $ref: '#/components/schemas/RouteHazard'
@@ -6591,9 +6634,17 @@ components:
               start:
                 type: string
                 format: date-time
+              start_local:
+                type: string
+                format: date-time
+                description: '`start` in the time zone of the segment''s first sample, with its UTC offset.'
               end:
                 type: string
                 format: date-time
+              end_local:
+                type: string
+                format: date-time
+                description: '`end` in the time zone of the segment''s last sample, with its UTC offset.'
         samples:
           type: array
           items:
@@ -6621,7 +6672,7 @@ components:
       type: object
       additionalProperties: false
       description: One crossing of an alert in effect when this departure travels it.
-      required: [id, event, severity, headline, onset, expiration, enter_distance, exit_distance, enter_time, exit_time]
+      required: [id, event, severity, headline, onset, onset_local, expiration, expiration_local, enter_distance, exit_distance, enter_time, enter_time_local, exit_time, exit_time_local]
       properties:
         id:
           type: string
@@ -6638,10 +6689,18 @@ components:
           type: [string, "null"]
           format: date-time
           description: When the alert takes effect (its effective time when no onset is given). `null` when neither is known.
+        onset_local:
+          type: [string, "null"]
+          format: date-time
+          description: '`onset` in the time zone of the covered sample nearest `enter_distance`, with its UTC offset at `onset`. `null` with `onset`.'
         expiration:
           type: string
           format: date-time
           description: The end of the alert's window for this crossing, the time the keep rule used. It is the event's end (the NWS event ending time, else the alert's `ends`); when neither is given, it is the product's expiry.
+        expiration_local:
+          type: string
+          format: date-time
+          description: '`expiration` in the time zone of the covered sample nearest `enter_distance`, with its UTC offset at `expiration`.'
         enter_distance:
           type: number
           minimum: 0
@@ -6654,10 +6713,18 @@ components:
           type: string
           format: date-time
           description: ETA at `enter_distance`.
+        enter_time_local:
+          type: string
+          format: date-time
+          description: '`enter_time` in the time zone of the covered sample nearest `enter_distance`, with its UTC offset.'
         exit_time:
           type: string
           format: date-time
           description: ETA at `exit_distance`.
+        exit_time_local:
+          type: string
+          format: date-time
+          description: '`exit_time` in the time zone of the covered sample nearest `exit_distance`, with its UTC offset.'
 
     RouteSample:
       type: object
@@ -6673,6 +6740,15 @@ components:
         eta:
           type: string
           format: date-time
+        timezone:
+          type: string
+          description: The IANA time zone at the sample. Absent outside coverage.
+          examples: [America/Chicago]
+        eta_local:
+          type: string
+          format: date-time
+          description: '`eta` in `timezone`, with its UTC offset. Absent outside coverage.'
+          examples: ['2026-11-02T09:15:00-06:00']
         valid_time:
           type: string
           format: date-time
@@ -7481,11 +7557,21 @@ components:
           format: double
           description: |
             Daytime maximum (on hourly-only rows, the calendar day's maximum).
-            May be null on the `relative_day: -1` overnight
-            row, whose daytime is already past: that row reports a maximum only
-            when the forecast cycle still carries one for the date, and never
-            estimates it from the overnight minimum. When `high` is null the
-            row also omits `day`.
+            On today's row (`relative_day: 0`) it takes the observed (RTMA)
+            daily maximum into account when one is available: it is not
+            reported below it, and from 18:00 local, while the analysis is
+            current, it is that observation combined with the forecast for the
+            hours left. The observed day is a fixed-offset day per region
+            (CONUS UTC-6, Alaska UTC-9, Hawaii UTC-10), so outside those
+            offsets it starts or ends up to two hours away from local
+            midnight. On the `relative_day: -1` overnight row, whose daytime
+            is past, it is that date's observed maximum when one is available
+            and not below `low`, else the forecast cycle's when it still
+            carries one. Null when no source carries the value, and on
+            today's row before 18:00 local when only the observation is
+            available and the forecast hours left do not reach the afternoon
+            (a morning maximum is not the day's). It is never estimated from
+            `low`.
         low:
           type: [number, "null"]
           format: double
@@ -7494,9 +7580,11 @@ components:
             morning-of-`date` and night-after-`date` minima where the source
             carries both. The source decides the exact hours (NBM MinT
             periods, or hourly minima over those night hours); it is not
-            bounded by the row's 06:00-06:00 window. Present on the
-            `relative_day: -1` row, whose remaining overnight hours are
-            still ahead.
+            bounded by the row's 06:00-06:00 window. Null when no source
+            carries a minimum for the date (for example past the forecast's
+            minimum-temperature horizon): it is never estimated from `high`.
+            Reported on the `relative_day: -1` row whenever a source carries
+            it, since that row's remaining overnight hours are still ahead.
         conditions:
           type: string
         icon:
@@ -7640,9 +7728,11 @@ components:
             Signed calendar offset from the local current date at request time
             (-1 = yesterday, 0 = today, 1 = tomorrow). Before 6 AM local an
             extra entry with `relative_day: -1` prepends the in-progress
-            overnight row. That row always reports `low` and `night`, but
-            `high` and `day` only when the cycle still carries that date's
-            daytime maximum. Select today by `relative_day == 0` rather than by
+            overnight row. That row always reports `night` and never `day`,
+            its daytime being past; `low` whenever a source carries it (see
+            `low`); `high`, when present, is that date's observed or forecast
+            maximum (see `high`). Select today by `relative_day == 0` rather
+            than by
             position in the array, which shifts by one inside that window.
         active_period:
           type: [string, "null"]
@@ -8874,7 +8964,7 @@ components:
     CatalogSource:
       type: object
       description: The product's data source and attribution terms.
-      required: [id, name, provider_id, attribution, license, terms_url]
+      required: [id, name, provider_id, attribution, license, terms_url, credits]
       properties:
         id:
           type: string
@@ -8895,6 +8985,243 @@ components:
         terms_url:
           type: [string, "null"]
           example: https://www.weather.gov/disclaimer
+        credits:
+          type: array
+          description: |
+            Every upstream the product credits, one element each; the fields
+            above equal the first. Display each element's `attribution`.
+          items:
+            $ref: '#/components/schemas/CatalogCredit'
+
+    CatalogCredit:
+      type: object
+      description: One upstream publisher a product credits, with its licence terms.
+      required: [provider_id, name, attribution, license, terms_url]
+      properties:
+        provider_id:
+          type: string
+          example: noaa
+        name:
+          type: [string, "null"]
+          example: National Blend of Models
+        attribution:
+          type: string
+          example: Data provided by NOAA/NWS
+        license:
+          type: string
+          description: |
+            Licence token: `public_domain`, `cc_by_4`, `cdla_permissive_2`,
+            `odbl_1` or `internal`. New values may be added.
+          example: public_domain
+        terms_url:
+          type: [string, "null"]
+          example: https://www.weather.gov/disclaimer
+
+    CatalogTime:
+      type: object
+      description: The product's time semantics.
+      required: [axis, direction, step, horizon, cadence, latency, history]
+      properties:
+        axis:
+          type: string
+          description: |
+            What the product's frames are indexed by: `valid` (valid time),
+            `issue` (issue time), `both`, `none` (a time-free reference
+            layer) or `day_of_year` (a climatology). New values may be added.
+          example: valid
+        direction:
+          type: string
+          description: |
+            `forward` (the data looks ahead), `back` (it looks back) or
+            `none`. New values may be added.
+          example: forward
+        step:
+          type: [string, "null"]
+          description: Native frame spacing, an ISO 8601 duration (the product's `step`).
+          example: PT1H
+        horizon:
+          type: [string, "null"]
+          description: Forecast horizon, an ISO 8601 duration (the product's `horizon`).
+          example: PT264H
+        cadence:
+          type: [string, "null"]
+          description: Update cadence, an ISO 8601 duration (the product's `cadence`).
+          example: PT1H
+        latency:
+          type: [string, "null"]
+          description: Typical delay from valid or issue time to availability, an ISO 8601 duration; `null` when not stated.
+          example: null
+        history:
+          type: [string, "null"]
+          description: How far back the product can be read, an ISO 8601 duration; `null` when not stated.
+          example: null
+
+    CatalogQuery:
+      type: object
+      description: |
+        The data-query words the product supports: query shapes (OGC API EDR
+        names), time words, reducers and filters. New values may be added to
+        each list.
+      required: [shapes, time_words, reducers, filters, where, area_as_reference, max_cells, max_locations]
+      properties:
+        shapes:
+          type: array
+          items:
+            type: string
+          description: |
+            `position`, `locations`, `bbox`, `area`, `path`, `nearest`,
+            `items`.
+          example: [position, locations, bbox, area]
+        time_words:
+          type: array
+          items:
+            type: string
+          description: '`hours`, `start_end`, `at`, `run`.'
+          example: [hours, start_end, at, run]
+        reducers:
+          type: array
+          items:
+            type: string
+          description: |
+            `sum`, `max`, `min`, `mean`, `count_above`, `count_below`,
+            `percentile`, `degree_days`, `cumulative`, `count`, `count_by`.
+          example: [sum, max, min, mean]
+        filters:
+          type: array
+          items:
+            type: string
+          description: The product's filterable properties (see `properties_schema`).
+          example: []
+        where:
+          type: boolean
+          description: Whether criteria and window search apply (a numeric series).
+        area_as_reference:
+          type: boolean
+          description: Whether the product's features can be referenced as an area.
+        max_cells:
+          type: [integer, "null"]
+          description: Zonal-statistics cell cap per element; `null` for non-gridded products.
+          example: 100000
+        max_locations:
+          type: [integer, "null"]
+          description: Places per request; `null` when not applicable.
+          example: 25
+
+    CatalogRole:
+      type: object
+      description: |
+        The product's role in its domain: the standard names it is the
+        product of record for, their observed counterparts and alternates,
+        and the domain's native accumulation products.
+      required: [default_for, observed_counterpart, accumulations, alternates]
+      properties:
+        default_for:
+          type: array
+          items:
+            type: string
+          example: [temperature_2m]
+        observed_counterpart:
+          type: object
+          description: standard_name -> the domain's observed product of record.
+          additionalProperties:
+            type: string
+          example: {temperature_2m: rtma_conus}
+        accumulations:
+          type: object
+          description: ISO 8601 duration -> the native accumulation product.
+          additionalProperties:
+            type: string
+          example: {}
+        alternates:
+          type: object
+          description: standard_name -> other forecast products of the domain that serve it.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example: {temperature_2m: [hrrr_surface, rrfs_surface]}
+
+    CatalogProperty:
+      type: object
+      description: One feature property and how it aggregates under an area.
+      required: [type, aggregate]
+      properties:
+        type:
+          type: string
+          description: '`integer`, `number`, `string`, `boolean`, `array` or `object`.'
+          example: integer
+        aggregate:
+          type: string
+          description: |
+            `centroid_in` (sum over the features whose centroid is inside),
+            `area_weighted` (sum weighted by the overlapped fraction),
+            `precomputed` (each feature already holds its total: sum the
+            features), `count_by` (count features per value) or `none`. New
+            values may be added.
+          example: precomputed
+        description:
+          type: string
+        units:
+          type: [string, "null"]
+        enum:
+          type: array
+          items: {}
+        filterable:
+          type: boolean
+          description: Whether a data-query filter may select on this property.
+        filter_ops:
+          type: array
+          items:
+            type: string
+          description: |
+            Operators a filter on this property accepts: `eq`, `ne`, `gt`,
+            `ge`, `lt`, `le`, `in`. New values may be added.
+          example: [eq, ge, gt, le, lt]
+        partition_by:
+          type: string
+          description: |
+            The property a sum of this one is additive within: features with
+            different values of it overlap (zone types), so a sum needs a
+            filter on it.
+          example: zone_type
+
+    CatalogTableStore:
+      type: object
+      description: |
+        A table-backed reference layer's store: the property holding each
+        feature's portable id, how often the table is refreshed and its
+        source vintage.
+      required: [type, id_property, id_format, refresh, vintage]
+      properties:
+        type:
+          type: string
+          example: table
+        id_property:
+          type: string
+          example: geoid
+        id_format:
+          type: string
+          description: |
+            How a feature id is spelled from the id columns: `{geoid}`, or
+            `{zone_type}/{zone_id}` for a composite id (`fire/COZ214`). The
+            value an area reference's `feature_id` takes.
+          example: '{geoid}'
+        refresh:
+          type: string
+          example: quarterly
+        vintage:
+          type: [string, "null"]
+          example: TIGER2024
+
+    CatalogQuality:
+      type: object
+      description: Caveats to read before using the product.
+      required: [caveats]
+      properties:
+        caveats:
+          type: array
+          items:
+            type: string
 
     CatalogProduct:
       description: |
@@ -8903,7 +9230,18 @@ components:
       allOf:
         - $ref: '#/components/schemas/CatalogProductSummary'
         - type: object
-          required: [agent_description, aliases, question_shapes, related, variables]
+          required:
+            - agent_description
+            - aliases
+            - question_shapes
+            - related
+            - time
+            - query
+            - role
+            - properties_schema
+            - table_store
+            - quality
+            - variables
           properties:
             agent_description:
               type: [string, "null"]
@@ -8923,6 +9261,29 @@ components:
               items:
                 type: string
               description: Ids of related catalog products.
+            time:
+              $ref: '#/components/schemas/CatalogTime'
+            query:
+              $ref: '#/components/schemas/CatalogQuery'
+            role:
+              description: The product's role in its domain; `null` when it has none.
+              oneOf:
+                - $ref: '#/components/schemas/CatalogRole'
+                - type: 'null'
+            properties_schema:
+              type: [object, "null"]
+              description: |
+                Feature and text products: each property's type and aggregate
+                rule, keyed by property name; `null` for gridded products.
+              additionalProperties:
+                $ref: '#/components/schemas/CatalogProperty'
+            table_store:
+              description: A table-backed reference layer's store; `null` otherwise.
+              oneOf:
+                - $ref: '#/components/schemas/CatalogTableStore'
+                - type: 'null'
+            quality:
+              $ref: '#/components/schemas/CatalogQuality'
             variables:
               type: array
               items:
@@ -8946,6 +9307,9 @@ components:
         - aliases
         - categories
         - bands
+        - cell_methods
+        - level
+        - encoding
         - point
       properties:
         name:
@@ -9056,6 +9420,48 @@ components:
               label:
                 type: string
                 example: Slight
+        cell_methods:
+          type: [object, "null"]
+          description: |
+            How the value is reduced over time (CF cell_methods), e.g.
+            `{"time": "maximum"}`; `null` when not stated.
+          additionalProperties:
+            type: string
+          example: null
+        level:
+          description: The variable's vertical level; `null` when not stated.
+          oneOf:
+            - type: object
+              required: [type, value, units]
+              properties:
+                type:
+                  type: string
+                  example: height_above_ground
+                value:
+                  type: number
+                  format: double
+                  example: 2
+                units:
+                  type: string
+                  example: m
+            - type: 'null'
+        encoding:
+          description: |
+            A raw variable's encoding: a sentinel value and its meaning, and
+            the base its values count from (`utc_midnight_seconds`); `null`
+            when the value is not encoded.
+          oneOf:
+            - type: object
+              required: [sentinel, meaning, unit_base]
+              properties:
+                sentinel:
+                  type: [number, "null"]
+                  format: double
+                meaning:
+                  type: [string, "null"]
+                unit_base:
+                  type: [string, "null"]
+            - type: 'null'
         point:
           description: |
             How `/v1/point` serves the variable: the `unit` it reports
@@ -10229,7 +10635,13 @@ components:
         age_seconds:
           type: integer
           minimum: 0
-          description: Seconds elapsed since `reference_time`.
+          description: |
+            Seconds elapsed since `reference_time`, or since `latest_valid`
+            when there is no `reference_time` (an observed product with no
+            run). An observed daily product (for example
+            `rtma_daily_ag_temps_*`) stamps each day at its start, so its age
+            counts from the start of its latest observed day, not from its
+            last update.
 
     # -----------------------------------------------------------------------
     # Experimental: narrations + guidance
