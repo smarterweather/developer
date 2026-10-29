@@ -220,7 +220,7 @@
     {
       "name": "describe_data",
       "title": "Describe data",
-      "description": "A dataset's variables (standard names, units, display units, categories, bands), horizon, step, cadence, freshness, cost class and an example_query for query_dataset. Example: {\"dataset_id\": \"nbm_conus\"}.",
+      "description": "A dataset's variables (standard names, units, display units, categories, bands), horizon, step, cadence, freshness, cost class and an example_query to read its values. Free; call it after search_data, before query_dataset. Example: {\"dataset_id\": \"nbm_conus\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -4856,13 +4856,13 @@
     {
       "name": "get_status",
       "title": "Get status",
-      "description": "Current data-freshness status of the weather platform: overall state, per-source states (ok / degraded / outage / no_signal), open incidents with cause attribution (provider outage vs internal processing delay), and active provider advisories. Use this when a user asks whether data is current, when other tools return surprisingly stale data, or before presenting time-critical weather. If a source is degraded or in outage, tell the user their data may be stale rather than presenting it as live. No inputs. Refreshed about every 5 minutes.",
+      "description": "Data freshness of the weather platform (no inputs needed; refreshed about every 5 minutes): overall state, per-source states (ok / degraded / outage / no_signal), open incidents with their cause (provider outage vs internal processing delay) and active provider advisories. Use it when asked whether data is current, when other tools return stale-looking data, or before presenting time-critical weather. If a source is degraded or in outage, say the data may be stale rather than presenting it as live. Example: {}.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "include_ok": {
             "default": false,
-            "description": "true: list every monitored source including healthy ones. false (default): only sources that are not ok, keeping the response compact.",
+            "description": "true: every monitored source, healthy ones too. false (default): only sources that are not ok.",
             "type": "boolean"
           }
         },
@@ -5836,7 +5836,7 @@
     {
       "name": "search_data",
       "title": "Search data",
-      "description": "Search the data catalog: which dataset answers a weather question, or what data exists at a point. With `query` it ranks grids, radar, satellite, outlooks and observations and returns hits with variable, units, cadence, why and the exact `call` to run next (ready for \"now\"; set `time_start`/`time_end`, or `at`, for a past time); without it, it lists the datasets at the place with freshness, or every public one. A place (`location` or lat/lon) or `domain` keeps datasets covering it; variables come from describe_data. Example: {\"location\": \"Anchorage, AK\"}.",
+      "description": "Search the data catalog: which dataset's values answer a weather question, or what data exists at a point. With `query` it ranks grids, radar, satellite, outlooks and observations and returns hits with variable, units, cadence, why and the exact `call` to run next (ready for \"now\"; `time_start`/`time_end` or `at` for a past time); without it, it lists datasets at the place with freshness, or every public one. A place (`location` or lat/lon) or `domain` keeps datasets covering it; variables come from describe_data. Example: {\"location\": \"Anchorage, AK\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
