@@ -470,7 +470,12 @@ paths:
         matches no US place returns `404` `not-found`, both with
         `next_steps`. Partial-coverage scenarios inside
         coverage are reported via `meta.warnings[]` with a structured
-        code so clients can respond programmatically.
+        code so clients can respond programmatically. When a read from
+        an upstream weather source times out or is unavailable, the
+        affected section's warning is `upstream_timeout` or
+        `upstream_unavailable` and the response is sent
+        `Cache-Control: no-store`, so no cache replays it after the
+        upstream recovers.
 
         ### Response density, sampling and sparse fieldsets
 
