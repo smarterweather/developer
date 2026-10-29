@@ -7557,11 +7557,21 @@ components:
           format: double
           description: |
             Daytime maximum (on hourly-only rows, the calendar day's maximum).
-            May be null on the `relative_day: -1` overnight
-            row, whose daytime is already past: that row reports a maximum only
-            when the forecast cycle still carries one for the date, and never
-            estimates it from the overnight minimum. When `high` is null the
-            row also omits `day`.
+            On today's row (`relative_day: 0`) it takes the observed (RTMA)
+            daily maximum into account when one is available: it is not
+            reported below it, and from 18:00 local, while the analysis is
+            current, it is that observation combined with the forecast for the
+            hours left. The observed day is a fixed-offset day per region
+            (CONUS UTC-6, Alaska UTC-9, Hawaii UTC-10), so outside those
+            offsets it starts or ends up to two hours away from local
+            midnight. On the `relative_day: -1` overnight row, whose daytime
+            is past, it is that date's observed maximum when one is available
+            and not below `low`, else the forecast cycle's when it still
+            carries one. Null when no source carries the value, and on
+            today's row before 18:00 local when only the observation is
+            available and the forecast hours left do not reach the afternoon
+            (a morning maximum is not the day's). It is never estimated from
+            `low`.
         low:
           type: [number, "null"]
           format: double
@@ -7570,9 +7580,11 @@ components:
             morning-of-`date` and night-after-`date` minima where the source
             carries both. The source decides the exact hours (NBM MinT
             periods, or hourly minima over those night hours); it is not
-            bounded by the row's 06:00-06:00 window. Present on the
-            `relative_day: -1` row, whose remaining overnight hours are
-            still ahead.
+            bounded by the row's 06:00-06:00 window. Null when no source
+            carries a minimum for the date (for example past the forecast's
+            minimum-temperature horizon): it is never estimated from `high`.
+            Reported on the `relative_day: -1` row whenever a source carries
+            it, since that row's remaining overnight hours are still ahead.
         conditions:
           type: string
         icon:
@@ -7716,9 +7728,11 @@ components:
             Signed calendar offset from the local current date at request time
             (-1 = yesterday, 0 = today, 1 = tomorrow). Before 6 AM local an
             extra entry with `relative_day: -1` prepends the in-progress
-            overnight row. That row always reports `low` and `night`, but
-            `high` and `day` only when the cycle still carries that date's
-            daytime maximum. Select today by `relative_day == 0` rather than by
+            overnight row. That row always reports `night` and never `day`,
+            its daytime being past; `low` whenever a source carries it (see
+            `low`); `high`, when present, is that date's observed or forecast
+            maximum (see `high`). Select today by `relative_day == 0` rather
+            than by
             position in the array, which shifts by one inside that window.
         active_period:
           type: [string, "null"]
@@ -10621,7 +10635,13 @@ components:
         age_seconds:
           type: integer
           minimum: 0
-          description: Seconds elapsed since `reference_time`.
+          description: |
+            Seconds elapsed since `reference_time`, or since `latest_valid`
+            when there is no `reference_time` (an observed product with no
+            run). An observed daily product (for example
+            `rtma_daily_ag_temps_*`) stamps each day at its start, so its age
+            counts from the start of its latest observed day, not from its
+            last update.
 
     # -----------------------------------------------------------------------
     # Experimental: narrations + guidance
