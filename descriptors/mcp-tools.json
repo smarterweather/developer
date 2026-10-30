@@ -220,7 +220,7 @@
     {
       "name": "describe_data",
       "title": "Describe data",
-      "description": "A dataset's variables (standard names, units, display units, categories, bands), horizon, step, cadence, freshness, cost class and an example_query to read its values. Free; call it after search_data, before query_dataset. Example: {\"dataset_id\": \"nbm_conus\"}.",
+      "description": "A dataset's variables (standard names, units, display units, categories, bands), horizon, step, cadence, freshness, cost class and an example_query to read its values. Free; call it after search_data, before get_data. Example: {\"dataset_id\": \"nbm_conus\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -246,7 +246,7 @@
             "additionalProperties": {}
           },
           "example_query": {
-            "description": "query_dataset arguments for this dataset; add a location.",
+            "description": "get_data arguments for this dataset; add a location.",
             "type": "object",
             "properties": {},
             "additionalProperties": {}
@@ -1608,6 +1608,603 @@
           ]
         ],
         "smarterweather.dev/toolset": "core"
+      }
+    },
+    {
+      "name": "get_data",
+      "title": "Get data",
+      "description": "Values of any catalog grid or snapshot dataset (NBM, HRRR, RRFS, GFS, RTMA, MRMS, air quality, ...) at a place or several, or reduced over a bbox or inline area: series, stats per step bucket, or windows where conditions hold. `select` takes `product:variable` tokens from search_data and describe_data; send one space word and at most one time word (hours, start+end or at; run pins a forecast cycle); omit units for catalog SI. Example: {\"select\": [\"nbm_conus:temperature_2m\"], \"location\": \"Denver, CO\", \"hours\": 24}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "select": {
+            "description": "What to read: `product:variable`, `product:*`, `product` (a feature or text product's properties), a bare standard_name (resolved in the place's domain), or `@observed:<standard_name>` / `@forecast:<standard_name>` (at most 25 items).",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "location": {
+            "description": "Space: one place (place text, ZIP or `lat,lon`). EDR position; `nearest` on a feature product (non-empty).",
+            "type": "string"
+          },
+          "locations": {
+            "description": "Space: up to 25 places; one result element per place (at most 25 items).",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "description": "Non-empty."
+            }
+          },
+          "bbox": {
+            "description": "Space: [west, south, east, north] in degrees. Items on a feature or text product; a grid needs `stats` (exactly 4 items).",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "area": {
+            "description": "Space: a polygon by reference ({product, feature_id | feature_ids | filter}; the product must declare query.area_as_reference) or inline ({geometry}). Over a feature product, the overlay; over a grid, zonal statistics.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "product": {
+                "type": "string",
+                "description": "The referenced product (one that declares query.area_as_reference), or omitted with `geometry`."
+              },
+              "feature_id": {
+                "description": "The referenced product's portable feature id (FIPS geoid, UGC zone, alert id) (non-empty).",
+                "type": "string"
+              },
+              "feature_ids": {
+                "description": "Up to 25 feature ids; one result element per feature (at most 25 items).",
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "description": "Non-empty."
+                }
+              },
+              "filter": {
+                "description": "Selects the referenced product's features; the area is their union (overlaps dissolved), one result element. Per feature: feature_ids, or select the per-feature product over this area.",
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "description": "`<name> <op> <value>`, op one of == != > >= < <= in (`in`: a comma-separated list); values in request units.",
+                  "type": "string"
+                }
+              },
+              "geometry": {
+                "description": "An inline MultiPolygon, <= 10,000 vertices; send a Polygon as a one-member MultiPolygon.",
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "coordinates"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "MultiPolygon",
+                    "description": "Always MultiPolygon."
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "description": "At least 2 items; at most 3 items."
+                        },
+                        "description": "At least 4 items."
+                      }
+                    },
+                    "description": "Polygons of closed [lon, lat] rings, outer ring first."
+                  }
+                }
+              }
+            }
+          },
+          "path": {
+            "description": "Space: a trajectory sampled at each vertex's ETA: geometry or polyline with times, or departure + speed; departures fans out one element per departure.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "geometry": {
+                "description": "The route as a LineString (or send polyline).",
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "coordinates"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "LineString",
+                    "description": "Always LineString."
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "description": "At least 2 items; at most 3 items."
+                    },
+                    "description": "[lon, lat] positions in travel order (at least 2 items)."
+                  }
+                }
+              },
+              "polyline": {
+                "type": "string",
+                "description": "The route as an encoded polyline (precision 5), instead of geometry (non-empty)."
+              },
+              "times": {
+                "type": "array",
+                "items": {
+                  "description": "ISO 8601 date or date-time; a local offset is accepted (at least 10 characters).",
+                  "type": "string"
+                },
+                "description": "The time at each vertex, in vertex order (instead of departure + speed)."
+              },
+              "departure": {
+                "description": "Start time; ETAs follow from speed (at least 10 characters).",
+                "type": "string"
+              },
+              "departures": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "description": "ISO 8601 date or date-time; a local offset is accepted (at least 10 characters).",
+                  "type": "string"
+                },
+                "description": "Up to 3 start times to compare; one result element per departure (at most 3 items)."
+              },
+              "speed": {
+                "description": "Travel speed for departure, in the request units (km/h, or mph with imperial) (> 0).",
+                "type": "number"
+              }
+            }
+          },
+          "hours": {
+            "description": "Time: a rolling window of this many hours (ahead for a forecast, back for an analysis) (>= 1).",
+            "type": "integer"
+          },
+          "start": {
+            "description": "Time: window start (with `end`) (at least 10 characters).",
+            "type": "string"
+          },
+          "end": {
+            "description": "Time: window end (with `start`) (at least 10 characters).",
+            "type": "string"
+          },
+          "at": {
+            "description": "Time: one instant (at least 10 characters).",
+            "type": "string"
+          },
+          "run": {
+            "description": "Time: a model run (reference time), or `latest` (non-empty).",
+            "type": "string"
+          },
+          "step": {
+            "description": "Bucket size for `stats`, an ISO 8601 duration.",
+            "type": "string"
+          },
+          "stats": {
+            "description": "Reducers per `step` bucket, over the whole window, or over the area's cells and features. `cumulative:` prefixes sum and degree_days only (a running total).",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "filter": {
+            "description": "On a feature product: expressions over its filterable properties, applied before aggregation.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "description": "`<name> <op> <value>`, op one of == != > >= < <= in (`in`: a comma-separated list); values in request units.",
+              "type": "string"
+            }
+          },
+          "where": {
+            "description": "Value criteria over the selected variables' standard_names, tested per sample: they mask the series, or are the predicate for windows and count reducers.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "description": "`<name> <op> <value>`, op one of == != > >= < <= in (`in`: a comma-separated list); values in request units.",
+              "type": "string"
+            }
+          },
+          "windows": {
+            "description": "Window search over `where`: consecutive runs of at least min_hours.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "min_hours": {
+                "type": "integer",
+                "description": "Shortest run of consecutive hours meeting every `where` expression (>= 1)."
+              },
+              "light": {
+                "enum": [
+                  "day",
+                  "night",
+                  "any"
+                ],
+                "description": "Restrict windows to daylight (day), darkness (night) or neither (any)."
+              },
+              "max_windows": {
+                "type": "integer",
+                "description": "Most windows to return, earliest first (>= 1)."
+              }
+            }
+          },
+          "units": {
+            "description": "metric or imperial; omitted returns each variable's catalog `units` (SI), the generic door's default.",
+            "enum": [
+              "metric",
+              "imperial"
+            ]
+          },
+          "view": {
+            "description": "concise (default): values and feature properties with a centroid and bbox; detailed adds simplified geometry, provenance and raw encodings.",
+            "enum": [
+              "concise",
+              "detailed"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Frames per series element (default and max 168), or features per element (max 50); next_cursor continues (>= 1)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "next_cursor of the previous page, with the same arguments (non-empty)."
+          }
+        },
+        "required": [
+          "select"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "series",
+                    "stats",
+                    "windows"
+                  ],
+                  "description": "series: values per frame; stats: reducers per step bucket; windows: runs where every `where` held."
+                },
+                "product": {
+                  "type": "string"
+                },
+                "place": {
+                  "description": "The place of a location or locations call; absent over a bbox or area.",
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "lat": {
+                      "type": "number"
+                    },
+                    "lon": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "lat",
+                    "lon"
+                  ],
+                  "additionalProperties": false
+                },
+                "bbox": {
+                  "description": "An area element's bounds, [min_lon, min_lat, max_lon, max_lat].",
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "cells": {
+                  "description": "An area element's grid cells.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "partial",
+                    "unavailable",
+                    "out_of_domain",
+                    "not_public",
+                    "entitlement_required"
+                  ]
+                },
+                "related": {
+                  "description": "With out_of_domain: a product that covers the place.",
+                  "type": "string"
+                },
+                "run": {
+                  "description": "The model run behind every value.",
+                  "type": "string"
+                },
+                "runs": {
+                  "description": "Distinct runs, when values mix more than one.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "data_age_seconds": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "freshness_status": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "fresh",
+                        "stale",
+                        "missing"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "timezone": {
+                  "description": "The place's IANA timezone.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "utc_offset_seconds": {
+                  "description": "The first sample's UTC offset.",
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "step": {
+                  "type": "string"
+                },
+                "times": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "UTC ISO 8601, ascending."
+                },
+                "times_local": {
+                  "description": "The same instants in local time, each with its own offset.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "values": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "description": "Per variable (stats: `<variable>:<reducer>`), aligned with times."
+                },
+                "units": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "windows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "start": {
+                        "type": "string"
+                      },
+                      "end": {
+                        "type": "string"
+                      },
+                      "start_local": {
+                        "type": "string"
+                      },
+                      "end_local": {
+                        "type": "string"
+                      },
+                      "hours": {
+                        "type": "number"
+                      },
+                      "limiting": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "start",
+                      "end",
+                      "hours"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "passed": {
+                  "description": "With windows (or where over an area): the samples that passed.",
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "notes": {
+                  "description": "What the data service says about this element, e.g. why its result is partial.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "provenance": {
+                  "description": "view detailed: store, run and source credits.",
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "kind",
+                "product",
+                "status",
+                "data_age_seconds",
+                "freshness_status",
+                "timezone",
+                "times",
+                "values",
+                "units"
+              ],
+              "additionalProperties": false
+            },
+            "description": "One element per (select, place), tagged by kind."
+          },
+          "units": {
+            "type": "string",
+            "enum": [
+              "si",
+              "metric",
+              "imperial"
+            ]
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "True when a page or an element is partial: next_cursor continues a page; an element's notes say why it is partial."
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data_status": {
+            "description": "Present only when the data service did not answer and a cached copy was served.",
+            "type": "object",
+            "properties": {},
+            "additionalProperties": {}
+          },
+          "attribution": {
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
+            "type": "string"
+          },
+          "_sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "product": {
+                  "type": "string"
+                },
+                "office": {
+                  "type": "string"
+                },
+                "dataset_id": {
+                  "type": "string"
+                },
+                "dataset_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "issued_at": {
+                  "type": "string"
+                },
+                "time_zone": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "provider",
+                "label"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Per-source provenance: what produced these values and when."
+          }
+        },
+        "required": [
+          "results",
+          "units",
+          "truncated",
+          "next_cursor"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "title": "Get data",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "_meta": {
+        "smarterweather.dev/strict": false,
+        "smarterweather.dev/toolset": "catalog"
       }
     },
     {
@@ -5286,312 +5883,6 @@
       },
       "_meta": {
         "smarterweather.dev/toolset": "observed"
-      }
-    },
-    {
-      "name": "query_dataset",
-      "title": "Query dataset",
-      "description": "Raw time series of one dataset's variables at a point, with unit labels: any gridded product (NBM, HRRR, RRFS, GFS, RTMA, MRMS, air quality, ...). Time modes: hours (default 24), time_start+time_end (ISO 8601), or latest=true (newest value). Up to 168 frames: when truncated, send next_cursor as cursor with the same arguments. reference_time pins a model run; each series reports its run (reference_time, or reference_times when runs mix); runs older than about 48 h may be gone. For blended forecasts use get_forecast. Examples: {\"location\": \"Denver, CO\", \"dataset_id\": \"rrfs_surface\", \"variables\": [\"temperature_2m\"], \"hours\": 18} or {\"lat\": 41.4, \"lon\": -92.9, \"dataset_id\": \"rtma_conus\", \"variables\": [\"temperature_2m\"], \"latest\": true}.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "location": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200,
-            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
-          },
-          "lat": {
-            "type": "number",
-            "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
-          },
-          "lon": {
-            "type": "number",
-            "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
-          },
-          "dataset_id": {
-            "description": "Default: the NBM dataset for the location (nbm_conus/nbm_alaska/nbm_hawaii). Discover with search_data.",
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 80
-          },
-          "variables": {
-            "minItems": 1,
-            "maxItems": 20,
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Standard names (e.g. temperature_2m, precipitation); see describe_data."
-          },
-          "hours": {
-            "description": "Hours from now (1-264): ahead, or back on analyses (default: newest 166 frames); from the run start with reference_time.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 264
-          },
-          "time_start": {
-            "description": "ISO 8601 window start (with time_end).",
-            "type": "string"
-          },
-          "time_end": {
-            "description": "ISO 8601 window end (with time_start).",
-            "type": "string"
-          },
-          "latest": {
-            "default": false,
-            "description": "Only the newest value (analyses like RTMA/MRMS).",
-            "type": "boolean"
-          },
-          "reference_time": {
-            "description": "Pin a specific model run (ISO 8601). Default: latest run.",
-            "type": "string"
-          },
-          "units": {
-            "default": "imperial",
-            "type": "string",
-            "enum": [
-              "imperial",
-              "metric"
-            ]
-          },
-          "cursor": {
-            "description": "next_cursor of the previous page.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "variables"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "properties": {
-          "location": {
-            "type": "object",
-            "properties": {
-              "lat": {
-                "type": "number"
-              },
-              "lon": {
-                "type": "number"
-              },
-              "name": {
-                "type": "string"
-              },
-              "matched_via": {
-                "type": "string",
-                "enum": [
-                  "autosuggest",
-                  "fuzzy"
-                ]
-              }
-            },
-            "required": [
-              "lat",
-              "lon"
-            ],
-            "additionalProperties": false
-          },
-          "units": {
-            "type": "string",
-            "enum": [
-              "imperial",
-              "metric"
-            ]
-          },
-          "series": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "dataset_id": {
-                  "type": "string"
-                },
-                "valid_times": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "data": {
-                  "type": "object",
-                  "properties": {},
-                  "additionalProperties": {
-                    "type": "array",
-                    "items": {
-                      "type": [
-                        "number",
-                        "null"
-                      ]
-                    }
-                  }
-                },
-                "unit_labels": {
-                  "type": "object",
-                  "properties": {},
-                  "additionalProperties": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "description": "Unit of each variable in data."
-                },
-                "reference_time": {
-                  "description": "Model run behind every value in this series.",
-                  "type": "string"
-                },
-                "reference_times": {
-                  "description": "Distinct runs, when this series mixes more than one.",
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "status": {
-                  "type": "string",
-                  "description": "ok, unavailable, out_of_domain (see related) or not_public."
-                },
-                "related": {
-                  "description": "With out_of_domain: a dataset that covers the point.",
-                  "type": "string"
-                },
-                "data_age_seconds": {
-                  "anyOf": [
-                    {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "freshness_status": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "enum": [
-                        "fresh",
-                        "stale",
-                        "missing"
-                      ]
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                }
-              },
-              "required": [
-                "dataset_id",
-                "valid_times",
-                "data",
-                "unit_labels",
-                "status",
-                "data_age_seconds",
-                "freshness_status"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "truncated": {
-            "type": "boolean"
-          },
-          "next_cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "data_status": {
-            "description": "Present only when the data service did not answer and a cached copy was served.",
-            "type": "object",
-            "properties": {},
-            "additionalProperties": {}
-          },
-          "attribution": {
-            "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
-            "type": "string"
-          },
-          "_sources": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string"
-                },
-                "provider": {
-                  "type": "string"
-                },
-                "label": {
-                  "type": "string"
-                },
-                "product": {
-                  "type": "string"
-                },
-                "office": {
-                  "type": "string"
-                },
-                "dataset_id": {
-                  "type": "string"
-                },
-                "dataset_ids": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "issued_at": {
-                  "type": "string"
-                },
-                "time_zone": {
-                  "type": "string"
-                },
-                "method": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "type",
-                "provider",
-                "label"
-              ],
-              "additionalProperties": false
-            },
-            "description": "Per-source provenance: what produced these values and when."
-          }
-        },
-        "required": [
-          "location",
-          "units",
-          "series",
-          "truncated",
-          "next_cursor"
-        ],
-        "additionalProperties": false
-      },
-      "annotations": {
-        "title": "Query dataset",
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": true
-      },
-      "_meta": {
-        "smarterweather.dev/required_one_of": [
-          [
-            "location"
-          ],
-          [
-            "lat",
-            "lon"
-          ]
-        ],
-        "smarterweather.dev/toolset": "catalog"
       }
     },
     {
