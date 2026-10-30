@@ -470,7 +470,12 @@ paths:
         matches no US place returns `404` `not-found`, both with
         `next_steps`. Partial-coverage scenarios inside
         coverage are reported via `meta.warnings[]` with a structured
-        code so clients can respond programmatically.
+        code so clients can respond programmatically. When a read from
+        an upstream weather source times out or is unavailable, the
+        affected section's warning is `upstream_timeout` or
+        `upstream_unavailable` and the response is sent
+        `Cache-Control: no-store`, so no cache replays it after the
+        upstream recovers.
 
         ### Response density, sampling and sparse fieldsets
 
@@ -3295,6 +3300,18 @@ paths:
             minimum: -180
             maximum: 180
           example: -87.6298
+        - name: include
+          in: query
+          required: false
+          description: |
+            `boundaries` adds the containing-boundary ids of the exact
+            point (`boundaries`): per reference-layer product (`us_states`,
+            `us_counties`, `nws_zones`, `nws_offices`, ...), the ids an
+            `area` reference takes. Read for the point itself, never a
+            neighbour's cached answer.
+          schema:
+            type: string
+            enum: [boundaries]
       responses:
         '200':
           description: Resolved location metadata.
@@ -3577,6 +3594,16 @@ paths:
             minLength: 5
             maxLength: 5
           example: "60601"
+        - name: include
+          in: query
+          required: false
+          description: |
+            `boundaries` adds each result's containing-boundary ids
+            (`boundaries`), read at its point. A result whose read failed
+            has none, and the response is then `Cache-Control: no-store`.
+          schema:
+            type: string
+            enum: [boundaries]
       responses:
         '200':
           description: |
@@ -3968,7 +3995,9 @@ paths:
       description: |
         Returns runs of forecast hours that satisfy the caller's
         criteria, the REST twin of MCP `find_best_window`. The scan is
-        deterministic. An optional `activity` string may attach a
+        deterministic: the criteria are `where` expressions on the window
+        search `GET /v1/series` serves (`windows`), over the location's
+        forecast that serves every variable the criteria test. An optional `activity` string may attach a
         favorability `rating` and `limiting_factor` to one window when
         activity rating is enabled for the service. When rating is off,
         or the scorer does not return a usable verdict, `rating` and
@@ -4341,11 +4370,11 @@ paths:
     get:
       operationId: getSeries
       x-stability: experimental
-      summary: Time series of catalog grid and snapshot products at a point.
+      summary: Time series, statistics and windows of catalog grid and snapshot products at a point or over an area.
       description: |
         Returns the time series of one or more data catalog products at one
-        location: the public, catalog-governed door to stored model and
-        analysis data. Any `grid` or `snapshot` product that
+        location, or their statistics over an area: the public,
+        catalog-governed door to stored model and analysis data. Any `grid` or `snapshot` product that
         `GET /v1/catalog` lists qualifies, for example `hrrr_surface`,
         `nbm_conus`, `gfs_surface`, `rtma_conus`, `mrms_qpe_01h_pass2_conus`
         or `astro`. Variables are named by their catalog `standard_name`.
@@ -4357,16 +4386,35 @@ paths:
         ### Selection
 
         `product` with `var` (repeatable; omit `var` for every variable of
-        the product), or `select=product:var` (repeatable or comma-joined,
-        at most 25) to read several products. An unknown product or
-        variable is a `404`. A catalog product that is public but not
-        served by this route (an MCP-only product, or a REST product that
-        is not a grid or snapshot) is a `404` when it is the only
-        selection, and a `not_public` element beside a servable one.
+        the product), or `select` tokens (repeatable or comma-joined, at
+        most 25) to read several products:
+
+        - `product:variable`, or `product:*` for every variable;
+        - a bare `standard_name`, resolved in each location's domain to
+          the catalog's product of record for it (`role.default_for`),
+          else to the one public forecast serving it (the domain's own
+          before a global one), else to the one public product serving
+          it;
+        - `@observed:<standard_name>`, the domain's observed product of
+          record, and `@forecast:<standard_name>`, as a bare name but only
+          ever a forecast. Over one window the two stitch at now: the
+          observed element ends at now and the forecast element starts
+          there.
+
+        Each element names the product it read. Tokens that resolve to one
+        product share its element. In a batch a bare token can resolve to
+        a different product in each location's domain; each location then
+        gets the elements of its own domain. An unknown product, variable
+        or standard name is a `404` (with `did_you_mean` and
+        `suggested_call` when one is close). A catalog product that is
+        public but not served by this route (an MCP-only product, or a REST
+        product that is not a grid or snapshot) is a `404` when it is the
+        only selection, and a `not_public` element beside a servable one.
 
         ### Time
 
-        At most one time word, and it is optional:
+        At most one time word (`hours`, `start` and `end`, or `at`), and
+        it is optional:
 
         - `hours` (1-384) takes its direction from the product's catalog
           `product_type`: forward from now for a `forecast`, backward from
@@ -4382,17 +4430,22 @@ paths:
         - `start` and `end` (RFC 3339, at most 16 days apart), applied
           exactly as given: a daily row stamped at 00:00Z is outside a
           window that starts later that day.
-        - Neither: an analysis returns its latest frame and a forecast the
+        - `at` (RFC 3339, or a date for its UTC midnight): the one frame in
+          effect at that instant, the latest at or before it within one
+          frame step. Not with `run`.
+        - None: an analysis returns its latest frame and a forecast the
           next 24 h, rounded out as above (24 h from the run's
           initialization time with `run`).
 
         A product with no `product_type`, or a `climatology` such as
         `climate_normals_conus`, requires `start` and `end`. `run` (RFC
-        3339) pins a forecast model cycle and composes with either time
-        word; it is a `400` on a product that is not a `forecast`.
-        `step`, `stats`, `view`, `fields` and `format` are reserved and
-        return `400` for now; `at` is not a word of this route (use
-        `GET /v1/point` for the latest value).
+        3339) pins a forecast model cycle and composes with `hours` or
+        `start` and `end`; it is a `400` on a product that is not a
+        `forecast`. With `stats` or `windows`, `run` reduces the whole run
+        and takes no other time word. A window entirely past a forecast's
+        `horizon`, or before an analysis's `history`, is a `400` with
+        `time_hint`. `fields` and `format` are reserved and return `400`
+        for now.
 
         `astro` is an `analysis` whose rows run through about 14 days
         ahead, so with no time word it returns the newest row and `hours`
@@ -4405,6 +4458,96 @@ paths:
         a window no run reaches is `unavailable`. Observed radar history
         comes from `mrms_reflectivity_conus` and the MRMS QPE products
         such as `mrms_qpe_01h_pass2_conus`.
+
+        ### Operators
+
+        Each product declares the words it takes in its catalog `query`
+        block (`GET /v1/catalog/{product_id}`); a word it does not declare
+        is a `400` with `unsupported_word` and the block's values in
+        `valid_values`.
+
+        - `stats`: reducers, repeatable or comma-joined: `sum`, `max`,
+          `min`, `mean`, `count`, `count_above:<v>`, `count_below:<v>`,
+          `percentile:<p>`, `degree_days:<base>[,<upper>][,simple|modified]`,
+          and the `cumulative:` prefix on `sum` and `degree_days` (a
+          running total over the buckets). Over the whole window, or per
+          `step` bucket. `degree_days` sums per local day (`step` `P1D` or
+          none) from the day's max and min, or from a daily max and min
+          pair of the product: selecting one side reads its partner too,
+          and a daily extreme without one is a `400`. `sum` and `mean` over a total since
+          the model run started are a `400` naming the product's period
+          totals and the domain's accumulation products.
+        - `step`: `PT15M`, `PT1H`, `PT3H`, `PT6H` or `P1D`, never finer than
+          the product's frames; needs `stats`. `P1D` buckets are the
+          location's local days.
+        - `where`: `<standard_name> <op> <value>`, op one of
+          `== != > >= < <= in` (`in` takes a comma list), repeatable. Each
+          names a variable every selected product selects (a `400`
+          `operator_conflict` otherwise: select it from each product or
+          split the call) and masks the samples that fail it (null where
+          masked); a null value passes. It is the predicate of
+          `windows` and the count reducers.
+        - `windows[min_hours]`, `windows[light]` (`day`, `night` or
+          `any`) and `windows[max_windows]` (OpenAPI `deepObject`): spans of
+          at least `min_hours` hours (a frame lasts until the next one) of
+          contiguous samples that pass every `where`
+          expression (every sample with none) and the light filter, read
+          from the domain's sunrise and sunset product of record.
+        - `min_lon`, `min_lat`, `max_lon` and `max_lat` (all four, in place
+          of `lat` and `lon`): statistics over every grid cell whose center
+          is in the box and every sample of the window; needs `stats`.
+          Every corner (every vertex of an inline area) must lie in the
+          area center's US domain (CONUS, Alaska or Hawaii), else a `400`
+          `outside_coverage`. At
+          most `max_cells` cells per product (the catalog `query.max_cells`,
+          100,000): a larger box is a `400` `area_too_large` naming coarser
+          products. An inline polygon is sent in the batch body.
+        - `area[product]` with one of `area[feature_id]`,
+          `area[feature_ids]` (at most 25, repeated or comma-joined) or
+          `area[filter]` (repeatable), in place of `lat` and `lon`: an area
+          by reference to a feature product whose catalog
+          `query.area_as_reference` is true (`us_counties`, `us_states`,
+          `nws_zones`, `nws_alerts`, ...), by its portable feature id (the
+          referenced product's `table_store.id_property`); needs `stats`.
+          The referenced geometry, simplified to the finest selected grid's
+          resolution, is read as an inline polygon: one area for
+          `feature_id`, one per id (each its own elements) for
+          `feature_ids`, and the union of the matched features (overlaps
+          dissolved) for a filter. Each element names its `area`. The
+          features are the ones in effect now (at `at` when the referenced
+          product takes `at`); an id with no feature, or a filter matching
+          none, is a `404` `area_not_found`. Elements (products x areas)
+          are at most 100. A product that does not reference is a `400`
+          `not_area_reference` naming those that do. A referenced area too
+          detailed for 10,000 vertices is fetched again more simplified
+          (up to 0.1 degrees); past that it is a `400` `area_too_large`
+          naming the area, whose `suggested_call` reads its bbox (or, for
+          a filter union of at most 25 features, those features one by one
+          as `area[feature_ids]`); among `area[feature_ids]`, only the
+          oversized ids are fetched coarser, and one still too detailed is
+          left out of the `suggested_call` (the others kept) and named, with
+          its bbox, in `hint`. A bbox beside an area is a `400`
+          `operator_conflict` whose `suggested_call` keeps the area. A
+          referenced product behind a per-key flag the key does not have
+          answers `entitlement_required` elements. Areas read in parallel;
+          a failure is answered for the lowest failing area.
+
+        Thresholds (`where` values, `count_above`, `count_below` and
+        `degree_days` arguments) are in the request `units`. `stats` and
+        `windows` reduce the whole window, read in 16-day parts split at
+        a local midnight and merged; a `percentile` without `step` over a
+        longer window covers its first 16 days, with a note. They are
+        computed in the location's timezone: when it cannot be resolved
+        the request is a retryable `503` (`timezone_unavailable`). A light
+        filter where sunrise and sunset are unavailable is a `400`
+        `daylight_unavailable` suggesting `windows[light]=any`. An
+        `@observed:` or `@forecast:` token whose window lies wholly on the
+        other side of now is a `400` with `time_hint`. With `stats`
+        or `windows` an element carries `stats` and `windows` and no
+        frames; `where` alone masks the series, which still pages. Results
+        are in the request units: a `degree_days` or a `sum` of a
+        temperature is a difference (`delta_C`, `delta_F`, `K`) and the
+        counts are labelled `count`.
 
         ### Units and raw values
 
@@ -4439,10 +4582,18 @@ paths:
 
         ### Envelope
 
-        `series[]` holds one element per (product, location), in request
-        order and column-oriented: `times[]` (RFC 3339 UTC), `values` per
-        variable aligned with `times[]`, and `run` when every frame shares
-        one model run, else `runs[]` aligned with `times[]`. Each element
+        `series[]` holds one element per (product, location), or per
+        product over an area (`lat` and `lon` its center: the box's center,
+        or a point inside a polygon; with `bbox`, `cells` and, for an area
+        by reference, `area`), in request order and column-oriented: `times[]` (RFC 3339
+        UTC), `times_local[]` (the same instants with the location's UTC
+        offset at each, so a DST change shows), `values` per variable
+        aligned with `times[]`, and `run` when every frame shares one model
+        run, else `runs[]` aligned with `times[]`. `timezone` (IANA) and
+        `utc_offset_seconds` (at the element's first time) describe the
+        local times; both are null, and `times_local` empty, when the
+        timezone cannot be resolved. `view=detailed` adds each element's
+        `provenance` (source credits and raw encodings). Each element
         has a `status`: `ok`; `unavailable` for an empty window;
         `out_of_domain` outside the product's catalog `coverage[]` or
         outside the 50 US states and DC (`global` products included), with
@@ -4476,7 +4627,9 @@ paths:
         ### Caching
 
         `Cache-Control: max-age=N, stale-while-revalidate=N` with N the
-        smallest selected product cadence clamped to 60-3600 s, `public`
+        smallest selected product cadence clamped to 60-3600 s (with an
+        area by reference, over every area's own products, and at most the
+        referenced product's: 60 s for alerts), `public`
         for first-party keys and `private` for partner keys. An element's
         `meta.timezone` may be null when the timezone lookup is
         unavailable or slow; the response is then sent with
@@ -4484,11 +4637,21 @@ paths:
         temporarily degraded or fallback lookup, or when the upstream read
         returned only part of an element's frames.
 
+        ### Errors
+
+        A data-level `400` or `404` is an RFC 9457 problem with a `reason`
+        and the members that correct it: `valid_values`, `did_you_mean`,
+        `unsupported_word`, `unknown_property`, `time_hint`, the counts of
+        `area_too_large` and `too_many_elements`, and `suggested_call`, the
+        corrected request on this route.
+
         ### Auth and cost
 
-        Standard sw-api Bearer auth and rate limits apply. Cost class
-        `data`, weight 1 per request: products, variables, hours and
-        `limit` never change it.
+        Standard sw-api Bearer auth and rate limits apply. Weight 1
+        (`data`) per element, or 2 (`compute`) per element when the request
+        has an operator word (`stats`, `where`, `windows`, or an area,
+        inline or by reference);
+        variables, hours, `step`, `view` and `limit` never change it.
       tags: [Products]
       security:
         - bearerAuth: []
@@ -4498,21 +4661,22 @@ paths:
         - $ref: '#/components/parameters/SeriesSelectQuery'
         - name: lat
           in: query
-          required: true
+          required: false
           description: |
-            Latitude. A finite value outside [-90, 90] is an `out_of_domain`
-            element; a non-numeric or non-finite value is a `400`.
+            Latitude, required unless the request is a bbox. A finite value
+            outside [-90, 90] is an `out_of_domain` element; a non-numeric
+            or non-finite value is a `400`.
           schema:
             type: number
             format: double
           example: 41.88
         - name: lon
           in: query
-          required: true
+          required: false
           description: |
-            Longitude. A finite value outside [-180, 180] is an
-            `out_of_domain` element; a non-numeric or non-finite value is a
-            `400`.
+            Longitude, required unless the request is a bbox. A finite value
+            outside [-180, 180] is an `out_of_domain` element; a
+            non-numeric or non-finite value is a `400`.
           schema:
             type: number
             format: double
@@ -4521,7 +4685,18 @@ paths:
         - $ref: '#/components/parameters/SeriesHoursQuery'
         - $ref: '#/components/parameters/SeriesStartQuery'
         - $ref: '#/components/parameters/SeriesEndQuery'
+        - $ref: '#/components/parameters/SeriesAtQuery'
         - $ref: '#/components/parameters/SeriesRunQuery'
+        - $ref: '#/components/parameters/SeriesStepQuery'
+        - $ref: '#/components/parameters/SeriesStatsQuery'
+        - $ref: '#/components/parameters/SeriesWhereQuery'
+        - $ref: '#/components/parameters/SeriesWindowsQuery'
+        - $ref: '#/components/parameters/SeriesMinLonQuery'
+        - $ref: '#/components/parameters/SeriesMinLatQuery'
+        - $ref: '#/components/parameters/SeriesMaxLonQuery'
+        - $ref: '#/components/parameters/SeriesMaxLatQuery'
+        - $ref: '#/components/parameters/AreaReferenceQuery'
+        - $ref: '#/components/parameters/SeriesViewQuery'
         - $ref: '#/components/parameters/SeriesLimitQuery'
         - $ref: '#/components/parameters/SeriesCursorQuery'
       responses:
@@ -4573,7 +4748,13 @@ paths:
       description: |
         Multi-location form of `GET /v1/series`: the same grammar as JSON
         fields, with `locations[]` of `{lat, lon, label?}` (at most 25) in
-        place of `lat` and `lon`. Products x locations is at most 100.
+        place of `lat` and `lon`, or an area in place of both: the bbox
+        (`min_lon`, `min_lat`, `max_lon`, `max_lat`) or `area.geometry`, an
+        inline GeoJSON MultiPolygon (RFC 7946, WGS84; a Polygon is sent as
+        a one-member MultiPolygon) of at most 10,000 vertices, or a `path`
+        (`SeriesPath`: a trajectory sampled at each ETA, one element per
+        (select, departure), each with its `path` echo). Elements
+        (products x locations, or products x departures) are at most 100.
         Elements come back location-major in request order, each echoing
         its location's `label`. Every rule of `GET /v1/series` applies;
         `points`, top-level `lat`/`lon` and `at` are not words of this
@@ -4591,10 +4772,10 @@ paths:
 
         ### Auth and cost
 
-        Standard sw-api Bearer auth and rate limits apply. Cost class
-        `data`, weight 1 per location (`len(locations)`), whatever each
-        element's status; products, variables, hours and `limit` never
-        change it.
+        Standard sw-api Bearer auth and rate limits apply. Weight 1
+        (`data`) per element, or 2 (`compute`) per element with an operator
+        word (`path` is one), whatever each element's status; variables,
+        hours, `step`, `view` and `limit` never change it.
       tags: [Products]
       security:
         - bearerAuth: []
@@ -4645,8 +4826,407 @@ paths:
           $ref: '#/components/responses/Problem403'
         '404':
           $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
         '413':
           $ref: '#/components/responses/Problem413'
+        '422':
+          $ref: '#/components/responses/Problem422'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/features/{product_id}:
+    get:
+      operationId: getFeatures
+      x-stability: experimental
+      summary: Features of a catalog feature product at a point, in a box, over an area, or as a list.
+      description: |
+        The generic door of the catalog's `feature` and `geojson`
+        products: reference layers such as
+        `us_counties`, `census_block_groups` or `nws_zones`, active alerts
+        (`nws_alerts`), outlooks, storm reports and stations. Any product
+        `GET /v1/catalog` lists with `kind` `feature` or `geojson`
+        qualifies; the product's catalog `query` block lists the shapes,
+        time words, reducers and filterable properties it takes, and a word
+        it does not list is a `400` with `unsupported_word` and the block's
+        values in `valid_values`. The named feature routes
+        (`/v1/climate-reports`, `/v1/storm-reports`, `/v1/record-events`,
+        `/v1/nexrad/features`, `/v1/storm-tracks`, `/v1/tropical*`,
+        `/v1/alerts*`) stay as they are.
+
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment while the grammar settles.
+
+        ### Space
+
+        One of these, or none:
+
+        - `lat` and `lon`: the features containing the point (`position`),
+          or, on a product whose `query.shapes` lists `nearest`, the
+          nearest features with `distance_m`. Coverage is the 50 US states
+          and DC: a point outside them is a `404` `outside-coverage`, as is
+          a box or inline area that misses every US domain.
+        - `min_lon`, `min_lat`, `max_lon`, `max_lat`: the features
+          intersecting the box.
+        - `area[product]` with one of `area[feature_id]`,
+          `area[feature_ids]` (at most 25, repeated or comma-joined) or
+          `area[filter]` (repeatable): an area by reference to a product
+          whose catalog `query.area_as_reference` is true, by its portable
+          feature id (FIPS `geoid`, state abbreviation, ZCTA, UGC zone,
+          alert id; the referenced product's `table_store.id_property`).
+          A filter reference is one area, the union of the matched
+          features (overlaps dissolved). The answer is the overlay: every
+          feature of this product that intersects the area, each with its
+          `apportioned` share of every summed property under the
+          property's declared `aggregate` rule (`area_weighted`: value x
+          `overlap_fraction`; `centroid_in`: the value when its
+          representative point is inside; `precomputed`: the value), so the
+          shares sum to `stats`. `area[feature_ids]` answers one element
+          per id. An inline polygon is sent to
+          `POST /v1/features/{product_id}/query`.
+        - None: every feature (`items`), paged.
+
+        ### Time
+
+        At most one time word, on a product whose `query.time_words` lists
+        it: `hours` (ahead for a forward product, back for a backward one),
+        `start` and `end` (RFC 3339; overlap with each feature's time), or
+        `at` (RFC 3339, or a date: the features in effect at that instant;
+        `nws_alerts` reads its version history, as `GET /v1/alerts?at=`
+        does). With none, the features in effect now. A time-free layer
+        takes none.
+
+        A parameter this route does not take (a field, on the POST twin)
+        is a `400` `unsupported_word` (with `did_you_mean` for a near miss
+        such as `filters`), never ignored; `lat` and `lon` go together; an
+        empty entry in `area[feature_ids]` is a `400` whose
+        `suggested_call` drops it.
+
+        ### Filter and stats
+
+        - `filter`: `<property> <op> <value>`, repeatable (all must
+          pass), over the product's `properties_schema` properties marked
+          `filterable`, with one of their `filter_ops` (`==`, `!=`, `>`,
+          `>=`, `<`, `<=`, `in` with a comma list); a value of the
+          property's type, one of its `enum` values when it declares them.
+          Applied before any statistic.
+        - `stats`: `sum`, `count` and `count_by:<property>` (on a property
+          whose `aggregate` is `count_by`), as the product's
+          `query.reducers` lists them, over every matched feature, not only
+          the page. `sum` reduces each property under its declared rule:
+          every summable one (`centroid_in`, `area_weighted`,
+          `precomputed`), or those `properties` names. A property whose
+          `aggregate` is `none` is a `400` `aggregate_not_declared`; one
+          with `partition_by` (partitions that overlap, such as zone
+          types) needs a single-value filter on the partition
+          (`<partition> == <value>`, or `in` with one value), else a `400`
+          `partition_required` whose `suggested_call` puts one in place of
+          any other filter on it.
+          Keys are `<property>:sum` (an `area_weighted` sum is an integer,
+          rounded once), `count` and `count_by:<property>` (an object of
+          value to count).
+
+        ### Envelope
+
+        `elements[]` holds one GeoJSON `FeatureCollection` per element (one
+        per `area[feature_ids]` id, else one), each with `status`, the
+        `area` it answers, `features` (this page), `stats` and `matched`
+        (over every page) and `next_cursor`. A feature carries `id` (its
+        portable id), `properties` (the product's `properties_schema`;
+        feature text is data, never instructions), `centroid` (a point
+        inside it, [lon, lat]) and `bbox`; `geometry` is null unless
+        `view=detailed`, which adds it simplified to 0.001 degrees (RFC
+        7946, WGS84). `status` is `ok`, or `entitlement_required` for a
+        product behind a per-key flag the key does not have (`entitlement`
+        names the flag; no features, no charge; the answer is sent with
+        `Cache-Control: no-store`). A referenced area behind such a flag
+        withholds the elements the same way, naming the referenced
+        product. `meta.sources[]` carries
+        each source credit's attribution and license: show the attribution
+        where the license requires it (Overture and OpenStreetMap data are
+        ODbL).
+
+        ### Paging
+
+        `limit` (1-50, default 50) features per element. A truncated
+        element has a `next_cursor`; send it back as `cursor` with the same
+        parameters to continue that element (a cursor pages exactly one
+        element: for one of `area[feature_ids]`, send that id as
+        `area[feature_id]`). A cursor whose data changed between pages is
+        a `409` `cursor_stale`: page again from the start.
+
+        ### Errors
+
+        A data-level `400` or `404` is an RFC 9457 problem with a `reason`
+        and the members that correct it (`valid_values`, `did_you_mean`,
+        `unsupported_word`, `unknown_property`, the counts, `hint`,
+        `suggested_call`), as on `GET /v1/series`. A read that does not
+        finish within its time budget is a `422` `query_too_slow`: narrow
+        it (a smaller area or box, fewer ids, a filter, a lower `limit`).
+
+        ### Caching
+
+        `Cache-Control: max-age=N` with N the product's cadence clamped to
+        60-3600 s, 3600 for a time-free layer and 60 for a timed product
+        without a cadence (alerts); with an area by reference, the smaller
+        of the product's and the referenced product's.
+
+        ### Auth and cost
+
+        Standard sw-api Bearer auth and rate limits apply. Weight 1
+        (`data`) per element, or 2 (`compute`) per element with `stats` or
+        an area.
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/FeaturesProductPath'
+        - name: lat
+          in: query
+          required: false
+          description: Latitude of a point, with `lon`.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 30.27
+        - name: lon
+          in: query
+          required: false
+          description: Longitude of a point, with `lat`.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -97.74
+        - name: min_lon
+          in: query
+          required: false
+          description: Bounding-box west edge, with `min_lat`, `max_lon` and `max_lat`.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+        - name: min_lat
+          in: query
+          required: false
+          description: Bounding-box south edge.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+        - name: max_lon
+          in: query
+          required: false
+          description: Bounding-box east edge; greater than `min_lon`.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+        - name: max_lat
+          in: query
+          required: false
+          description: Bounding-box north edge; greater than `min_lat`.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+        - $ref: '#/components/parameters/AreaReferenceQuery'
+        - name: hours
+          in: query
+          required: false
+          description: A rolling window of this many hours (1-384), ahead for a forward product, back for a backward one.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 384
+        - name: start
+          in: query
+          required: false
+          description: Window start (RFC 3339), with `end`.
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          required: false
+          description: Window end (RFC 3339), after `start`.
+          schema:
+            type: string
+            format: date-time
+        - name: at
+          in: query
+          required: false
+          description: An instant (RFC 3339, or a date for its UTC midnight).
+          schema:
+            type: string
+        - $ref: '#/components/parameters/FeaturesFilterQuery'
+        - $ref: '#/components/parameters/FeaturesStatsQuery'
+        - $ref: '#/components/parameters/FeaturesPropertiesQuery'
+        - name: view
+          in: query
+          required: false
+          description: '`concise` (default: no geometry) or `detailed` (geometry simplified to 0.001 degrees).'
+          schema:
+            type: string
+            enum: [concise, detailed]
+            default: concise
+        - name: limit
+          in: query
+          required: false
+          description: Features per element (default 50, max 50).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: An element's opaque `next_cursor`, sent with the same parameters.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 8192
+      responses:
+        '200':
+          description: One FeatureCollection per element.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeaturesResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '422':
+          $ref: '#/components/responses/Problem422'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/features/{product_id}/query:
+    post:
+      operationId: postFeaturesQuery
+      x-stability: experimental
+      summary: Features of a catalog feature product over an inline polygon (or any GET word as JSON).
+      description: |
+        The POST twin of `GET /v1/features/{product_id}`: the same words as
+        JSON fields, plus an inline area, `area.geometry`, a GeoJSON
+        MultiPolygon (RFC 7946, WGS84; a Polygon is sent as a one-member
+        MultiPolygon; positions `[lon, lat]` or `[lon, lat, alt]`) of at
+        most 10,000 vertices, which does not fit a URL. `area` takes a
+        reference or a geometry, not both. Every rule of the GET route
+        applies; an unknown field is a `400`.
+
+        **Experimental** (`x-stability: experimental`), as the GET route.
+
+        ### Caching
+
+        `Cache-Control: private, no-store`.
+
+        ### Auth and cost
+
+        As the GET route: weight 1 (`data`) per element, 2 (`compute`) per
+        element with `stats` or an area.
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/FeaturesProductPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeaturesQueryRequest'
+            examples:
+              homesInAPolygon:
+                value:
+                  area:
+                    geometry:
+                      type: MultiPolygon
+                      coordinates: [[[[-97.55, 35.3], [-97.4, 35.3], [-97.4, 35.4], [-97.55, 35.4], [-97.55, 35.3]]]]
+                  stats: [sum]
+                  properties: [housing_units, population]
+      responses:
+        '200':
+          description: One FeatureCollection per element.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeaturesResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '413':
+          $ref: '#/components/responses/Problem413'
+        '422':
+          $ref: '#/components/responses/Problem422'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -5143,10 +5723,11 @@ components:
       in: query
       required: false
       description: |
-        One or more `product:var` selectors (variable `standard_name`, or
-        the stored `name` as an alias; `values` are keyed by
-        `standard_name`), repeated or comma-joined, at most 25 in all. Not
-        with `product` or `var`.
+        One or more select tokens, repeated or comma-joined, at most 25 in
+        all: `product:var` (variable `standard_name`, or the stored `name`
+        as an alias; `values` are keyed by `standard_name`), `product:*`,
+        a bare `standard_name`, or `@observed:` / `@forecast:` with a
+        `standard_name`. Not with `product` or `var`.
       style: form
       explode: true
       schema:
@@ -5213,6 +5794,135 @@ components:
         type: string
         format: date-time
       example: '2026-10-14T12:00:00Z'
+    SeriesAtQuery:
+      name: at
+      in: query
+      required: false
+      description: One instant (RFC 3339, or a date for its UTC midnight); the frame in effect then. Not with `hours`, `start`/`end` or `run`.
+      schema:
+        type: string
+      example: '2026-10-14T15:00:00Z'
+    SeriesStepQuery:
+      name: step
+      in: query
+      required: false
+      description: Bucket size for `stats`; `P1D` is the location's local day. Never finer than the product's frames.
+      schema:
+        type: string
+        enum: [PT15M, PT1H, PT3H, PT6H, P1D]
+      example: P1D
+    SeriesStatsQuery:
+      name: stats
+      in: query
+      required: false
+      description: |
+        Reducers, repeated or comma-joined (a `degree_days` token keeps its
+        comma arguments): `sum`, `max`, `min`, `mean`, `count`,
+        `count_above:<v>`, `count_below:<v>`, `percentile:<p>`,
+        `degree_days:<base>[,<upper>][,simple|modified]`, and
+        `cumulative:` before `sum` or `degree_days`. Thresholds in the
+        request units.
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 32
+        items:
+          type: string
+          minLength: 3
+          maxLength: 64
+      example: [max, min, 'degree_days:50,86,modified']
+    SeriesWhereQuery:
+      name: where
+      in: query
+      required: false
+      description: |
+        `<standard_name> <op> <value>` over a selected variable, op one of
+        `== != > >= < <= in` (`in` takes a comma list), value in the
+        request units; repeatable, every expression must pass.
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 25
+        items:
+          type: string
+          minLength: 3
+          maxLength: 256
+      example: ['wind_speed_10m <= 15']
+    SeriesWindowsQuery:
+      name: windows
+      in: query
+      required: false
+      description: |
+        Window search over `where`: `windows[min_hours]` (required, at
+        least 1), `windows[light]` (`day`, `night` or `any`) and
+        `windows[max_windows]`.
+      style: deepObject
+      explode: true
+      schema:
+        type: object
+        additionalProperties: false
+        properties:
+          min_hours:
+            type: integer
+            minimum: 1
+          light:
+            type: string
+            enum: [day, night, any]
+          max_windows:
+            type: integer
+            minimum: 1
+      example: {min_hours: 3, light: day}
+    SeriesMinLonQuery:
+      name: min_lon
+      in: query
+      required: false
+      description: Bounding-box west edge, with `min_lat`, `max_lon` and `max_lat` in place of `lat` and `lon`; needs `stats`.
+      schema:
+        type: number
+        format: double
+        minimum: -180
+        maximum: 180
+    SeriesMinLatQuery:
+      name: min_lat
+      in: query
+      required: false
+      description: Bounding-box south edge.
+      schema:
+        type: number
+        format: double
+        minimum: -90
+        maximum: 90
+    SeriesMaxLonQuery:
+      name: max_lon
+      in: query
+      required: false
+      description: Bounding-box east edge; greater than `min_lon`.
+      schema:
+        type: number
+        format: double
+        minimum: -180
+        maximum: 180
+    SeriesMaxLatQuery:
+      name: max_lat
+      in: query
+      required: false
+      description: Bounding-box north edge; greater than `min_lat`.
+      schema:
+        type: number
+        format: double
+        minimum: -90
+        maximum: 90
+    SeriesViewQuery:
+      name: view
+      in: query
+      required: false
+      description: '`concise` (default) or `detailed`, which adds each element''s `provenance`.'
+      schema:
+        type: string
+        enum: [concise, detailed]
+        default: concise
     SeriesLimitQuery:
       name: limit
       in: query
@@ -5233,6 +5943,93 @@ components:
         type: string
         minLength: 1
         maxLength: 8192
+    FeaturesProductPath:
+      name: product_id
+      in: path
+      required: true
+      description: A catalog product id whose `kind` is `feature` or `geojson` (`GET /v1/catalog`).
+      schema:
+        type: string
+        pattern: '^[a-z0-9_]+$'
+        minLength: 1
+        maxLength: 128
+      example: us_counties
+    AreaReferenceQuery:
+      name: area
+      in: query
+      required: false
+      description: |
+        An area by reference: `area[product]` (a product whose catalog
+        `query.area_as_reference` is true) with one of `area[feature_id]`,
+        `area[feature_ids]` (at most 25, repeated or comma-joined; one
+        element per id) or `area[filter]` (repeatable; one area, the union
+        of the matched features). Ids are the referenced product's
+        portable feature ids (its `table_store.id_property`).
+      style: deepObject
+      explode: true
+      schema:
+        type: object
+        additionalProperties: false
+        properties:
+          product:
+            type: string
+          feature_id:
+            type: string
+          feature_ids:
+            type: string
+          filter:
+            type: string
+      example: {product: us_counties, feature_id: '48453'}
+    FeaturesFilterQuery:
+      name: filter
+      in: query
+      required: false
+      description: |
+        `<property> <op> <value>` over a filterable property of the
+        product (`properties_schema`), op one of its `filter_ops` (`==`,
+        `!=`, `>`, `>=`, `<`, `<=`, `in` with a comma list); repeatable,
+        every expression must pass.
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 16
+        items:
+          type: string
+          minLength: 3
+          maxLength: 512
+      example: ['state_abbr == TX']
+    FeaturesStatsQuery:
+      name: stats
+      in: query
+      required: false
+      description: '`sum`, `count` and `count_by:<property>`, repeated or comma-joined, as the product''s `query.reducers` lists them.'
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 16
+        items:
+          type: string
+          minLength: 3
+          maxLength: 128
+      example: [sum, count]
+    FeaturesPropertiesQuery:
+      name: properties
+      in: query
+      required: false
+      description: The properties `sum` reduces, repeated or comma-joined; every summable property when omitted. Needs `stats=sum`.
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 32
+        items:
+          type: string
+          pattern: '^[a-z0-9_]+$'
+          minLength: 1
+          maxLength: 128
+      example: [population]
     LatQuery:
       name: lat
       in: query
@@ -5856,6 +6653,87 @@ components:
           description: A URI reference identifying the specific occurrence.
         next_steps:
           $ref: '#/components/schemas/ProblemNextSteps'
+        reason:
+          type: string
+          description: |
+            On a data-level `400` or `404` (`GET /v1/series`,
+            `GET /v1/features/{product_id}`), the corrective error:
+            `unknown_product`, `unknown_variable`, `unknown_standard_name`,
+            `ambiguous_select`, `unknown_property`, `invalid_operator`,
+            `operator_conflict`, `unsupported_word`, `area_too_large`,
+            `too_many_elements`, `outside_time_range`, `outside_coverage`,
+            `daylight_unavailable`, `aggregate_not_declared` (a statistic
+            over a property whose declared `aggregate` does not allow it),
+            `partition_required` (a sum over a partitioned property without
+            its single-value filter), `not_area_reference`, `area_not_found`
+            or `invalid_cursor`. On a `409`, `cursor_stale`; on a `422`,
+            `query_too_slow`. On a `503`, `timezone_unavailable`: the
+            location's timezone, which `stats` and `windows` are computed
+            in, could not be resolved.
+        valid_values:
+          type: array
+          description: The values the rejected word or name may take.
+          items:
+            type: string
+        did_you_mean:
+          type: string
+          description: The closest valid value.
+        unsupported_word:
+          type: string
+          description: The word the product's catalog `query` block does not list.
+        unknown_property:
+          type: string
+          description: The name a `where` expression gave that is no selected variable, or the feature property a `filter`, `properties` or statistic named that the product does not declare for it (with `partition_required`, the partition property).
+        time_hint:
+          type: object
+          description: The time range the product answers.
+          properties:
+            horizon:
+              type: string
+            history:
+              type: string
+            earliest_valid:
+              type: string
+              format: date-time
+            latest_valid:
+              type: string
+              format: date-time
+        cells:
+          type: integer
+          description: With `area_too_large`, the estimated cells in the area.
+        cells_at_least:
+          type: integer
+          description: With `area_too_large`, a lower bound on the cells in the area (`max_cells` + 1, where counting stops).
+        max_cells:
+          type: integer
+        max_vertices:
+          type: integer
+        elements:
+          type: integer
+        max_elements:
+          type: integer
+        hint:
+          type: string
+        suggested_call:
+          type: object
+          description: The corrected request on the same route; a GET also as its `query` parameters (one value as a string, several as an array).
+          required: [method, url]
+          properties:
+            method:
+              type: string
+              enum: [GET, POST]
+            url:
+              type: string
+            query:
+              type: object
+              additionalProperties:
+                oneOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: string
+            body:
+              type: object
 
     ProblemTrialEnded:
       allOf:
@@ -9288,6 +10166,27 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/CatalogVariable'
+            examples:
+              type: array
+              description: |
+                Verified examples that read or reference the product: a
+                question and the call that answers it, in the get_data
+                grammar (`select`, a space word, a time word, `stats`,
+                ...); on REST, `select` maps to the door of each product's
+                `kind`.
+              items:
+                type: object
+                required: [id, question, domain, call]
+                properties:
+                  id:
+                    type: string
+                  question:
+                    type: string
+                  domain:
+                    type: string
+                  call:
+                    type: object
+                    additionalProperties: true
 
     CatalogVariable:
       type: object
@@ -9910,6 +10809,19 @@ components:
           description: |
             IANA timezone identifier covering the query coordinate.
           example: "America/Chicago"
+        boundaries:
+          type: object
+          description: |
+            With `include=boundaries`: the containing-boundary ids per
+            reference-layer product id, each an id an `area` reference
+            takes (`area[product]=us_counties&area[feature_id]=17031`).
+            Absent when the lookup failed; the response is then
+            `Cache-Control: no-store`.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example: {us_states: [IL], us_counties: ['17031'], nws_zones: [forecast/ILZ014, county/ILC031, fire/ILZ014], nws_offices: [LOT]}
       additionalProperties: true
 
     GeocodeResultsResponse:
@@ -10017,6 +10929,16 @@ components:
           description: |
             Secondary two-line copy (city, state).
           example: "Naperville, IL"
+        boundaries:
+          type: object
+          description: |
+            `GET /v1/geocode/search` with `include=boundaries`: the
+            result's containing-boundary ids per reference-layer product
+            id, each an id an `area` reference takes.
+          additionalProperties:
+            type: array
+            items:
+              type: string
       additionalProperties: true
 
     StormTrackFeature:
@@ -11676,7 +12598,7 @@ components:
           description: The requested units system.
         truncated:
           type: boolean
-          description: True when `limit` cut the series; `next_cursor` resumes them.
+          description: True when `limit` cut the series (`next_cursor` resumes them), or when an element's `notes` say a result covers part of the window.
         next_cursor:
           type: [string, "null"]
           description: Opaque cursor for the next page, null when not truncated.
@@ -11686,7 +12608,7 @@ components:
           properties:
             step:
               type: ["null"]
-              description: The output step; reserved, always null for now (native frames).
+              description: The output step; reserved, always null for now (native frames; a `stats` bucket step is `stats.step`).
             sources:
               type: array
               description: The catalog sources behind the response, with their attribution terms.
@@ -11716,9 +12638,12 @@ components:
     SeriesElement:
       type: object
       description: |
-        One (product, location) series, column-oriented: every `values`
-        array and `runs` are aligned with `times`.
-      required: [product, lat, lon, status, times, values, units, data_age_seconds, freshness_status, meta]
+        One (product, location) or (product, area) series,
+        column-oriented: every `values` array, `runs` and `times_local` are
+        aligned with `times`. An area element's `lat` and `lon` are the
+        area's center (a point inside a polygon), beside its `bbox`,
+        `cells` and, for an area by reference, the `area` it answers.
+      required: [product, lat, lon, status, timezone, utc_offset_seconds, times, times_local, values, units, data_age_seconds, freshness_status, meta]
       properties:
         product:
           type: string
@@ -11729,6 +12654,24 @@ components:
         lon:
           type: number
           format: double
+        bbox:
+          type: array
+          description: An area element's bounds, [min_lon, min_lat, max_lon, max_lat].
+          minItems: 4
+          maxItems: 4
+          items:
+            type: number
+        cells:
+          type: integer
+          description: An area element's grid cells (centers inside the area).
+        timezone:
+          type: [string, "null"]
+          description: IANA timezone of the location (an area's center), null when it cannot be resolved.
+          example: America/Chicago
+        utc_offset_seconds:
+          type: [integer, "null"]
+          description: The timezone's UTC offset at the element's first time (at now without one).
+          example: -18000
         label:
           type: string
           description: The batch location's `label`, when it had one.
@@ -11738,8 +12681,11 @@ components:
           description: |
             `ok`; `unavailable` (no frames in the window); `out_of_domain`
             (outside the product's coverage); `not_public` (public on
-            another door, not served on this route). `partial` and
-            `entitlement_required` are reserved.
+            another door, not served on this route);
+            `entitlement_required` (an area by reference to a product
+            behind a per-key flag the key does not have: no values, no
+            charge, `entitlement` names the flag, `lat` and `lon` are 0,
+            and the response is `no-store`). `partial` is reserved.
         related:
           type: string
           description: With `out_of_domain`, a related product that covers the point.
@@ -11750,9 +12696,15 @@ components:
           items:
             type: string
             format: date-time
+        times_local:
+          type: array
+          description: The `times` in the element's timezone, each with its own UTC offset; empty without a timezone.
+          items:
+            type: string
+            format: date-time
         values:
           type: object
-          description: Values per variable `standard_name`, aligned with `times`; null where missing.
+          description: Values per variable `standard_name`, aligned with `times`; null where missing or masked by `where`.
           additionalProperties:
             type: array
             items:
@@ -11762,6 +12714,63 @@ components:
           description: Unit per variable `standard_name`; null for a raw value with no stored unit.
           additionalProperties:
             type: [string, "null"]
+        stats:
+          $ref: '#/components/schemas/SeriesStats'
+        windows:
+          type: array
+          description: With `windows`, the windows found, earliest first (empty when none).
+          items:
+            $ref: '#/components/schemas/SeriesWindow'
+        passed:
+          type: integer
+          description: With `windows` (or `where` over an area), the samples that passed.
+        notes:
+          type: array
+          description: |
+            Caveats on the element's result, e.g. a `percentile` without
+            `step` over a window longer than 16 days, which covers the
+            first 16 days only (the response is then `truncated`).
+          items:
+            type: string
+        area:
+          $ref: '#/components/schemas/SeriesAreaEcho'
+        path:
+          $ref: '#/components/schemas/SeriesPathEcho'
+        crossings:
+          type: array
+          description: |
+            A feature product along a `path`: each stretch of the path
+            inside one of its features while that feature is in effect at
+            the element's departure's ETAs, ordered by `enter_distance`,
+            then `feature_id`; empty when none. The element's `values` are
+            empty; its `times` are the sample ETAs, as on every path
+            element.
+          items:
+            $ref: '#/components/schemas/SeriesCrossing'
+        entitlement:
+          type: object
+          description: With `entitlement_required`, the withheld referenced product and the flag that grants it.
+          required: [field, flag, plan]
+          properties:
+            field:
+              type: string
+            flag:
+              type: string
+            plan:
+              type: [string, "null"]
+        provenance:
+          type: object
+          description: With `view=detailed`, the element's source credits and each variable's raw encoding.
+          required: [sources, encodings]
+          properties:
+            sources:
+              type: array
+              items:
+                $ref: '#/components/schemas/SeriesSource'
+            encodings:
+              type: object
+              additionalProperties:
+                type: [object, "null"]
         run:
           type: string
           format: date-time
@@ -11790,14 +12799,69 @@ components:
               type: [string, "null"]
               description: IANA timezone of the location, null when it cannot be resolved.
               example: America/Chicago
+    SeriesStats:
+      type: object
+      description: |
+        Reducers per bucket: bucket starts (UTC, and local), and values per
+        `<standard_name>:<token>` (the request's token) aligned with them,
+        in the request units.
+      required: [step, times, times_local, values, units]
+      properties:
+        step:
+          type: [string, "null"]
+        times:
+          type: array
+          items:
+            type: string
+            format: date-time
+        times_local:
+          type: array
+          items:
+            type: string
+            format: date-time
+        values:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: [number, "null"]
+        units:
+          type: object
+          additionalProperties:
+            type: [string, "null"]
+    SeriesWindow:
+      type: object
+      required: [start, end, hours]
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        start_local:
+          type: string
+          format: date-time
+        end_local:
+          type: string
+          format: date-time
+        hours:
+          type: number
+          description: The window's duration in hours, each frame lasting until the next one (the series' last frame, the step before it), so daily and mixed-step frames measure in time.
+        limiting:
+          type: string
+          description: The `where` expression (or `light`) that ended the window; absent when the series did.
     SeriesBatchRequest:
       x-stability: experimental
       type: object
       additionalProperties: false
-      required: [locations, units]
+      required: [units]
       description: |
         The `GET /v1/series` grammar as JSON, with `locations[]` in place
-        of `lat` and `lon`.
+        of `lat` and `lon`, an area (the bbox, `area.geometry`, or an
+        area by reference: `area.product` with `area.feature_id`,
+        `area.feature_ids` or `area.filter`), or a `path`, in place of
+        both.
       properties:
         locations:
           type: array
@@ -11833,9 +12897,95 @@ components:
         end:
           type: string
           format: date-time
+        at:
+          type: string
         run:
           type: string
           format: date-time
+        step:
+          type: string
+          enum: [PT15M, PT1H, PT3H, PT6H, P1D]
+        stats:
+          type: array
+          maxItems: 32
+          items:
+            type: string
+          example: [max, min, 'degree_days:50,86,modified']
+        where:
+          type: array
+          maxItems: 25
+          items:
+            type: string
+          example: ['wind_speed_10m <= 15']
+        windows:
+          type: object
+          additionalProperties: false
+          properties:
+            min_hours:
+              type: integer
+              minimum: 1
+            light:
+              type: string
+              enum: [day, night, any]
+            max_windows:
+              type: integer
+              minimum: 1
+        min_lon:
+          type: number
+        min_lat:
+          type: number
+        max_lon:
+          type: number
+        max_lat:
+          type: number
+        area:
+          type: object
+          additionalProperties: false
+          description: An inline `geometry`, or a reference (`product` with `feature_id`, `feature_ids` or `filter`), not both.
+          properties:
+            product:
+              type: string
+              description: A product whose catalog `query.area_as_reference` is true.
+              example: us_counties
+            feature_id:
+              type: string
+              example: '48453'
+            feature_ids:
+              type: array
+              maxItems: 25
+              items:
+                type: string
+            filter:
+              type: array
+              maxItems: 16
+              items:
+                type: string
+            geometry:
+              type: object
+              description: A GeoJSON MultiPolygon (RFC 7946, WGS84), at most 10,000 vertices.
+              additionalProperties: false
+              required: [type, coordinates]
+              properties:
+                type:
+                  type: string
+                  enum: [MultiPolygon]
+                coordinates:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: array
+                        minItems: 2
+                        maxItems: 3
+                        items:
+                          type: number
+        path:
+          $ref: '#/components/schemas/SeriesPath'
+        view:
+          type: string
+          enum: [concise, detailed]
         limit:
           type: integer
           minimum: 1
@@ -11843,6 +12993,446 @@ components:
           default: 168
         cursor:
           type: string
+    SeriesPath:
+      x-stability: experimental
+      type: object
+      additionalProperties: false
+      description: |
+        A trajectory (OGC API EDR): `geometry` (a GeoJSON LineString) or
+        `polyline` (an encoded polyline, precision 5), timed by `departure`
+        (default now) at `speed`, by up to 3 `departures` (one element per
+        departure), or by per-vertex `times` (a departure then shifts the
+        schedule). The path is sampled about every 10 km, endpoints
+        included, at most 100 samples, and each sample is read at its ETA
+        from the frame nearest it. A late ETA past the last frame read,
+        while the run continues (its catalog horizon), takes the run's
+        nearest frame; past the run's end it is `beyond_horizon`. A read
+        that missed frames a departure's samples need, and served none of
+        them, makes that element `unavailable` with a `notes` entry (the
+        response is `truncated`); only when nothing at all is served does
+        the request answer `503`. Limits, as on `POST /v1/weather/route`:
+        at most 10,000 vertices and 5,000 km, no step of 180 degrees of
+        longitude or more, departures from 1 hour ago to 168 hours ahead
+        and within 24 hours of each other, travel of at most 72 hours. A
+        path takes no `locations`, bbox or `area`, and none of `hours`,
+        `start`, `end`, `at`, `run`, `step`, `stats`, `where`, `windows`,
+        `limit` or `cursor` (`operator_conflict`, with a `suggested_call`
+        that drops them). Products answer along a path only when their
+        catalog `query.shapes` lists `path` (else `unsupported_word`): a
+        grid or snapshot product reads each sample at its ETA; a feature
+        product (`product:*`) answers `crossings`, the stretches of the
+        path inside its features in effect when the departure is there
+        (the feature's own window: an alert's onset to its end). A path
+        that crosses more than 500 of a product's features answers `422`
+        `too_many_features`, and a feature read over its time budget
+        `422` `query_too_slow` (send a shorter path);
+        features that change while their pages are read answer `409`
+        `cursor_stale` (retry).
+      properties:
+        geometry:
+          type: object
+          additionalProperties: false
+          required: [type, coordinates]
+          properties:
+            type:
+              type: string
+              enum: [LineString]
+            coordinates:
+              type: array
+              minItems: 2
+              maxItems: 10000
+              items:
+                type: array
+                minItems: 2
+                maxItems: 3
+                items:
+                  type: number
+            bbox:
+              type: array
+              description: The GeoJSON bbox member; accepted and ignored.
+              items:
+                type: number
+        polyline:
+          type: string
+          minLength: 1
+          description: An encoded polyline (Google format, precision 5).
+        times:
+          type: array
+          description: One RFC 3339 instant per vertex, non-decreasing; a wait at a vertex is a repeated time.
+          items:
+            type: string
+            format: date-time
+        departure:
+          type: string
+          format: date-time
+          description: The departure (default now; with `times`, `times[0]`). Not with `departures`.
+        departures:
+          type: array
+          minItems: 1
+          maxItems: 3
+          description: Up to 3 departures, one element per (select, departure). Not with `departure`.
+          items:
+            type: string
+            format: date-time
+        speed:
+          type: number
+          exclusiveMinimum: 0
+          description: Travel speed without `times`, in mph with `units=imperial` (5 to 100, default 55), else km/h, with `units=si` too (8 to 160, default 89). `units` is required and checked first.
+    SeriesPathEcho:
+      x-stability: experimental
+      type: object
+      description: |
+        A path element's trajectory: the element's `times` are the sample
+        ETAs for its departure, and every array here is aligned with them.
+        `times_local` gives each ETA in its own sample's zone (an uncovered
+        sample takes the nearest covered one's); the element's `timezone`
+        and `utc_offset_seconds` are the origin's.
+      required: [departure, departure_local, arrival, arrival_local, eta_source, distance_unit, length, spacing, distances, lats, lons, headings, timezones]
+      properties:
+        departure:
+          type: string
+          format: date-time
+        departure_local:
+          type: string
+          description: The departure in the origin's zone (the first covered sample's).
+        arrival:
+          type: string
+          format: date-time
+          description: The end of the schedule (with `times`, a wait at the destination included).
+        arrival_local:
+          type: string
+          description: The arrival in the destination's zone (the last covered sample's).
+        eta_source:
+          type: string
+          enum: [speed, times]
+        distance_unit:
+          type: string
+          enum: [m, km, mi]
+          description: m with `units=si`, km with `metric`, mi with `imperial`.
+        length:
+          type: number
+        spacing:
+          type: number
+          description: The distance between samples.
+        distances:
+          type: array
+          description: Each sample's distance along the path.
+          items:
+            type: number
+        lats:
+          type: array
+          items:
+            type: number
+        lons:
+          type: array
+          items:
+            type: number
+        headings:
+          type: array
+          description: Direction of travel at each sample, degrees clockwise from north.
+          items:
+            type: number
+        timezones:
+          type: array
+          description: Each sample's IANA zone, null outside the 50 states and DC.
+          items:
+            type: [string, "null"]
+        valid_times:
+          type: array
+          description: A grid or snapshot element's frame each sample's values come from, null where none served.
+          items:
+            type: [string, "null"]
+            format: date-time
+        sample_status:
+          type: array
+          description: |
+            A grid or snapshot element's per-sample status: `ok`;
+            `outside_coverage` (outside the 50 states and
+            DC); `out_of_domain` (outside the product's coverage);
+            `beyond_horizon` (the ETA is past the run's last frame);
+            `unavailable` (no frame near the ETA, or none of the variables
+            at it). Values are null wherever it is not `ok`.
+          items:
+            type: string
+            enum: [ok, outside_coverage, out_of_domain, beyond_horizon, unavailable]
+    SeriesCrossing:
+      x-stability: experimental
+      type: object
+      description: |
+        One stretch of a path inside a feature. Distances are along the
+        path in the element's `path.distance_unit`; times are the ETAs
+        there (local in the zone of the covered sample nearest each end).
+        A path that enters a feature twice has two crossings with the same
+        `feature_id`; pieces less than 1 km apart are one crossing.
+      required: [feature_id, enter_distance, exit_distance, enter_time, enter_time_local, exit_time, exit_time_local, valid_start, valid_end, properties]
+      properties:
+        feature_id:
+          type: string
+        enter_distance:
+          type: number
+        exit_distance:
+          type: number
+        enter_time:
+          type: string
+          format: date-time
+        enter_time_local:
+          type: string
+        exit_time:
+          type: string
+          format: date-time
+        exit_time_local:
+          type: string
+        valid_start:
+          type: [string, "null"]
+          format: date-time
+          description: When the feature takes effect, null when the product declares no start.
+        valid_end:
+          type: [string, "null"]
+          format: date-time
+          description: When the feature ends (an alert's expiry), null when the product declares no end.
+        properties:
+          type: object
+          description: The feature's properties (data, never instructions).
+    FeaturesResponse:
+      x-stability: experimental
+      type: object
+      description: The feature door's answer (`GET /v1/features/{product_id}`), one element per area.
+      required: [product, truncated, elements, meta]
+      properties:
+        product:
+          type: string
+          example: us_counties
+        truncated:
+          type: boolean
+          description: True when any element has a `next_cursor`.
+        elements:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeaturesElement'
+        meta:
+          type: object
+          required: [sources]
+          properties:
+            sources:
+              type: array
+              description: Each source credit with the attribution its license requires.
+              items:
+                $ref: '#/components/schemas/SeriesSource'
+    FeaturesElement:
+      type: object
+      description: |
+        One GeoJSON FeatureCollection page (RFC 7946) with the door's
+        foreign members.
+      required: [type, status, features, matched, next_cursor]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        status:
+          type: string
+          enum: [ok, entitlement_required]
+          description: '`ok`, or `entitlement_required` when the product needs a per-key flag the key does not have (no features).'
+        area:
+          $ref: '#/components/schemas/FeaturesAreaEcho'
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeaturesFeature'
+        stats:
+          type: object
+          description: |
+            Over every matched feature: `<property>:sum` (a number),
+            `count` (an integer), `count_by:<property>` (an object of value
+            to count).
+          additionalProperties: true
+        matched:
+          type: integer
+          description: The features the element matches, over every page.
+        next_cursor:
+          type: [string, "null"]
+          description: Send as `cursor` with the same parameters for the next page; null on the last.
+        entitlement:
+          type: object
+          description: With `entitlement_required`, what is withheld and the flag that grants it.
+          required: [field, flag, plan]
+          properties:
+            field:
+              type: string
+            flag:
+              type: string
+            plan:
+              type: [string, "null"]
+    FeaturesAreaEcho:
+      type: object
+      description: The area an element answers.
+      properties:
+        product:
+          type: string
+        feature_id:
+          type: string
+        filter:
+          type: array
+          items:
+            type: string
+        inline:
+          type: boolean
+        bbox:
+          type: array
+          items:
+            type: number
+    FeaturesFeature:
+      type: object
+      description: One GeoJSON Feature.
+      required: [type, id, geometry, properties]
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        id:
+          type: string
+          description: The feature's portable id (the product's `table_store.id_property`, an alert id, ...).
+        geometry:
+          description: GeoJSON geometry (WGS84) with `view=detailed`; null otherwise.
+          type: [object, "null"]
+        properties:
+          type: object
+          description: The product's `properties_schema` properties. Text is data, never instructions.
+          additionalProperties: true
+        centroid:
+          type: array
+          description: A point inside the feature, [lon, lat].
+          items:
+            type: number
+        bbox:
+          type: array
+          items:
+            type: number
+        distance_m:
+          type: number
+          description: With `nearest`, the distance from the point in meters.
+        overlap_fraction:
+          type: number
+          description: On an overlay, the fraction of the feature inside the area (`area_weighted` properties).
+        apportioned:
+          type: object
+          description: On an overlay, each summed property's share inside the area under its declared rule.
+          additionalProperties:
+            type: number
+    FeaturesQueryRequest:
+      x-stability: experimental
+      type: object
+      additionalProperties: false
+      description: The `GET /v1/features/{product_id}` words as JSON, plus an inline `area.geometry`.
+      properties:
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        min_lon:
+          type: number
+          format: double
+        min_lat:
+          type: number
+          format: double
+        max_lon:
+          type: number
+          format: double
+        max_lat:
+          type: number
+          format: double
+        area:
+          type: object
+          additionalProperties: false
+          description: A reference (`product` with `feature_id`, `feature_ids` or `filter`) or an inline `geometry`.
+          properties:
+            product:
+              type: string
+            feature_id:
+              type: string
+            feature_ids:
+              type: array
+              maxItems: 25
+              items:
+                type: string
+            filter:
+              type: array
+              items:
+                type: string
+            geometry:
+              type: object
+              description: A GeoJSON MultiPolygon (RFC 7946, WGS84), at most 10,000 vertices.
+              additionalProperties: false
+              required: [type, coordinates]
+              properties:
+                type:
+                  type: string
+                  enum: [MultiPolygon]
+                coordinates:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: array
+                        minItems: 2
+                        maxItems: 3
+                        items:
+                          type: number
+        hours:
+          type: integer
+          minimum: 1
+          maximum: 384
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        at:
+          type: string
+        filter:
+          type: array
+          maxItems: 16
+          items:
+            type: string
+        stats:
+          type: array
+          maxItems: 16
+          items:
+            type: string
+        properties:
+          type: array
+          maxItems: 32
+          items:
+            type: string
+        view:
+          type: string
+          enum: [concise, detailed]
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 50
+        cursor:
+          type: string
+    SeriesAreaEcho:
+      type: object
+      description: The referenced area an element answers.
+      required: [product]
+      properties:
+        product:
+          type: string
+          example: us_counties
+        feature_id:
+          type: string
+          example: '48453'
+        filter:
+          type: array
+          items:
+            type: string
     SeriesBatchLocation:
       type: object
       additionalProperties: false
@@ -11952,6 +13542,24 @@ components:
       description: |
         Payload too large. The request body exceeded the route's size cap
         (1 MiB on `POST /v1/pois/exposure` and `POST /v1/weather/route`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem409:
+      description: |
+        Conflict (type `conflict`). On the feature door, `reason`
+        `cursor_stale`: the data changed between pages; page again from
+        the start (`suggested_call` drops the cursor).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem422:
+      description: |
+        The read did not finish within its time budget (type
+        `query-too-slow`, `reason` `query_too_slow`): narrow it, with a
+        smaller area or box, fewer ids, a filter or a lower `limit`.
       content:
         application/problem+json:
           schema:
