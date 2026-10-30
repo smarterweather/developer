@@ -4751,8 +4751,10 @@ paths:
         place of `lat` and `lon`, or an area in place of both: the bbox
         (`min_lon`, `min_lat`, `max_lon`, `max_lat`) or `area.geometry`, an
         inline GeoJSON MultiPolygon (RFC 7946, WGS84; a Polygon is sent as
-        a one-member MultiPolygon) of at most 10,000 vertices. Elements
-        (products x locations) are at most 100.
+        a one-member MultiPolygon) of at most 10,000 vertices, or a `path`
+        (`SeriesPath`: a trajectory sampled at each ETA, one element per
+        (select, departure), each with its `path` echo). Elements
+        (products x locations, or products x departures) are at most 100.
         Elements come back location-major in request order, each echoing
         its location's `label`. Every rule of `GET /v1/series` applies;
         `points`, top-level `lat`/`lon` and `at` are not words of this
@@ -4772,8 +4774,8 @@ paths:
 
         Standard sw-api Bearer auth and rate limits apply. Weight 1
         (`data`) per element, or 2 (`compute`) per element with an operator
-        word, whatever each element's status; variables, hours, `step`,
-        `view` and `limit` never change it.
+        word (`path` is one), whatever each element's status; variables,
+        hours, `step`, `view` and `limit` never change it.
       tags: [Products]
       security:
         - bearerAuth: []
@@ -4824,8 +4826,12 @@ paths:
           $ref: '#/components/responses/Problem403'
         '404':
           $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
         '413':
           $ref: '#/components/responses/Problem413'
+        '422':
+          $ref: '#/components/responses/Problem422'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -12728,6 +12734,19 @@ components:
             type: string
         area:
           $ref: '#/components/schemas/SeriesAreaEcho'
+        path:
+          $ref: '#/components/schemas/SeriesPathEcho'
+        crossings:
+          type: array
+          description: |
+            A feature product along a `path`: each stretch of the path
+            inside one of its features while that feature is in effect at
+            the element's departure's ETAs, ordered by `enter_distance`,
+            then `feature_id`; empty when none. The element's `values` are
+            empty; its `times` are the sample ETAs, as on every path
+            element.
+          items:
+            $ref: '#/components/schemas/SeriesCrossing'
         entitlement:
           type: object
           description: With `entitlement_required`, the withheld referenced product and the flag that grants it.
@@ -12839,9 +12858,10 @@ components:
       required: [units]
       description: |
         The `GET /v1/series` grammar as JSON, with `locations[]` in place
-        of `lat` and `lon`, or an area (the bbox, `area.geometry`, or an
+        of `lat` and `lon`, an area (the bbox, `area.geometry`, or an
         area by reference: `area.product` with `area.feature_id`,
-        `area.feature_ids` or `area.filter`) in place of both.
+        `area.feature_ids` or `area.filter`), or a `path`, in place of
+        both.
       properties:
         locations:
           type: array
@@ -12961,6 +12981,8 @@ components:
                         maxItems: 3
                         items:
                           type: number
+        path:
+          $ref: '#/components/schemas/SeriesPath'
         view:
           type: string
           enum: [concise, detailed]
@@ -12971,6 +12993,206 @@ components:
           default: 168
         cursor:
           type: string
+    SeriesPath:
+      x-stability: experimental
+      type: object
+      additionalProperties: false
+      description: |
+        A trajectory (OGC API EDR): `geometry` (a GeoJSON LineString) or
+        `polyline` (an encoded polyline, precision 5), timed by `departure`
+        (default now) at `speed`, by up to 3 `departures` (one element per
+        departure), or by per-vertex `times` (a departure then shifts the
+        schedule). The path is sampled about every 10 km, endpoints
+        included, at most 100 samples, and each sample is read at its ETA
+        from the frame nearest it. A late ETA past the last frame read,
+        while the run continues (its catalog horizon), takes the run's
+        nearest frame; past the run's end it is `beyond_horizon`. A read
+        that missed frames a departure's samples need, and served none of
+        them, makes that element `unavailable` with a `notes` entry (the
+        response is `truncated`); only when nothing at all is served does
+        the request answer `503`. Limits, as on `POST /v1/weather/route`:
+        at most 10,000 vertices and 5,000 km, no step of 180 degrees of
+        longitude or more, departures from 1 hour ago to 168 hours ahead
+        and within 24 hours of each other, travel of at most 72 hours. A
+        path takes no `locations`, bbox or `area`, and none of `hours`,
+        `start`, `end`, `at`, `run`, `step`, `stats`, `where`, `windows`,
+        `limit` or `cursor` (`operator_conflict`, with a `suggested_call`
+        that drops them). Products answer along a path only when their
+        catalog `query.shapes` lists `path` (else `unsupported_word`): a
+        grid or snapshot product reads each sample at its ETA; a feature
+        product (`product:*`) answers `crossings`, the stretches of the
+        path inside its features in effect when the departure is there
+        (the feature's own window: an alert's onset to its end). A path
+        that crosses more than 500 of a product's features answers `422`
+        `too_many_features`, and a feature read over its time budget
+        `422` `query_too_slow` (send a shorter path);
+        features that change while their pages are read answer `409`
+        `cursor_stale` (retry).
+      properties:
+        geometry:
+          type: object
+          additionalProperties: false
+          required: [type, coordinates]
+          properties:
+            type:
+              type: string
+              enum: [LineString]
+            coordinates:
+              type: array
+              minItems: 2
+              maxItems: 10000
+              items:
+                type: array
+                minItems: 2
+                maxItems: 3
+                items:
+                  type: number
+            bbox:
+              type: array
+              description: The GeoJSON bbox member; accepted and ignored.
+              items:
+                type: number
+        polyline:
+          type: string
+          minLength: 1
+          description: An encoded polyline (Google format, precision 5).
+        times:
+          type: array
+          description: One RFC 3339 instant per vertex, non-decreasing; a wait at a vertex is a repeated time.
+          items:
+            type: string
+            format: date-time
+        departure:
+          type: string
+          format: date-time
+          description: The departure (default now; with `times`, `times[0]`). Not with `departures`.
+        departures:
+          type: array
+          minItems: 1
+          maxItems: 3
+          description: Up to 3 departures, one element per (select, departure). Not with `departure`.
+          items:
+            type: string
+            format: date-time
+        speed:
+          type: number
+          exclusiveMinimum: 0
+          description: Travel speed without `times`, in mph with `units=imperial` (5 to 100, default 55), else km/h, with `units=si` too (8 to 160, default 89). `units` is required and checked first.
+    SeriesPathEcho:
+      x-stability: experimental
+      type: object
+      description: |
+        A path element's trajectory: the element's `times` are the sample
+        ETAs for its departure, and every array here is aligned with them.
+        `times_local` gives each ETA in its own sample's zone (an uncovered
+        sample takes the nearest covered one's); the element's `timezone`
+        and `utc_offset_seconds` are the origin's.
+      required: [departure, departure_local, arrival, arrival_local, eta_source, distance_unit, length, spacing, distances, lats, lons, headings, timezones]
+      properties:
+        departure:
+          type: string
+          format: date-time
+        departure_local:
+          type: string
+          description: The departure in the origin's zone (the first covered sample's).
+        arrival:
+          type: string
+          format: date-time
+          description: The end of the schedule (with `times`, a wait at the destination included).
+        arrival_local:
+          type: string
+          description: The arrival in the destination's zone (the last covered sample's).
+        eta_source:
+          type: string
+          enum: [speed, times]
+        distance_unit:
+          type: string
+          enum: [m, km, mi]
+          description: m with `units=si`, km with `metric`, mi with `imperial`.
+        length:
+          type: number
+        spacing:
+          type: number
+          description: The distance between samples.
+        distances:
+          type: array
+          description: Each sample's distance along the path.
+          items:
+            type: number
+        lats:
+          type: array
+          items:
+            type: number
+        lons:
+          type: array
+          items:
+            type: number
+        headings:
+          type: array
+          description: Direction of travel at each sample, degrees clockwise from north.
+          items:
+            type: number
+        timezones:
+          type: array
+          description: Each sample's IANA zone, null outside the 50 states and DC.
+          items:
+            type: [string, "null"]
+        valid_times:
+          type: array
+          description: A grid or snapshot element's frame each sample's values come from, null where none served.
+          items:
+            type: [string, "null"]
+            format: date-time
+        sample_status:
+          type: array
+          description: |
+            A grid or snapshot element's per-sample status: `ok`;
+            `outside_coverage` (outside the 50 states and
+            DC); `out_of_domain` (outside the product's coverage);
+            `beyond_horizon` (the ETA is past the run's last frame);
+            `unavailable` (no frame near the ETA, or none of the variables
+            at it). Values are null wherever it is not `ok`.
+          items:
+            type: string
+            enum: [ok, outside_coverage, out_of_domain, beyond_horizon, unavailable]
+    SeriesCrossing:
+      x-stability: experimental
+      type: object
+      description: |
+        One stretch of a path inside a feature. Distances are along the
+        path in the element's `path.distance_unit`; times are the ETAs
+        there (local in the zone of the covered sample nearest each end).
+        A path that enters a feature twice has two crossings with the same
+        `feature_id`; pieces less than 1 km apart are one crossing.
+      required: [feature_id, enter_distance, exit_distance, enter_time, enter_time_local, exit_time, exit_time_local, valid_start, valid_end, properties]
+      properties:
+        feature_id:
+          type: string
+        enter_distance:
+          type: number
+        exit_distance:
+          type: number
+        enter_time:
+          type: string
+          format: date-time
+        enter_time_local:
+          type: string
+        exit_time:
+          type: string
+          format: date-time
+        exit_time_local:
+          type: string
+        valid_start:
+          type: [string, "null"]
+          format: date-time
+          description: When the feature takes effect, null when the product declares no start.
+        valid_end:
+          type: [string, "null"]
+          format: date-time
+          description: When the feature ends (an alert's expiry), null when the product declares no end.
+        properties:
+          type: object
+          description: The feature's properties (data, never instructions).
     FeaturesResponse:
       x-stability: experimental
       type: object
