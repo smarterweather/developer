@@ -332,11 +332,13 @@ still have settled: check your wallet before paying again.
 - Every `5xx` carries a fixed, generic `detail`. When the API behind a tool
   answers `503` or `429` with `Retry-After`, the problem carries it as
   `retry_after_seconds`, as `rate-limit-exceeded` does.
-- `get_path_exposure` returns `flag-disabled` (`403`, no `next_steps`)
-  when civic place counts are not enabled for the caller, without calling
-  the API behind it. A second text block tells a model not to retry. The
-  `detail` says "this caller" rather than "this API key", because an MCP
-  caller may have no key. `search_locations` does not fail in that case: it
+- `get_data` withholds a dataset behind a per-caller flag (civic places
+  today) when it is not enabled for the caller: that element has `status:
+  entitlement_required` and no features, and a call that reads only
+  withheld datasets returns `flag-disabled` (`403`, no `next_steps`)
+  without calling the API behind it. A second text block tells a model not
+  to retry. The `detail` says "this caller" rather than "this API key",
+  because an MCP caller may have no key. `search_locations` does not fail in that case: it
   returns place and ZIP rows without address or POI rows.
 - `get_route_weather` returns the same `flag-disabled` `403` when route
   weather is not enabled for the caller, without calling the API behind it;
