@@ -3300,6 +3300,18 @@ paths:
             minimum: -180
             maximum: 180
           example: -87.6298
+        - name: include
+          in: query
+          required: false
+          description: |
+            `boundaries` adds the containing-boundary ids of the exact
+            point (`boundaries`): per reference-layer product (`us_states`,
+            `us_counties`, `nws_zones`, `nws_offices`, ...), the ids an
+            `area` reference takes. Read for the point itself, never a
+            neighbour's cached answer.
+          schema:
+            type: string
+            enum: [boundaries]
       responses:
         '200':
           description: Resolved location metadata.
@@ -3582,6 +3594,16 @@ paths:
             minLength: 5
             maxLength: 5
           example: "60601"
+        - name: include
+          in: query
+          required: false
+          description: |
+            `boundaries` adds each result's containing-boundary ids
+            (`boundaries`), read at its point. A result whose read failed
+            has none, and the response is then `Cache-Control: no-store`.
+          schema:
+            type: string
+            enum: [boundaries]
       responses:
         '200':
           description: |
@@ -4480,6 +4502,35 @@ paths:
           most `max_cells` cells per product (the catalog `query.max_cells`,
           100,000): a larger box is a `400` `area_too_large` naming coarser
           products. An inline polygon is sent in the batch body.
+        - `area[product]` with one of `area[feature_id]`,
+          `area[feature_ids]` (at most 25, repeated or comma-joined) or
+          `area[filter]` (repeatable), in place of `lat` and `lon`: an area
+          by reference to a feature product whose catalog
+          `query.area_as_reference` is true (`us_counties`, `us_states`,
+          `nws_zones`, `nws_alerts`, ...), by its portable feature id (the
+          referenced product's `table_store.id_property`); needs `stats`.
+          The referenced geometry, simplified to the finest selected grid's
+          resolution, is read as an inline polygon: one area for
+          `feature_id`, one per id (each its own elements) for
+          `feature_ids`, and the union of the matched features (overlaps
+          dissolved) for a filter. Each element names its `area`. The
+          features are the ones in effect now (at `at` when the referenced
+          product takes `at`); an id with no feature, or a filter matching
+          none, is a `404` `area_not_found`. Elements (products x areas)
+          are at most 100. A product that does not reference is a `400`
+          `not_area_reference` naming those that do. A referenced area too
+          detailed for 10,000 vertices is fetched again more simplified
+          (up to 0.1 degrees); past that it is a `400` `area_too_large`
+          naming the area, whose `suggested_call` reads its bbox (or, for
+          a filter union of at most 25 features, those features one by one
+          as `area[feature_ids]`); among `area[feature_ids]`, only the
+          oversized ids are fetched coarser, and one still too detailed is
+          left out of the `suggested_call` (the others kept) and named, with
+          its bbox, in `hint`. A bbox beside an area is a `400`
+          `operator_conflict` whose `suggested_call` keeps the area. A
+          referenced product behind a per-key flag the key does not have
+          answers `entitlement_required` elements. Areas read in parallel;
+          a failure is answered for the lowest failing area.
 
         Thresholds (`where` values, `count_above`, `count_below` and
         `degree_days` arguments) are in the request `units`. `stats` and
@@ -4532,8 +4583,9 @@ paths:
         ### Envelope
 
         `series[]` holds one element per (product, location), or per
-        product over an area (`lat` and `lon` its center, with `bbox` and
-        `cells`), in request order and column-oriented: `times[]` (RFC 3339
+        product over an area (`lat` and `lon` its center: the box's center,
+        or a point inside a polygon; with `bbox`, `cells` and, for an area
+        by reference, `area`), in request order and column-oriented: `times[]` (RFC 3339
         UTC), `times_local[]` (the same instants with the location's UTC
         offset at each, so a DST change shows), `values` per variable
         aligned with `times[]`, and `run` when every frame shares one model
@@ -4575,7 +4627,9 @@ paths:
         ### Caching
 
         `Cache-Control: max-age=N, stale-while-revalidate=N` with N the
-        smallest selected product cadence clamped to 60-3600 s, `public`
+        smallest selected product cadence clamped to 60-3600 s (with an
+        area by reference, over every area's own products, and at most the
+        referenced product's: 60 s for alerts), `public`
         for first-party keys and `private` for partner keys. An element's
         `meta.timezone` may be null when the timezone lookup is
         unavailable or slow; the response is then sent with
@@ -4595,7 +4649,8 @@ paths:
 
         Standard sw-api Bearer auth and rate limits apply. Weight 1
         (`data`) per element, or 2 (`compute`) per element when the request
-        has an operator word (`stats`, `where`, `windows`, or an area);
+        has an operator word (`stats`, `where`, `windows`, or an area,
+        inline or by reference);
         variables, hours, `step`, `view` and `limit` never change it.
       tags: [Products]
       security:
@@ -4640,6 +4695,7 @@ paths:
         - $ref: '#/components/parameters/SeriesMinLatQuery'
         - $ref: '#/components/parameters/SeriesMaxLonQuery'
         - $ref: '#/components/parameters/SeriesMaxLatQuery'
+        - $ref: '#/components/parameters/AreaReferenceQuery'
         - $ref: '#/components/parameters/SeriesViewQuery'
         - $ref: '#/components/parameters/SeriesLimitQuery'
         - $ref: '#/components/parameters/SeriesCursorQuery'
@@ -4770,6 +4826,401 @@ paths:
           $ref: '#/components/responses/Problem404'
         '413':
           $ref: '#/components/responses/Problem413'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/features/{product_id}:
+    get:
+      operationId: getFeatures
+      x-stability: experimental
+      summary: Features of a catalog feature product at a point, in a box, over an area, or as a list.
+      description: |
+        The generic door of the catalog's `feature` and `geojson`
+        products: reference layers such as
+        `us_counties`, `census_block_groups` or `nws_zones`, active alerts
+        (`nws_alerts`), outlooks, storm reports and stations. Any product
+        `GET /v1/catalog` lists with `kind` `feature` or `geojson`
+        qualifies; the product's catalog `query` block lists the shapes,
+        time words, reducers and filterable properties it takes, and a word
+        it does not list is a `400` with `unsupported_word` and the block's
+        values in `valid_values`. The named feature routes
+        (`/v1/climate-reports`, `/v1/storm-reports`, `/v1/record-events`,
+        `/v1/nexrad/features`, `/v1/storm-tracks`, `/v1/tropical*`,
+        `/v1/alerts*`) stay as they are.
+
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment while the grammar settles.
+
+        ### Space
+
+        One of these, or none:
+
+        - `lat` and `lon`: the features containing the point (`position`),
+          or, on a product whose `query.shapes` lists `nearest`, the
+          nearest features with `distance_m`. Coverage is the 50 US states
+          and DC: a point outside them is a `404` `outside-coverage`, as is
+          a box or inline area that misses every US domain.
+        - `min_lon`, `min_lat`, `max_lon`, `max_lat`: the features
+          intersecting the box.
+        - `area[product]` with one of `area[feature_id]`,
+          `area[feature_ids]` (at most 25, repeated or comma-joined) or
+          `area[filter]` (repeatable): an area by reference to a product
+          whose catalog `query.area_as_reference` is true, by its portable
+          feature id (FIPS `geoid`, state abbreviation, ZCTA, UGC zone,
+          alert id; the referenced product's `table_store.id_property`).
+          A filter reference is one area, the union of the matched
+          features (overlaps dissolved). The answer is the overlay: every
+          feature of this product that intersects the area, each with its
+          `apportioned` share of every summed property under the
+          property's declared `aggregate` rule (`area_weighted`: value x
+          `overlap_fraction`; `centroid_in`: the value when its
+          representative point is inside; `precomputed`: the value), so the
+          shares sum to `stats`. `area[feature_ids]` answers one element
+          per id. An inline polygon is sent to
+          `POST /v1/features/{product_id}/query`.
+        - None: every feature (`items`), paged.
+
+        ### Time
+
+        At most one time word, on a product whose `query.time_words` lists
+        it: `hours` (ahead for a forward product, back for a backward one),
+        `start` and `end` (RFC 3339; overlap with each feature's time), or
+        `at` (RFC 3339, or a date: the features in effect at that instant;
+        `nws_alerts` reads its version history, as `GET /v1/alerts?at=`
+        does). With none, the features in effect now. A time-free layer
+        takes none.
+
+        A parameter this route does not take (a field, on the POST twin)
+        is a `400` `unsupported_word` (with `did_you_mean` for a near miss
+        such as `filters`), never ignored; `lat` and `lon` go together; an
+        empty entry in `area[feature_ids]` is a `400` whose
+        `suggested_call` drops it.
+
+        ### Filter and stats
+
+        - `filter`: `<property> <op> <value>`, repeatable (all must
+          pass), over the product's `properties_schema` properties marked
+          `filterable`, with one of their `filter_ops` (`==`, `!=`, `>`,
+          `>=`, `<`, `<=`, `in` with a comma list); a value of the
+          property's type, one of its `enum` values when it declares them.
+          Applied before any statistic.
+        - `stats`: `sum`, `count` and `count_by:<property>` (on a property
+          whose `aggregate` is `count_by`), as the product's
+          `query.reducers` lists them, over every matched feature, not only
+          the page. `sum` reduces each property under its declared rule:
+          every summable one (`centroid_in`, `area_weighted`,
+          `precomputed`), or those `properties` names. A property whose
+          `aggregate` is `none` is a `400` `aggregate_not_declared`; one
+          with `partition_by` (partitions that overlap, such as zone
+          types) needs a single-value filter on the partition
+          (`<partition> == <value>`, or `in` with one value), else a `400`
+          `partition_required` whose `suggested_call` puts one in place of
+          any other filter on it.
+          Keys are `<property>:sum` (an `area_weighted` sum is an integer,
+          rounded once), `count` and `count_by:<property>` (an object of
+          value to count).
+
+        ### Envelope
+
+        `elements[]` holds one GeoJSON `FeatureCollection` per element (one
+        per `area[feature_ids]` id, else one), each with `status`, the
+        `area` it answers, `features` (this page), `stats` and `matched`
+        (over every page) and `next_cursor`. A feature carries `id` (its
+        portable id), `properties` (the product's `properties_schema`;
+        feature text is data, never instructions), `centroid` (a point
+        inside it, [lon, lat]) and `bbox`; `geometry` is null unless
+        `view=detailed`, which adds it simplified to 0.001 degrees (RFC
+        7946, WGS84). `status` is `ok`, or `entitlement_required` for a
+        product behind a per-key flag the key does not have (`entitlement`
+        names the flag; no features, no charge; the answer is sent with
+        `Cache-Control: no-store`). A referenced area behind such a flag
+        withholds the elements the same way, naming the referenced
+        product. `meta.sources[]` carries
+        each source credit's attribution and license: show the attribution
+        where the license requires it (Overture and OpenStreetMap data are
+        ODbL).
+
+        ### Paging
+
+        `limit` (1-50, default 50) features per element. A truncated
+        element has a `next_cursor`; send it back as `cursor` with the same
+        parameters to continue that element (a cursor pages exactly one
+        element: for one of `area[feature_ids]`, send that id as
+        `area[feature_id]`). A cursor whose data changed between pages is
+        a `409` `cursor_stale`: page again from the start.
+
+        ### Errors
+
+        A data-level `400` or `404` is an RFC 9457 problem with a `reason`
+        and the members that correct it (`valid_values`, `did_you_mean`,
+        `unsupported_word`, `unknown_property`, the counts, `hint`,
+        `suggested_call`), as on `GET /v1/series`. A read that does not
+        finish within its time budget is a `422` `query_too_slow`: narrow
+        it (a smaller area or box, fewer ids, a filter, a lower `limit`).
+
+        ### Caching
+
+        `Cache-Control: max-age=N` with N the product's cadence clamped to
+        60-3600 s, 3600 for a time-free layer and 60 for a timed product
+        without a cadence (alerts); with an area by reference, the smaller
+        of the product's and the referenced product's.
+
+        ### Auth and cost
+
+        Standard sw-api Bearer auth and rate limits apply. Weight 1
+        (`data`) per element, or 2 (`compute`) per element with `stats` or
+        an area.
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/FeaturesProductPath'
+        - name: lat
+          in: query
+          required: false
+          description: Latitude of a point, with `lon`.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: 30.27
+        - name: lon
+          in: query
+          required: false
+          description: Longitude of a point, with `lat`.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: -97.74
+        - name: min_lon
+          in: query
+          required: false
+          description: Bounding-box west edge, with `min_lat`, `max_lon` and `max_lat`.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+        - name: min_lat
+          in: query
+          required: false
+          description: Bounding-box south edge.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+        - name: max_lon
+          in: query
+          required: false
+          description: Bounding-box east edge; greater than `min_lon`.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+        - name: max_lat
+          in: query
+          required: false
+          description: Bounding-box north edge; greater than `min_lat`.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+        - $ref: '#/components/parameters/AreaReferenceQuery'
+        - name: hours
+          in: query
+          required: false
+          description: A rolling window of this many hours (1-384), ahead for a forward product, back for a backward one.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 384
+        - name: start
+          in: query
+          required: false
+          description: Window start (RFC 3339), with `end`.
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          required: false
+          description: Window end (RFC 3339), after `start`.
+          schema:
+            type: string
+            format: date-time
+        - name: at
+          in: query
+          required: false
+          description: An instant (RFC 3339, or a date for its UTC midnight).
+          schema:
+            type: string
+        - $ref: '#/components/parameters/FeaturesFilterQuery'
+        - $ref: '#/components/parameters/FeaturesStatsQuery'
+        - $ref: '#/components/parameters/FeaturesPropertiesQuery'
+        - name: view
+          in: query
+          required: false
+          description: '`concise` (default: no geometry) or `detailed` (geometry simplified to 0.001 degrees).'
+          schema:
+            type: string
+            enum: [concise, detailed]
+            default: concise
+        - name: limit
+          in: query
+          required: false
+          description: Features per element (default 50, max 50).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 50
+        - name: cursor
+          in: query
+          required: false
+          description: An element's opaque `next_cursor`, sent with the same parameters.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 8192
+      responses:
+        '200':
+          description: One FeatureCollection per element.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeaturesResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '422':
+          $ref: '#/components/responses/Problem422'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
+  /v1/features/{product_id}/query:
+    post:
+      operationId: postFeaturesQuery
+      x-stability: experimental
+      summary: Features of a catalog feature product over an inline polygon (or any GET word as JSON).
+      description: |
+        The POST twin of `GET /v1/features/{product_id}`: the same words as
+        JSON fields, plus an inline area, `area.geometry`, a GeoJSON
+        MultiPolygon (RFC 7946, WGS84; a Polygon is sent as a one-member
+        MultiPolygon; positions `[lon, lat]` or `[lon, lat, alt]`) of at
+        most 10,000 vertices, which does not fit a URL. `area` takes a
+        reference or a geometry, not both. Every rule of the GET route
+        applies; an unknown field is a `400`.
+
+        **Experimental** (`x-stability: experimental`), as the GET route.
+
+        ### Caching
+
+        `Cache-Control: private, no-store`.
+
+        ### Auth and cost
+
+        As the GET route: weight 1 (`data`) per element, 2 (`compute`) per
+        element with `stats` or an area.
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/FeaturesProductPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeaturesQueryRequest'
+            examples:
+              homesInAPolygon:
+                value:
+                  area:
+                    geometry:
+                      type: MultiPolygon
+                      coordinates: [[[[-97.55, 35.3], [-97.4, 35.3], [-97.4, 35.4], [-97.55, 35.4], [-97.55, 35.3]]]]
+                  stats: [sum]
+                  properties: [housing_units, population]
+      responses:
+        '200':
+          description: One FeatureCollection per element.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeaturesResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '413':
+          $ref: '#/components/responses/Problem413'
+        '422':
+          $ref: '#/components/responses/Problem422'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -5486,6 +5937,93 @@ components:
         type: string
         minLength: 1
         maxLength: 8192
+    FeaturesProductPath:
+      name: product_id
+      in: path
+      required: true
+      description: A catalog product id whose `kind` is `feature` or `geojson` (`GET /v1/catalog`).
+      schema:
+        type: string
+        pattern: '^[a-z0-9_]+$'
+        minLength: 1
+        maxLength: 128
+      example: us_counties
+    AreaReferenceQuery:
+      name: area
+      in: query
+      required: false
+      description: |
+        An area by reference: `area[product]` (a product whose catalog
+        `query.area_as_reference` is true) with one of `area[feature_id]`,
+        `area[feature_ids]` (at most 25, repeated or comma-joined; one
+        element per id) or `area[filter]` (repeatable; one area, the union
+        of the matched features). Ids are the referenced product's
+        portable feature ids (its `table_store.id_property`).
+      style: deepObject
+      explode: true
+      schema:
+        type: object
+        additionalProperties: false
+        properties:
+          product:
+            type: string
+          feature_id:
+            type: string
+          feature_ids:
+            type: string
+          filter:
+            type: string
+      example: {product: us_counties, feature_id: '48453'}
+    FeaturesFilterQuery:
+      name: filter
+      in: query
+      required: false
+      description: |
+        `<property> <op> <value>` over a filterable property of the
+        product (`properties_schema`), op one of its `filter_ops` (`==`,
+        `!=`, `>`, `>=`, `<`, `<=`, `in` with a comma list); repeatable,
+        every expression must pass.
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 16
+        items:
+          type: string
+          minLength: 3
+          maxLength: 512
+      example: ['state_abbr == TX']
+    FeaturesStatsQuery:
+      name: stats
+      in: query
+      required: false
+      description: '`sum`, `count` and `count_by:<property>`, repeated or comma-joined, as the product''s `query.reducers` lists them.'
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 16
+        items:
+          type: string
+          minLength: 3
+          maxLength: 128
+      example: [sum, count]
+    FeaturesPropertiesQuery:
+      name: properties
+      in: query
+      required: false
+      description: The properties `sum` reduces, repeated or comma-joined; every summable property when omitted. Needs `stats=sum`.
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 32
+        items:
+          type: string
+          pattern: '^[a-z0-9_]+$'
+          minLength: 1
+          maxLength: 128
+      example: [population]
     LatQuery:
       name: lat
       in: query
@@ -6112,12 +6650,18 @@ components:
         reason:
           type: string
           description: |
-            On a data-level `400` or `404` (`GET /v1/series`), the
-            corrective error: `unknown_product`, `unknown_variable`,
-            `unknown_standard_name`, `ambiguous_select`, `unknown_property`,
-            `invalid_operator`, `operator_conflict`, `unsupported_word`,
-            `area_too_large`, `too_many_elements`, `outside_time_range`,
-            `outside_coverage` or `daylight_unavailable`. On a `503`, `timezone_unavailable`: the
+            On a data-level `400` or `404` (`GET /v1/series`,
+            `GET /v1/features/{product_id}`), the corrective error:
+            `unknown_product`, `unknown_variable`, `unknown_standard_name`,
+            `ambiguous_select`, `unknown_property`, `invalid_operator`,
+            `operator_conflict`, `unsupported_word`, `area_too_large`,
+            `too_many_elements`, `outside_time_range`, `outside_coverage`,
+            `daylight_unavailable`, `aggregate_not_declared` (a statistic
+            over a property whose declared `aggregate` does not allow it),
+            `partition_required` (a sum over a partitioned property without
+            its single-value filter), `not_area_reference`, `area_not_found`
+            or `invalid_cursor`. On a `409`, `cursor_stale`; on a `422`,
+            `query_too_slow`. On a `503`, `timezone_unavailable`: the
             location's timezone, which `stats` and `windows` are computed
             in, could not be resolved.
         valid_values:
@@ -6133,7 +6677,7 @@ components:
           description: The word the product's catalog `query` block does not list.
         unknown_property:
           type: string
-          description: The name a `where` expression gave that is no selected variable.
+          description: The name a `where` expression gave that is no selected variable, or the feature property a `filter`, `properties` or statistic named that the product does not declare for it (with `partition_required`, the partition property).
         time_hint:
           type: object
           description: The time range the product answers.
@@ -9616,6 +10160,27 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/CatalogVariable'
+            examples:
+              type: array
+              description: |
+                Verified examples that read or reference the product: a
+                question and the call that answers it, in the get_data
+                grammar (`select`, a space word, a time word, `stats`,
+                ...); on REST, `select` maps to the door of each product's
+                `kind`.
+              items:
+                type: object
+                required: [id, question, domain, call]
+                properties:
+                  id:
+                    type: string
+                  question:
+                    type: string
+                  domain:
+                    type: string
+                  call:
+                    type: object
+                    additionalProperties: true
 
     CatalogVariable:
       type: object
@@ -10238,6 +10803,19 @@ components:
           description: |
             IANA timezone identifier covering the query coordinate.
           example: "America/Chicago"
+        boundaries:
+          type: object
+          description: |
+            With `include=boundaries`: the containing-boundary ids per
+            reference-layer product id, each an id an `area` reference
+            takes (`area[product]=us_counties&area[feature_id]=17031`).
+            Absent when the lookup failed; the response is then
+            `Cache-Control: no-store`.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example: {us_states: [IL], us_counties: ['17031'], nws_zones: [forecast/ILZ014, county/ILC031, fire/ILZ014], nws_offices: [LOT]}
       additionalProperties: true
 
     GeocodeResultsResponse:
@@ -10345,6 +10923,16 @@ components:
           description: |
             Secondary two-line copy (city, state).
           example: "Naperville, IL"
+        boundaries:
+          type: object
+          description: |
+            `GET /v1/geocode/search` with `include=boundaries`: the
+            result's containing-boundary ids per reference-layer product
+            id, each an id an `area` reference takes.
+          additionalProperties:
+            type: array
+            items:
+              type: string
       additionalProperties: true
 
     StormTrackFeature:
@@ -12047,7 +12635,8 @@ components:
         One (product, location) or (product, area) series,
         column-oriented: every `values` array, `runs` and `times_local` are
         aligned with `times`. An area element's `lat` and `lon` are the
-        area's center, beside its `bbox` and `cells`.
+        area's center (a point inside a polygon), beside its `bbox`,
+        `cells` and, for an area by reference, the `area` it answers.
       required: [product, lat, lon, status, timezone, utc_offset_seconds, times, times_local, values, units, data_age_seconds, freshness_status, meta]
       properties:
         product:
@@ -12086,8 +12675,11 @@ components:
           description: |
             `ok`; `unavailable` (no frames in the window); `out_of_domain`
             (outside the product's coverage); `not_public` (public on
-            another door, not served on this route). `partial` and
-            `entitlement_required` are reserved.
+            another door, not served on this route);
+            `entitlement_required` (an area by reference to a product
+            behind a per-key flag the key does not have: no values, no
+            charge, `entitlement` names the flag, `lat` and `lon` are 0,
+            and the response is `no-store`). `partial` is reserved.
         related:
           type: string
           description: With `out_of_domain`, a related product that covers the point.
@@ -12134,6 +12726,19 @@ components:
             first 16 days only (the response is then `truncated`).
           items:
             type: string
+        area:
+          $ref: '#/components/schemas/SeriesAreaEcho'
+        entitlement:
+          type: object
+          description: With `entitlement_required`, the withheld referenced product and the flag that grants it.
+          required: [field, flag, plan]
+          properties:
+            field:
+              type: string
+            flag:
+              type: string
+            plan:
+              type: [string, "null"]
         provenance:
           type: object
           description: With `view=detailed`, the element's source credits and each variable's raw encoding.
@@ -12234,8 +12839,9 @@ components:
       required: [units]
       description: |
         The `GET /v1/series` grammar as JSON, with `locations[]` in place
-        of `lat` and `lon`, or an area (the bbox or `area.geometry`) in
-        place of both.
+        of `lat` and `lon`, or an area (the bbox, `area.geometry`, or an
+        area by reference: `area.product` with `area.feature_id`,
+        `area.feature_ids` or `area.filter`) in place of both.
       properties:
         locations:
           type: array
@@ -12315,8 +12921,25 @@ components:
         area:
           type: object
           additionalProperties: false
-          required: [geometry]
+          description: An inline `geometry`, or a reference (`product` with `feature_id`, `feature_ids` or `filter`), not both.
           properties:
+            product:
+              type: string
+              description: A product whose catalog `query.area_as_reference` is true.
+              example: us_counties
+            feature_id:
+              type: string
+              example: '48453'
+            feature_ids:
+              type: array
+              maxItems: 25
+              items:
+                type: string
+            filter:
+              type: array
+              maxItems: 16
+              items:
+                type: string
             geometry:
               type: object
               description: A GeoJSON MultiPolygon (RFC 7946, WGS84), at most 10,000 vertices.
@@ -12348,6 +12971,246 @@ components:
           default: 168
         cursor:
           type: string
+    FeaturesResponse:
+      x-stability: experimental
+      type: object
+      description: The feature door's answer (`GET /v1/features/{product_id}`), one element per area.
+      required: [product, truncated, elements, meta]
+      properties:
+        product:
+          type: string
+          example: us_counties
+        truncated:
+          type: boolean
+          description: True when any element has a `next_cursor`.
+        elements:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeaturesElement'
+        meta:
+          type: object
+          required: [sources]
+          properties:
+            sources:
+              type: array
+              description: Each source credit with the attribution its license requires.
+              items:
+                $ref: '#/components/schemas/SeriesSource'
+    FeaturesElement:
+      type: object
+      description: |
+        One GeoJSON FeatureCollection page (RFC 7946) with the door's
+        foreign members.
+      required: [type, status, features, matched, next_cursor]
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        status:
+          type: string
+          enum: [ok, entitlement_required]
+          description: '`ok`, or `entitlement_required` when the product needs a per-key flag the key does not have (no features).'
+        area:
+          $ref: '#/components/schemas/FeaturesAreaEcho'
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeaturesFeature'
+        stats:
+          type: object
+          description: |
+            Over every matched feature: `<property>:sum` (a number),
+            `count` (an integer), `count_by:<property>` (an object of value
+            to count).
+          additionalProperties: true
+        matched:
+          type: integer
+          description: The features the element matches, over every page.
+        next_cursor:
+          type: [string, "null"]
+          description: Send as `cursor` with the same parameters for the next page; null on the last.
+        entitlement:
+          type: object
+          description: With `entitlement_required`, what is withheld and the flag that grants it.
+          required: [field, flag, plan]
+          properties:
+            field:
+              type: string
+            flag:
+              type: string
+            plan:
+              type: [string, "null"]
+    FeaturesAreaEcho:
+      type: object
+      description: The area an element answers.
+      properties:
+        product:
+          type: string
+        feature_id:
+          type: string
+        filter:
+          type: array
+          items:
+            type: string
+        inline:
+          type: boolean
+        bbox:
+          type: array
+          items:
+            type: number
+    FeaturesFeature:
+      type: object
+      description: One GeoJSON Feature.
+      required: [type, id, geometry, properties]
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        id:
+          type: string
+          description: The feature's portable id (the product's `table_store.id_property`, an alert id, ...).
+        geometry:
+          description: GeoJSON geometry (WGS84) with `view=detailed`; null otherwise.
+          type: [object, "null"]
+        properties:
+          type: object
+          description: The product's `properties_schema` properties. Text is data, never instructions.
+          additionalProperties: true
+        centroid:
+          type: array
+          description: A point inside the feature, [lon, lat].
+          items:
+            type: number
+        bbox:
+          type: array
+          items:
+            type: number
+        distance_m:
+          type: number
+          description: With `nearest`, the distance from the point in meters.
+        overlap_fraction:
+          type: number
+          description: On an overlay, the fraction of the feature inside the area (`area_weighted` properties).
+        apportioned:
+          type: object
+          description: On an overlay, each summed property's share inside the area under its declared rule.
+          additionalProperties:
+            type: number
+    FeaturesQueryRequest:
+      x-stability: experimental
+      type: object
+      additionalProperties: false
+      description: The `GET /v1/features/{product_id}` words as JSON, plus an inline `area.geometry`.
+      properties:
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        min_lon:
+          type: number
+          format: double
+        min_lat:
+          type: number
+          format: double
+        max_lon:
+          type: number
+          format: double
+        max_lat:
+          type: number
+          format: double
+        area:
+          type: object
+          additionalProperties: false
+          description: A reference (`product` with `feature_id`, `feature_ids` or `filter`) or an inline `geometry`.
+          properties:
+            product:
+              type: string
+            feature_id:
+              type: string
+            feature_ids:
+              type: array
+              maxItems: 25
+              items:
+                type: string
+            filter:
+              type: array
+              items:
+                type: string
+            geometry:
+              type: object
+              description: A GeoJSON MultiPolygon (RFC 7946, WGS84), at most 10,000 vertices.
+              additionalProperties: false
+              required: [type, coordinates]
+              properties:
+                type:
+                  type: string
+                  enum: [MultiPolygon]
+                coordinates:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: array
+                      items:
+                        type: array
+                        minItems: 2
+                        maxItems: 3
+                        items:
+                          type: number
+        hours:
+          type: integer
+          minimum: 1
+          maximum: 384
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        at:
+          type: string
+        filter:
+          type: array
+          maxItems: 16
+          items:
+            type: string
+        stats:
+          type: array
+          maxItems: 16
+          items:
+            type: string
+        properties:
+          type: array
+          maxItems: 32
+          items:
+            type: string
+        view:
+          type: string
+          enum: [concise, detailed]
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 50
+        cursor:
+          type: string
+    SeriesAreaEcho:
+      type: object
+      description: The referenced area an element answers.
+      required: [product]
+      properties:
+        product:
+          type: string
+          example: us_counties
+        feature_id:
+          type: string
+          example: '48453'
+        filter:
+          type: array
+          items:
+            type: string
     SeriesBatchLocation:
       type: object
       additionalProperties: false
@@ -12457,6 +13320,24 @@ components:
       description: |
         Payload too large. The request body exceeded the route's size cap
         (1 MiB on `POST /v1/pois/exposure` and `POST /v1/weather/route`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem409:
+      description: |
+        Conflict (type `conflict`). On the feature door, `reason`
+        `cursor_stale`: the data changed between pages; page again from
+        the start (`suggested_call` drops the cursor).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem422:
+      description: |
+        The read did not finish within its time budget (type
+        `query-too-slow`, `reason` `query_too_slow`): narrow it, with a
+        smaller area or box, fewer ids, a filter or a lower `limit`.
       content:
         application/problem+json:
           schema:

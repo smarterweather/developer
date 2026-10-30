@@ -43,6 +43,26 @@ AIFS AI model forecasts.
 
 ## Map, reference data and distribution
 
+### U.S. Census Bureau
+
+Boundaries, places, and population and housing counts.
+
+- License: Public domain (U.S. Government work)
+- Attribution: Source: U.S. Census Bureau (TIGER/Line, decennial census, American Community Survey).
+- Terms: https://www.census.gov/data/developers/about/terms-of-service.html
+
+### Overture Maps Foundation
+
+Places and building footprints.
+
+- License: Community Data License Agreement Permissive, Version 2.0 (CDLA-Permissive-2.0)
+- Attribution: Overture Maps Foundation, overturemaps.org. Places data available under CDLA Permissive 2.0.
+- Terms: https://docs.overturemaps.org/attribution/
+
+- License: Open Database License (ODbL) 1.0
+- Attribution: © OpenStreetMap contributors, Overture Maps Foundation. Available under the Open Database License.
+- Terms: https://docs.overturemaps.org/attribution/
+
 ### OpenStreetMap contributors
 
 Map and geographic reference data.
