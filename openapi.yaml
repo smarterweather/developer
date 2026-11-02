@@ -1850,8 +1850,7 @@ paths:
         Returns recent lightning near a point: the GOES GLM satellite
         flash count within `glm.radius_km` over the last
         `glm.window_minutes`, plus MRMS lightning density and
-        probability at the point when the grid has a value there.
-        Field names match the MCP `get_lightning_activity` tool. The
+        probability at the point when the grid has a value there. The
         point is snapped to the 0.01° (~1 km) grid used by the other
         point routes, and the response echoes the snapped `lat`/`lon`.
 
