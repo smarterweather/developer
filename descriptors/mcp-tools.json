@@ -69,109 +69,71 @@
     {
       "name": "find_best_window",
       "title": "Find best weather window",
-      "description": "Find the optimal time window for an activity based on weather criteria. Scans the forecast and returns periods in the asked light (day, night or any) matching all conditions. Criteria are expressed in the selected `units` system (default imperial: °F, mph, miles, feet). Example: {\"location\": \"Boulder, CO\", \"criteria\": {\"min_temperature\": 55, \"max_wind_speed\": 15}, \"hours\": 72, \"light\": \"day\"}.",
+      "description": "Find the best time for an activity: consecutive forecast hours where every `where` criterion holds, in the asked light (`windows.light` day, night or any), at least `windows.min_hours` long (default 2). Criteria are expressions over temperature_2m, wind_speed_10m, wind_gusts_10m, precipitation_probability, visibility, cloud_ceiling or cloud_cover in `units` (imperial by default); with no `where`, every hour in the light passes. Example: {\"location\": \"Boulder, CO\", \"where\": [\"temperature_2m >= 55\", \"wind_speed_10m <= 15\"], \"hours\": 72, \"windows\": {\"light\": \"day\", \"min_hours\": 3}}.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "location": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200,
-            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
-          },
-          "lat": {
-            "type": "number",
-            "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
-          },
-          "lon": {
-            "type": "number",
-            "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
-          },
-          "units": {
-            "default": "imperial",
-            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric.",
-            "type": "string",
-            "enum": [
-              "imperial",
-              "metric",
-              "si"
-            ]
-          },
-          "criteria": {
-            "type": "object",
-            "properties": {
-              "max_precipitation_probability": {
-                "description": "Maximum acceptable precipitation probability (0-100%).",
-                "type": "number",
-                "minimum": 0,
-                "maximum": 100
-              },
-              "min_temperature": {
-                "description": "Minimum temperature in the selected units (°F / °C / K).",
-                "type": "number"
-              },
-              "max_temperature": {
-                "description": "Maximum temperature in the selected units (°F / °C / K).",
-                "type": "number"
-              },
-              "max_wind_speed": {
-                "description": "Maximum sustained wind in the selected units (mph / km/h / m/s).",
-                "type": "number"
-              },
-              "max_wind_gust": {
-                "description": "Maximum wind gust in the selected units (mph / km/h / m/s).",
-                "type": "number"
-              },
-              "min_visibility": {
-                "description": "Minimum visibility in the selected units (miles / km / m).",
-                "type": "number"
-              },
-              "min_ceiling": {
-                "description": "Minimum cloud ceiling in the selected units (feet / m / m).",
-                "type": "number"
-              },
-              "max_cloud_cover": {
-                "description": "Maximum acceptable total cloud cover (0-100%).",
-                "type": "number",
-                "minimum": 0,
-                "maximum": 100
-              }
-            },
-            "description": "Weather criteria defining acceptable conditions (all optional)."
+            "description": "Space: one place (place text, ZIP or `lat,lon`). EDR position; `nearest` on a feature product (non-empty).",
+            "type": "string"
           },
           "hours": {
-            "default": 72,
-            "description": "Hours to search. Default 72.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 168
+            "description": "Time: a rolling window of this many hours (ahead for a forecast, back for an analysis) (>= 1).",
+            "type": "integer"
           },
-          "activity_duration_hours": {
-            "default": 2,
-            "description": "Minimum consecutive hours meeting criteria. Default 2.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 24
+          "where": {
+            "description": "Value criteria over the selected variables' standard_names, tested per sample: they mask the series, or are the predicate for windows and count reducers.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "description": "`<name> <op> <value>`, op one of == != > >= < <= in (`in`: a comma-separated list); values in request units.",
+              "type": "string"
+            }
           },
-          "light": {
-            "type": "string",
+          "windows": {
+            "description": "Window search over `where`: consecutive runs of at least min_hours.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "min_hours": {
+                "type": "integer",
+                "description": "Shortest run of consecutive hours meeting every `where` expression (>= 1)."
+              },
+              "light": {
+                "enum": [
+                  "day",
+                  "night",
+                  "any"
+                ],
+                "description": "Restrict windows to daylight (day), darkness (night) or neither (any)."
+              },
+              "max_windows": {
+                "type": "integer",
+                "description": "Most windows to return, earliest first (>= 1)."
+              },
+              "activity": {
+                "type": "string",
+                "description": "What the windows are for (mow the lawn); where the server rates, only the best window in the request is rated for it (non-empty; at most 200 characters)."
+              }
+            },
+            "default": {
+              "min_hours": 2
+            }
+          },
+          "units": {
+            "description": "metric, imperial or si; omitted returns each variable's catalog `units` (SI).",
             "enum": [
-              "day",
-              "night",
-              "any"
+              "metric",
+              "imperial",
+              "si"
             ],
-            "description": "Hours to consider. day: sunrise to sunset; night: sunset to sunrise; any: every hour."
-          },
-          "activity": {
-            "description": "Free-form activity to rate the windows for (e.g. \"afternoon golf\"). Accepted even when rating is off so clients can send it.",
-            "type": "string",
-            "maxLength": 200
+            "default": "imperial"
           }
         },
         "required": [
-          "criteria",
-          "light"
-        ]
+          "location"
+        ],
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -187,13 +149,6 @@
               },
               "name": {
                 "type": "string"
-              },
-              "matched_via": {
-                "type": "string",
-                "enum": [
-                  "autosuggest",
-                  "fuzzy"
-                ]
               }
             },
             "required": [
@@ -212,92 +167,18 @@
               "properties": {
                 "start": {
                   "type": "string",
-                  "description": "Where the window opens: the first passing sample's valid time, or the sunrise or sunset at the light edge when that sample spans it (after end when that is the only sample)."
+                  "description": "The first passing sample."
                 },
                 "end": {
                   "type": "string",
-                  "description": "Valid time of the last passing sample."
+                  "description": "The last passing sample."
                 },
                 "end_exclusive": {
-                  "type": "string",
-                  "description": "The window's exclusive close, authoritative over end: the valid time of the sample after the last passing one (end plus the last step at the series end), or the sunrise or sunset at the light edge when that sample spans it."
+                  "description": "The window's close: the frame after its last passing sample.",
+                  "type": "string"
                 },
                 "hours": {
-                  "type": "number",
-                  "description": "Elapsed hours from start to end_exclusive, to 2 decimals."
-                },
-                "unchecked": {
-                  "description": "Criteria with a missing value on a sample in the window: not checked there.",
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "rating": {
-                  "type": "string",
-                  "enum": [
-                    "unworkable",
-                    "poor",
-                    "workable",
-                    "good",
-                    "ideal"
-                  ]
-                },
-                "limiting_factor": {
-                  "type": "string",
-                  "enum": [
-                    "wind",
-                    "precip",
-                    "temperature",
-                    "visibility",
-                    "storms",
-                    "none"
-                  ]
-                }
-              },
-              "required": [
-                "start",
-                "end",
-                "end_exclusive",
-                "hours"
-              ],
-              "additionalProperties": {}
-            }
-          },
-          "criteria_applied": {
-            "type": "object",
-            "properties": {},
-            "additionalProperties": {}
-          },
-          "light": {
-            "type": "string",
-            "enum": [
-              "day",
-              "night",
-              "any"
-            ],
-            "description": "The light applied: any when sunrise/sunset data was unavailable for the scanned hours."
-          },
-          "light_filter": {
-            "description": "With light day or night: partial when sunrise/sunset data covered only some scanned hours (the rest are in no window).",
-            "type": "string",
-            "enum": [
-              "applied",
-              "partial",
-              "unavailable"
-            ]
-          },
-          "light_unknown": {
-            "description": "With a partial light_filter: the scanned stretches that could not be told day or night.",
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "start": {
-                  "type": "string"
-                },
-                "end": {
-                  "type": "string"
+                  "type": "number"
                 }
               },
               "required": [
@@ -305,39 +186,22 @@
                 "end"
               ],
               "additionalProperties": {}
-            }
+            },
+            "description": "Each window: start, end and end_exclusive (UTC; local beside them), hours, the limiting criterion, and rating when rated."
           },
-          "activity_duration_hours": {
-            "type": "number"
-          },
-          "sun_times": {
+          "criteria_applied": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "sunrise": {
-                  "type": "string"
-                },
-                "sunset": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "sunrise",
-                "sunset"
-              ],
-              "additionalProperties": {}
+              "type": "string"
             }
           },
-          "message": {
+          "light": {
             "type": "string"
           },
-          "dataset_id": {
-            "description": "The forecast product scanned.",
-            "type": "string"
+          "min_hours": {
+            "type": "number"
           },
-          "reference_time": {
-            "description": "The run scanned, when the series is one run.",
+          "status": {
             "type": "string"
           },
           "coverage_start": {
@@ -345,7 +209,11 @@
             "type": "string"
           },
           "coverage_end": {
-            "description": "Exclusive end of the scanned samples: the last valid time plus the last sample step.",
+            "description": "Exclusive end of the scanned samples: the last valid time plus the last step.",
+            "type": "string"
+          },
+          "attribution": {
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
             "type": "string"
           },
           "_sources": {
@@ -395,15 +263,23 @@
               "additionalProperties": {}
             },
             "description": "Per-source provenance: what produced these values and when."
+          },
+          "data_status": {
+            "description": "Present only when the data service did not answer and a cached copy was served.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
           }
         },
         "required": [
-          "location",
           "units",
           "windows",
           "criteria_applied",
           "light",
-          "activity_duration_hours"
+          "min_hours",
+          "status"
         ],
         "additionalProperties": {}
       },
@@ -415,35 +291,6 @@
         "openWorldHint": true
       },
       "_meta": {
-        "smarterweather.dev/input_examples": [
-          {
-            "location": "Boulder, CO",
-            "criteria": {
-              "min_temperature": 55,
-              "max_wind_speed": 15,
-              "max_precipitation_probability": 20
-            },
-            "hours": 72,
-            "activity_duration_hours": 3,
-            "light": "day"
-          },
-          {
-            "location": "Moab, UT",
-            "criteria": {
-              "max_cloud_cover": 20
-            },
-            "light": "night"
-          }
-        ],
-        "smarterweather.dev/required_one_of": [
-          [
-            "location"
-          ],
-          [
-            "lat",
-            "lon"
-          ]
-        ],
         "smarterweather.dev/toolset": "planning"
       }
     },
@@ -825,72 +672,119 @@
     {
       "name": "get_alerts",
       "title": "Get NWS alerts",
-      "description": "NWS watches, warnings, advisories. Point (city/ZIP/lat+lon): containing polygons. BBox or US state/DC/CONUS (codes, full names, US/national): intersecting polygons. A city miss is not a statewide all-clear — query the state or a bbox; never say regional inventory is impossible. NY/WA and \"New York State\"/\"Washington State\" are states; \"New York\"/\"Washington\" stay cities. Omit at for now; at (ISO-8601 UTC) is the snapshot then. Empty = all-clear or purged (~24h). alert_id = detail+geometry, ignores at. Ex: {\"location\":\"WI\",\"events\":[\"Tornado Warning\"]}.",
+      "description": "NWS watches, warnings and advisories in effect at a place (`location`), over a `bbox`, or over a state or county as `area` {product, feature_id} (find_places `boundaries` hands those back), now or at a past instant (`at`). Narrow with `filter` over event, severity, urgency or certainty, and page past 50 with `cursor`; an alert's id is its group_id (each alert's `id`), or its current CAP `message_id`, and `filter` on either with `view: detailed` returns its full text and geometry. Empty means all clear or purged (about 24 h), and a city with none is not a statewide all-clear. Example: {\"location\": \"Wichita, KS\", \"filter\": [\"event in Tornado Warning,Severe Thunderstorm Warning\"]}.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "location": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200,
-            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
-          },
-          "lat": {
-            "type": "number",
-            "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
-          },
-          "lon": {
-            "type": "number",
-            "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
+            "description": "Space: one place (place text, ZIP or `lat,lon`). EDR position; `nearest` on a feature product (non-empty).",
+            "type": "string"
           },
           "bbox": {
-            "description": "Bounding box {west,south,east,north}; west/east are negative in the US. Skips geocoding; intersecting polygons.",
-            "type": "object",
-            "properties": {
-              "west": {
-                "type": "number",
-                "minimum": -180,
-                "maximum": 180
-              },
-              "south": {
-                "type": "number",
-                "minimum": -90,
-                "maximum": 90
-              },
-              "east": {
-                "type": "number",
-                "minimum": -180,
-                "maximum": 180
-              },
-              "north": {
-                "type": "number",
-                "minimum": -90,
-                "maximum": 90
-              }
-            },
-            "required": [
-              "west",
-              "south",
-              "east",
-              "north"
-            ]
-          },
-          "events": {
-            "description": "Optional event-name filter, e.g. [\"Tornado Warning\"].",
+            "description": "Space: [west, south, east, north] in degrees. Items on a feature or text product; a grid needs `stats` (exactly 4 items).",
             "type": "array",
             "items": {
+              "type": "number"
+            }
+          },
+          "area": {
+            "description": "Space: a polygon by reference ({product, feature_id | feature_ids | filter}; the product must declare query.area_as_reference) or inline ({geometry}). Over a feature product, the overlay; over a grid, zonal statistics.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "product": {
+                "type": "string",
+                "description": "The referenced product (one that declares query.area_as_reference), or omitted with `geometry`."
+              },
+              "feature_id": {
+                "description": "The referenced product's portable feature id (FIPS geoid, UGC zone, alert id) (non-empty).",
+                "type": "string"
+              },
+              "feature_ids": {
+                "description": "Up to 25 feature ids; one result element per feature (at most 25 items).",
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "description": "Non-empty."
+                }
+              },
+              "filter": {
+                "description": "Selects the referenced product's features; the area is their union (overlaps dissolved), one result element. Per feature: feature_ids, or select the per-feature product over this area.",
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "description": "`<name> <op> <value>`, op one of == != > >= < <= in (`in`: a comma-separated list); values in request units.",
+                  "type": "string"
+                }
+              },
+              "geometry": {
+                "description": "An inline MultiPolygon, <= 10,000 vertices; send a Polygon as a one-member MultiPolygon.",
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "coordinates"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "MultiPolygon",
+                    "description": "Always MultiPolygon."
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "description": "At least 2 items; at most 3 items."
+                        },
+                        "description": "At least 4 items."
+                      }
+                    },
+                    "description": "Polygons of closed [lon, lat] rings, outer ring first."
+                  }
+                }
+              }
+            }
+          },
+          "at": {
+            "description": "Time: one instant (at least 10 characters).",
+            "type": "string"
+          },
+          "filter": {
+            "description": "On a feature product: expressions over its filterable properties, applied before aggregation.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "description": "`<name> <op> <value>`, op one of == != > >= < <= in (`in`: a comma-separated list); values in request units.",
               "type": "string"
             }
           },
-          "alert_id": {
-            "description": "Alert identifier for detail mode. When set, location is ignored.",
-            "type": "string"
+          "view": {
+            "description": "concise (default): values and feature properties with a centroid and bbox; detailed adds simplified geometry, provenance and raw encodings.",
+            "enum": [
+              "concise",
+              "detailed"
+            ]
           },
-          "at": {
-            "description": "ISO-8601 UTC past instant for the in-effect snapshot. Ignored with alert_id.",
-            "type": "string"
+          "limit": {
+            "type": "integer",
+            "description": "Frames per series element (default and max 168), or features per element (max 50); next_cursor continues (>= 1)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "next_cursor of the previous page, with the same arguments (non-empty)."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -906,28 +800,67 @@
               },
               "name": {
                 "type": "string"
-              },
-              "matched_via": {
-                "type": "string",
-                "enum": [
-                  "autosuggest",
-                  "fuzzy"
-                ]
               }
+            },
+            "required": [
+              "lat",
+              "lon"
+            ],
+            "additionalProperties": {}
+          },
+          "area": {
+            "description": "The area the alerts were read over.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
             },
             "additionalProperties": {}
           },
-          "alert_id": {
+          "alerts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The alert id (its group_id)."
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "additionalProperties": {}
+            },
+            "description": "One row per alert: its id and NWS properties (event, severity, headline, onset, expires, ...)."
+          },
+          "matched": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Alerts matching over every page."
+          },
+          "next_cursor": {
+            "description": "The next page, as `cursor`, with the same arguments.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
             "type": "string"
           },
-          "alerts": {},
-          "alert": {
-            "type": "object",
-            "properties": {},
-            "additionalProperties": {}
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "valid_time": {
-            "description": "Echo of at when an as-of snapshot was requested.",
+            "description": "Echo of `at` for an as-of snapshot.",
+            "type": "string"
+          },
+          "attribution": {
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
             "type": "string"
           },
           "_sources": {
@@ -977,8 +910,22 @@
               "additionalProperties": {}
             },
             "description": "Per-source provenance: what produced these values and when."
+          },
+          "data_status": {
+            "description": "Present only when the data service did not answer and a cached copy was served.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
           }
         },
+        "required": [
+          "alerts",
+          "matched",
+          "next_cursor",
+          "status"
+        ],
         "additionalProperties": {}
       },
       "annotations": {
@@ -993,21 +940,6 @@
           "resourceUri": "ui://weather-widget/v2/index.html"
         },
         "ui/resourceUri": "ui://weather-widget/v2/index.html",
-        "smarterweather.dev/required_one_of": [
-          [
-            "location"
-          ],
-          [
-            "lat",
-            "lon"
-          ],
-          [
-            "bbox"
-          ],
-          [
-            "alert_id"
-          ]
-        ],
         "smarterweather.dev/toolset": "core"
       }
     },
@@ -1194,35 +1126,28 @@
     {
       "name": "get_current_conditions",
       "title": "Get current conditions",
-      "description": "Current weather right now at a location from two independent sources in one call: the RTMA gridded analysis (exact-point values, updated sub-hourly) and the nearest METAR station observation (ground truth with raw METAR, flight category). Use the analysis for point-accurate values and the station for verification. Analysis fields: temperature_2m, dew_point_2m, relative_humidity_2m (derived here from temperature and dew point; listed in analysis.derived), wind_speed_10m, wind_direction_10m, wind_gusts_10m, surface_pressure (station pressure at ground level, not sea-level pressure), visibility, cloud_cover, cloud_ceiling, in units (labels in analysis.unit_labels). nearest_station is the station's own report, unconverted. For a forecast, use get_forecast. Example: {\"location\": \"Pella, IA\"}.",
+      "description": "Current weather right now at a place: the observed analysis at the exact point (temperature, dew point, relative humidity derived from them, wind speed, direction and gusts, pressure, visibility, cloud cover) plus the nearest station report. Values are in `units` (imperial by default; labels in analysis.units); nearest_station is the report as filed, with its distance in meters, and a forecast is get_forecast. Example: {\"location\": \"Pella, IA\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "location": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200,
-            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
-          },
-          "lat": {
-            "type": "number",
-            "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
-          },
-          "lon": {
-            "type": "number",
-            "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
+            "description": "Space: one place (place text, ZIP or `lat,lon`). EDR position; `nearest` on a feature product (non-empty).",
+            "type": "string"
           },
           "units": {
-            "default": "imperial",
-            "description": "imperial (default; °F, mph, inHg, mi, ft) or metric (°C, km/h, hPa, km, m); si returns K, m/s, Pa, m. si is deprecated and will be removed; use metric. Not applied to nearest_station.",
-            "type": "string",
+            "description": "metric, imperial or si; omitted returns each variable's catalog `units` (SI).",
             "enum": [
-              "imperial",
               "metric",
+              "imperial",
               "si"
-            ]
+            ],
+            "default": "imperial"
           }
-        }
+        },
+        "required": [
+          "location"
+        ],
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -1238,13 +1163,6 @@
               },
               "name": {
                 "type": "string"
-              },
-              "matched_via": {
-                "type": "string",
-                "enum": [
-                  "autosuggest",
-                  "fuzzy"
-                ]
               }
             },
             "required": [
@@ -1254,54 +1172,51 @@
             "additionalProperties": {}
           },
           "units": {
-            "type": "string",
-            "enum": [
-              "imperial",
-              "metric",
-              "si"
-            ]
+            "type": "string"
           },
           "analysis": {
             "anyOf": [
               {
                 "type": "object",
                 "properties": {
-                  "dataset_id": {
-                    "type": "string"
-                  },
-                  "valid_times": {
+                  "products": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     }
                   },
-                  "data": {
-                    "type": "object",
-                    "properties": {},
-                    "additionalProperties": {
-                      "type": "array",
-                      "items": {
-                        "type": [
-                          "number",
-                          "null"
-                        ]
-                      }
-                    }
-                  },
-                  "reference_time": {
+                  "status": {
                     "type": "string"
                   },
-                  "reference_times": {
-                    "type": "array",
-                    "items": {
+                  "time": {
+                    "description": "Valid time of the analysis frame (UTC).",
+                    "type": "string"
+                  },
+                  "time_local": {
+                    "type": "string"
+                  },
+                  "values": {
+                    "type": "object",
+                    "propertyNames": {
                       "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
                     }
                   },
-                  "unit_labels": {
+                  "units": {
                     "type": "object",
-                    "properties": {},
-                    "additionalProperties": {
+                    "propertyNames": {
                       "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     }
                   },
                   "derived": {
@@ -1318,9 +1233,11 @@
                   }
                 },
                 "required": [
-                  "dataset_id",
-                  "valid_times",
-                  "data"
+                  "products",
+                  "status",
+                  "values",
+                  "units",
+                  "derived"
                 ],
                 "additionalProperties": {}
               },
@@ -1333,13 +1250,20 @@
             "anyOf": [
               {
                 "type": "object",
-                "properties": {},
+                "propertyNames": {
+                  "type": "string"
+                },
                 "additionalProperties": {}
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The nearest station report, its id and distance_m."
+          },
+          "attribution": {
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
+            "type": "string"
           },
           "_sources": {
             "type": "array",
@@ -1388,10 +1312,17 @@
               "additionalProperties": {}
             },
             "description": "Per-source provenance: what produced these values and when."
+          },
+          "data_status": {
+            "description": "Present only when the data service did not answer and a cached copy was served.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
           }
         },
         "required": [
-          "location",
           "units",
           "analysis",
           "nearest_station"
@@ -1406,15 +1337,6 @@
         "openWorldHint": true
       },
       "_meta": {
-        "smarterweather.dev/required_one_of": [
-          [
-            "location"
-          ],
-          [
-            "lat",
-            "lon"
-          ]
-        ],
         "smarterweather.dev/toolset": "core"
       }
     },
@@ -2512,58 +2434,48 @@
     {
       "name": "get_forecast_distribution",
       "title": "Get forecast distribution",
-      "description": "NBM probabilistic guidance for one weather aspect: percentiles (p10-p90), exceedance probabilities and ensemble spread. Use this for any question about odds, ranges, potential or confidence (\"how much could we get\", \"range of possible highs\", \"how sure is this\") -- a deterministic forecast value cannot answer one. Reading the percentiles: p50 is the most likely outcome, p90 is the reasonable worst case when the risk is the high end (snow totals, wind, rainfall), and p10 when the risk is the low end (cold, visibility, ceiling). A single percentile is not the forecast -- report the likely value with the tail that matters, and label which is which. Aspects: precip (PoP, QPF + percentiles), snow (accumulation percentiles, >1/2/4in probabilities, snow level, snow-type probability), ice (ice accretion, freezing-rain / ice-pellet probabilities), temperature (`daily` high/low p10/p50/p90: the NBM value -/+ 1.28 stddev; hourly temp + stddev), wind (speed/gust percentiles), severe (thunderstorm probability plus NBM CWASP, a severe-environment index, both in percent: severe_weather_prob_p50 is the median CWASP value and severe_weather_prob_above_75 the probability CWASP exceeds 75; NBM has no tornado, hail or damaging-wind odds; SPC's: get_outlooks (guidance) hazard=severe), aviation (LIFR/IFR/MVFR visibility + ceiling odds), confidence (ensemble stddev; low = settled, high = details still in play). Labels in unit_labels. Example: {\"location\": \"Denver, CO\", \"aspect\": \"snow\", \"hours\": 72}.",
+      "description": "Probabilistic forecast guidance for one aspect, from severe risk to aviation ceilings: percentiles (p10 to p90), exceedance probabilities and ensemble spread, for the odds, ranges or confidence one forecast value cannot answer. Read p50 as the likely outcome, p90 as the reasonable worst case when the risk is the high end (snow, wind, rain) and p10 when it is the low end (cold, visibility, ceiling). Aspects: precip, snow, ice, temperature (daily high and low ranges), wind, severe (thunderstorm and severe-environment odds; SPC tornado, hail and wind odds are get_outlooks (guidance)), aviation (ceiling and visibility odds) and confidence (spread). Example: {\"location\": \"Denver, CO\", \"aspect\": \"snow\", \"hours\": 72}.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "location": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200,
-            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Space: one place (place text, ZIP or `lat,lon`). EDR position; `nearest` on a feature product (non-empty).",
+            "type": "string"
           },
-          "lat": {
-            "type": "number",
-            "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
+          "hours": {
+            "description": "Time: a rolling window of this many hours (ahead for a forecast, back for an analysis) (>= 1).",
+            "type": "integer",
+            "default": 72
           },
-          "lon": {
-            "type": "number",
-            "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
+          "units": {
+            "description": "metric, imperial or si; omitted returns each variable's catalog `units` (SI).",
+            "enum": [
+              "metric",
+              "imperial",
+              "si"
+            ],
+            "default": "imperial"
           },
           "aspect": {
             "type": "string",
             "enum": [
               "precip",
-              "snow",
-              "ice",
-              "temperature",
-              "wind",
-              "severe",
               "aviation",
-              "confidence"
+              "confidence",
+              "ice",
+              "severe",
+              "snow",
+              "temperature",
+              "wind"
             ],
-            "description": "Distribution family (see description)."
-          },
-          "hours": {
-            "description": "Forecast hours; default 48-72 by aspect.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 264
-          },
-          "units": {
-            "default": "imperial",
-            "description": "imperial (default; °F, mph, in) or metric. si is deprecated and will be removed; use metric.",
-            "type": "string",
-            "enum": [
-              "imperial",
-              "metric",
-              "si"
-            ]
+            "description": "Which aspect to read: one of precip, aviation, confidence, ice, severe, snow, temperature, wind."
           }
         },
         "required": [
+          "location",
           "aspect"
-        ]
+        ],
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -2579,13 +2491,6 @@
               },
               "name": {
                 "type": "string"
-              },
-              "matched_via": {
-                "type": "string",
-                "enum": [
-                  "autosuggest",
-                  "fuzzy"
-                ]
               }
             },
             "required": [
@@ -2595,46 +2500,36 @@
             "additionalProperties": {}
           },
           "aspect": {
-            "type": "string",
-            "enum": [
-              "precip",
-              "snow",
-              "ice",
-              "temperature",
-              "wind",
-              "severe",
-              "aviation",
-              "confidence"
-            ]
+            "type": "string"
           },
           "hours": {
             "type": "number"
           },
           "units": {
-            "type": "string",
-            "enum": [
-              "imperial",
-              "metric",
-              "si"
-            ]
+            "type": "string"
           },
           "series": {
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
-                "dataset_id": {
+                "product": {
                   "type": "string"
                 },
-                "valid_times": {
+                "status": {
+                  "type": "string"
+                },
+                "times": {
                   "type": "array",
                   "items": {
                     "type": "string"
                   }
                 },
-                "data": {
+                "values": {
                   "type": "object",
-                  "properties": {},
+                  "propertyNames": {
+                    "type": "string"
+                  },
                   "additionalProperties": {
                     "type": "array",
                     "items": {
@@ -2645,28 +2540,25 @@
                     }
                   }
                 },
-                "unit_labels": {
+                "units": {
                   "type": "object",
-                  "properties": {},
+                  "propertyNames": {
+                    "type": "string"
+                  },
                   "additionalProperties": {
-                    "type": "string"
-                  }
-                },
-                "reference_time": {
-                  "type": "string"
-                },
-                "reference_times": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   }
                 }
               },
               "required": [
-                "dataset_id",
-                "valid_times",
-                "data",
-                "unit_labels"
+                "product",
+                "status",
+                "times",
+                "values",
+                "units"
               ],
               "additionalProperties": {}
             }
@@ -2674,100 +2566,100 @@
           "daily": {
             "type": "object",
             "properties": {
-              "dataset_id": {
+              "product": {
                 "type": "string"
-              },
-              "reference_time": {
-                "type": "string"
-              },
-              "reference_times": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "derived": {
-                "type": "string",
-                "const": "nbm_spread_normal"
               },
               "unit": {
-                "type": "string"
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
-              "local_date": {
+              "derived": {
                 "type": "string"
               },
               "days": {
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "properties": {
-                    "date": {
-                      "type": "string"
-                    },
-                    "high": {
-                      "type": "object",
-                      "properties": {
-                        "p10": {
-                          "type": "number"
-                        },
-                        "p50": {
-                          "type": "number"
-                        },
-                        "p90": {
-                          "type": "number"
-                        },
-                        "stddev": {
-                          "type": "number"
-                        }
-                      },
-                      "required": [
-                        "p50"
-                      ],
-                      "additionalProperties": {}
-                    },
-                    "low": {
-                      "type": "object",
-                      "properties": {
-                        "p10": {
-                          "type": "number"
-                        },
-                        "p50": {
-                          "type": "number"
-                        },
-                        "p90": {
-                          "type": "number"
-                        },
-                        "stddev": {
-                          "type": "number"
-                        }
-                      },
-                      "required": [
-                        "p50"
-                      ],
-                      "additionalProperties": {}
-                    }
+                  "propertyNames": {
+                    "type": "string"
                   },
-                  "required": [
-                    "date"
-                  ],
                   "additionalProperties": {}
                 }
               }
             },
             "required": [
-              "dataset_id",
-              "derived",
+              "product",
               "unit",
-              "local_date",
+              "derived",
               "days"
             ],
+            "additionalProperties": {}
+          },
+          "attribution": {
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
+            "type": "string"
+          },
+          "_sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "product": {
+                  "type": "string"
+                },
+                "office": {
+                  "type": "string"
+                },
+                "dataset_id": {
+                  "type": "string"
+                },
+                "dataset_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "issued_at": {
+                  "type": "string"
+                },
+                "time_zone": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "provider",
+                "label"
+              ],
+              "additionalProperties": {}
+            },
+            "description": "Per-source provenance: what produced these values and when."
+          },
+          "data_status": {
+            "description": "Present only when the data service did not answer and a cached copy was served.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
             "additionalProperties": {}
           }
         },
         "required": [
-          "location",
           "aspect",
-          "hours",
           "units",
           "series"
         ],
@@ -2781,15 +2673,6 @@
         "openWorldHint": true
       },
       "_meta": {
-        "smarterweather.dev/required_one_of": [
-          [
-            "location"
-          ],
-          [
-            "lat",
-            "lon"
-          ]
-        ],
         "smarterweather.dev/toolset": "core"
       }
     },
@@ -3854,66 +3737,53 @@
     {
       "name": "get_observed_precipitation",
       "title": "Observed precipitation",
-      "description": "How much rain fell: observed precipitation totals at a location. Use for \"did it rain\", \"how much rain fell\", \"rain in the last 24 hours / since yesterday\". Source: MRMS MultiSensor QPE Pass2 (radar bias-corrected to rain gauges) over 1/3/6/24/48/72 h windows (CONUS; 1 h only in Alaska and Hawaii). Values have about 2 mm (0.08 in) resolution, so 0 means under about 1 mm; data runs about an hour behind real time. Pass `at` (within 33 h) for totals ending at a past time (newest frame up to 3 h before it). With include_nowcast (default) it also returns a next-hour radar nowcast (CONUS): peak intensity (light/moderate/heavy), type and start time, not an amount. Forecast totals past the next hour: get_data (catalog); station reports: get_observations (observed).",
+      "description": "How much rain fell: observed precipitation totals at a place over trailing 1 to 72 h windows (`hours`, default 24), or ending at a past time (`end` with `start`), from radar estimates bias-corrected to rain gauges. Values have about 0.08 in (2 mm) resolution, so 0 means under about 0.04 in, and data runs about an hour behind; `product: nowcast` adds the next hour's radar nowcast (peak intensity, type and start, not an amount). Example: {\"location\": \"Chicago, IL\", \"hours\": 24}.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "location": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200,
-            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
+            "description": "Space: one place (place text, ZIP or `lat,lon`). EDR position; `nearest` on a feature product (non-empty).",
+            "type": "string"
           },
-          "lat": {
-            "type": "number",
-            "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
+          "hours": {
+            "description": "Time: a rolling window of this many hours (ahead for a forecast, back for an analysis) (>= 1).",
+            "type": "integer",
+            "default": 24
           },
-          "lon": {
-            "type": "number",
-            "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
+          "start": {
+            "description": "Time: window start (with `end`) (at least 10 characters).",
+            "type": "string"
           },
-          "windows": {
-            "default": [
-              "1h",
-              "24h"
-            ],
-            "description": "Accumulation windows ending at the latest frame (or at `at`).",
-            "minItems": 1,
-            "maxItems": 6,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "1h",
-                "3h",
-                "6h",
-                "24h",
-                "48h",
-                "72h"
-              ]
-            }
-          },
-          "units": {
-            "default": "imperial",
-            "description": "Units of every value in and out: imperial (default; °F, mph, in) or metric (°C, km/h, mm). si is deprecated and will be removed; use metric.",
-            "type": "string",
-            "enum": [
-              "imperial",
-              "metric",
-              "si"
-            ]
+          "end": {
+            "description": "Time: window end (with `start`) (at least 10 characters).",
+            "type": "string"
           },
           "at": {
-            "description": "RFC3339 end time within the last 33 h. Default: latest.",
-            "type": "string",
-            "format": "date-time"
+            "description": "Time: one instant (at least 10 characters).",
+            "type": "string"
           },
-          "include_nowcast": {
-            "default": true,
-            "description": "Next-hour radar nowcast (CONUS; ignored with `at`).",
-            "type": "boolean"
+          "units": {
+            "description": "metric, imperial or si; omitted returns each variable's catalog `units` (SI).",
+            "enum": [
+              "metric",
+              "imperial",
+              "si"
+            ],
+            "default": "imperial"
+          },
+          "product": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "nowcast"
+            ],
+            "description": "Which product to read: one of observed, nowcast (default observed)."
           }
-        }
+        },
+        "required": [
+          "location"
+        ],
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -3929,13 +3799,6 @@
               },
               "name": {
                 "type": "string"
-              },
-              "matched_via": {
-                "type": "string",
-                "enum": [
-                  "autosuggest",
-                  "fuzzy"
-                ]
               }
             },
             "required": [
@@ -3945,14 +3808,10 @@
             "additionalProperties": {}
           },
           "units": {
-            "type": "string",
-            "enum": [
-              "imperial",
-              "metric",
-              "si"
-            ]
+            "type": "string"
           },
           "as_of": {
+            "description": "End of the newest hourly bucket.",
             "type": "string"
           },
           "windows": {
@@ -3961,15 +3820,7 @@
               "type": "object",
               "properties": {
                 "window": {
-                  "type": "string",
-                  "enum": [
-                    "1h",
-                    "3h",
-                    "6h",
-                    "24h",
-                    "48h",
-                    "72h"
-                  ]
+                  "type": "string"
                 },
                 "hours": {
                   "type": "number"
@@ -3981,38 +3832,28 @@
                   ]
                 },
                 "unit": {
-                  "type": "string"
-                },
-                "valid_time": {
                   "type": [
                     "string",
                     "null"
                   ]
                 },
                 "window_start": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": "string"
                 },
-                "age_seconds": {
-                  "type": [
-                    "number",
-                    "null"
-                  ]
+                "window_end": {
+                  "type": "string"
                 },
-                "dataset_id": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                "hours_with_data": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
                 },
                 "status": {
                   "type": "string",
                   "enum": [
                     "ok",
-                    "unavailable",
-                    "not_in_domain"
+                    "partial",
+                    "unavailable"
                   ]
                 }
               },
@@ -4021,78 +3862,31 @@
                 "hours",
                 "value",
                 "unit",
-                "valid_time",
                 "window_start",
-                "age_seconds",
-                "dataset_id",
+                "window_end",
+                "hours_with_data",
                 "status"
               ],
               "additionalProperties": {}
             }
           },
-          "quantization_step": {
-            "type": "object",
-            "properties": {
-              "value": {
-                "type": "number"
-              },
-              "unit": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "value",
-              "unit"
-            ],
-            "additionalProperties": {}
-          },
           "nowcast": {
-            "type": "object",
-            "properties": {
-              "horizon_minutes": {
-                "type": "number"
+            "anyOf": [
+              {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
               },
-              "generated_at": {
-                "type": "string"
-              },
-              "peak_intensity": {
-                "type": "string",
-                "enum": [
-                  "none",
-                  "light",
-                  "moderate",
-                  "heavy"
-                ]
-              },
-              "precip_type": {
-                "type": "string"
-              },
-              "starts_at": {
-                "type": "string"
-              },
-              "already_occurring": {
-                "type": "boolean"
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "horizon_minutes",
-              "peak_intensity",
-              "precip_type",
-              "already_occurring"
-            ],
-            "additionalProperties": {}
+            ]
           },
-          "derived": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "notes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "attribution": {
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
+            "type": "string"
           },
           "_sources": {
             "type": "array",
@@ -4143,18 +3937,16 @@
             "description": "Per-source provenance: what produced these values and when."
           },
           "data_status": {
+            "description": "Present only when the data service did not answer and a cached copy was served.",
             "type": "object",
-            "properties": {},
+            "propertyNames": {
+              "type": "string"
+            },
             "additionalProperties": {}
           }
         },
         "required": [
-          "location",
-          "units",
-          "windows",
-          "quantization_step",
-          "derived",
-          "_sources"
+          "units"
         ],
         "additionalProperties": {}
       },
@@ -4166,32 +3958,6 @@
         "openWorldHint": true
       },
       "_meta": {
-        "smarterweather.dev/input_examples": [
-          {
-            "location": "Chicago, IL",
-            "windows": [
-              "24h"
-            ]
-          },
-          {
-            "lat": 41.89,
-            "lon": -87.65,
-            "windows": [
-              "1h",
-              "6h"
-            ],
-            "at": "2026-09-30T12:00:00Z"
-          }
-        ],
-        "smarterweather.dev/required_one_of": [
-          [
-            "location"
-          ],
-          [
-            "lat",
-            "lon"
-          ]
-        ],
         "smarterweather.dev/toolset": "core"
       }
     },
@@ -5184,25 +4950,19 @@
     {
       "name": "get_time_context",
       "title": "Get time context",
-      "description": "Complete temporal context for a location: local time, timezone, 14-day calendar with day names and Today/Tomorrow offsets, sunrise/sunset/solar times (from the weather pipeline's astro product), and moon phase. Use whenever you need to reason about dates, times, or daylight for a location -- including \"what time is sunset?\", \"is it dark there now?\", or \"what day of the week is the 4th-day forecast?\". If current_time.timezone_resolved is false, zone unknown: state times as UTC, never as local. Accepts a place name directly. Example: {\"location\": \"Seattle, WA\"}.",
+      "description": "Local time, timezone, a 14-day calendar with day names and Today/Tomorrow labels, sunrise, sunset and solar times, and moon phase and rise and set for a place. Use it to reason about dates, times or daylight there (\"when is sunset?\", \"is it dark there now?\"); when current_time.timezone_resolved is false, state times in UTC. Example: {\"location\": \"Seattle, WA\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "location": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200,
-            "description": "Free-text place: \"City, ST\" (e.g. \"Portland, OR\"), US ZIP, venue/address where enabled, or \"lat,lon\". Use this OR lat+lon, not both."
-          },
-          "lat": {
-            "type": "number",
-            "description": "Latitude in decimal degrees (-90 to 90). Most tools also accept a `location` place-name string instead of lat/lon."
-          },
-          "lon": {
-            "type": "number",
-            "description": "Longitude in decimal degrees (-180 to 180). For continental US use negative values (west of the prime meridian)."
+            "description": "Space: one place (place text, ZIP or `lat,lon`). EDR position; `nearest` on a feature product (non-empty).",
+            "type": "string"
           }
-        }
+        },
+        "required": [
+          "location"
+        ],
+        "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
@@ -5218,13 +4978,6 @@
               },
               "name": {
                 "type": "string"
-              },
-              "matched_via": {
-                "type": "string",
-                "enum": [
-                  "autosuggest",
-                  "fuzzy"
-                ]
               }
             },
             "required": [
@@ -5235,30 +4988,97 @@
           },
           "current_time": {
             "type": "object",
-            "properties": {},
+            "propertyNames": {
+              "type": "string"
+            },
             "additionalProperties": {}
           },
           "daylight": {
             "type": "object",
-            "properties": {},
+            "propertyNames": {
+              "type": "string"
+            },
             "additionalProperties": {}
           },
           "moon": {
             "type": "object",
-            "properties": {},
+            "propertyNames": {
+              "type": "string"
+            },
             "additionalProperties": {}
           },
           "calendar": {
             "type": "array",
             "items": {
               "type": "object",
-              "properties": {},
+              "propertyNames": {
+                "type": "string"
+              },
               "additionalProperties": {}
             }
+          },
+          "attribution": {
+            "description": "Attribution the dataset licence requires. Cite it when quoting these values.",
+            "type": "string"
+          },
+          "_sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "product": {
+                  "type": "string"
+                },
+                "office": {
+                  "type": "string"
+                },
+                "dataset_id": {
+                  "type": "string"
+                },
+                "dataset_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "issued_at": {
+                  "type": "string"
+                },
+                "time_zone": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "provider",
+                "label"
+              ],
+              "additionalProperties": {}
+            },
+            "description": "Per-source provenance: what produced these values and when."
+          },
+          "data_status": {
+            "description": "Present only when the data service did not answer and a cached copy was served.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
           }
         },
         "required": [
-          "location",
           "current_time",
           "daylight",
           "moon",
@@ -5274,15 +5094,6 @@
         "openWorldHint": true
       },
       "_meta": {
-        "smarterweather.dev/required_one_of": [
-          [
-            "location"
-          ],
-          [
-            "lat",
-            "lon"
-          ]
-        ],
         "smarterweather.dev/toolset": "catalog"
       }
     },
