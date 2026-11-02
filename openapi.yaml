@@ -9945,7 +9945,7 @@ components:
         The data-query words the product supports: query shapes (OGC API EDR
         names), time words, reducers and filters. New values may be added to
         each list.
-      required: [shapes, time_words, reducers, filters, where, area_as_reference, max_cells, max_locations]
+      required: [shapes, time_words, reducers, filters, where, area_as_reference, nearest, max_cells, max_locations]
       properties:
         shapes:
           type: array
@@ -9981,6 +9981,21 @@ components:
         area_as_reference:
           type: boolean
           description: Whether the product's features can be referenced as an area.
+        nearest:
+          description: |
+            The `nearest` shape's radius, present exactly when `shapes` lists
+            `nearest` (feature products with point, line or polygon geometry;
+            a polygon containing the point comes first, at distance 0): a
+            point answers the nearest features within `max_m` metres (`null`:
+            uncapped), ordered by distance. `null` otherwise.
+          oneOf:
+            - type: object
+              required: [max_m]
+              properties:
+                max_m:
+                  type: [integer, "null"]
+                  example: 30000
+            - type: 'null'
         max_cells:
           type: [integer, "null"]
           description: Zonal-statistics cell cap per element; `null` for non-gridded products.
@@ -10005,7 +10020,11 @@ components:
           example: [temperature_2m]
         observed_counterpart:
           type: object
-          description: standard_name -> the domain's observed product of record.
+          description: |
+            standard_name -> the domain's observed product of record, as
+            `<product_id>`, or `<product_id>:<standard_name>` when the
+            observed variable carries another standard name (the 1 h QPE for
+            `precipitation`).
           additionalProperties:
             type: string
           example: {temperature_2m: rtma_conus}
@@ -10067,6 +10086,16 @@ components:
             different values of it overlap (zone types), so a sum needs a
             filter on it.
           example: zone_type
+        constant:
+          description: |
+            The property's one value on every feature of the product (an
+            outlook's day, a CPC outlook's period), which the features do not
+            carry: a filter on it selects or skips the whole product.
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+          example: 2
 
     CatalogTableStore:
       type: object
@@ -10365,6 +10394,48 @@ components:
                   type: [string, "null"]
                 unit_base:
                   type: [string, "null"]
+                fields:
+                  type: array
+                  description: |
+                    A packed value's bit fields: each is
+                    `(raw >> shift) & mask`, read as `offset + scale * field`
+                    in `units`; `sentinel` is a field value meaning no value,
+                    and `codes` name a coded field's values.
+                  items:
+                    type: object
+                    required: [name, shift, mask, scale, offset, units]
+                    properties:
+                      name:
+                        type: string
+                      shift:
+                        type: integer
+                      mask:
+                        type: integer
+                      scale:
+                        type: number
+                        format: double
+                      offset:
+                        type: number
+                        format: double
+                      units:
+                        type: [string, "null"]
+                      sentinel:
+                        type: integer
+                      meaning:
+                        type: string
+                      valid_when:
+                        type: object
+                        description: The field has a value only when `field` (another field of the value) is not `ne`.
+                        required: [field, ne]
+                        properties:
+                          field:
+                            type: string
+                          ne:
+                            type: integer
+                      codes:
+                        type: object
+                        additionalProperties:
+                          type: string
             - type: 'null'
         point:
           description: |

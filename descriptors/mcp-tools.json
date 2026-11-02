@@ -1657,10 +1657,11 @@
             }
           },
           "units": {
-            "description": "metric or imperial; omitted returns each variable's catalog `units` (SI), the generic door's default.",
+            "description": "metric, imperial or si; omitted returns each variable's catalog `units` (SI).",
             "enum": [
               "metric",
-              "imperial"
+              "imperial",
+              "si"
             ]
           },
           "view": {
