@@ -3544,6 +3544,11 @@ paths:
         or a `city` (with optional `state` disambiguator). Exactly one
         of `city` or `zipcode` must be supplied.
 
+        A `city` search returns at most 10 place rows plus up to 64
+        `county` rows (a county-equivalent whose legal name is `city`,
+        most populous first), so a county name many states share
+        ("Washington County") returns every one.
+
         ### Caching
 
         Successful responses carry `Cache-Control: private,
@@ -10856,7 +10861,7 @@ components:
       description: |
         Single forward-geocode candidate. Most fields are JSON `null`
         when the source record lacks them. `type` is the result kind
-        (`place`, `zip`, `address`, `poi`).
+        (`place`, `zip`, `county`, `address`, `poi`).
 
         Forward-compat: additional fields may appear without a
         sw-api release.
@@ -10903,14 +10908,18 @@ components:
           type: string
           description: |
             Result kind. Emitted values are
-            `place`, `zip`, `address`, `poi`. Treat as opaque --
+            `place`, `zip`, `county`, `address`, `poi`; a `county` row
+            is a county-equivalent matched by its legal name
+            ("Travis County", "Orleans Parish"). Treat as opaque --
             new types may appear without a sw-api release.
           example: "place"
         place_id:
           type: [string, "null"]
           description: |
             Census place GEOID. Same key as the v2 basemap tile `id`.
-            Present on place results; omitted for ZIP results.
+            Present on place results; the 5-digit county FIPS geoid on
+            `county` rows (the `us_counties` feature id); omitted for
+            ZIP results.
           example: "1714000"
         id:
           type: string

@@ -53,7 +53,7 @@
           "dataset_id",
           "detail"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Describe data",
@@ -200,7 +200,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "units": {
             "type": "string"
@@ -261,7 +261,7 @@
                 "end_exclusive",
                 "hours"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             }
           },
           "criteria_applied": {
@@ -304,7 +304,7 @@
                 "start",
                 "end"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             }
           },
           "activity_duration_hours": {
@@ -326,7 +326,7 @@
                 "sunrise",
                 "sunset"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             }
           },
           "message": {
@@ -392,7 +392,7 @@
                 "provider",
                 "label"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             },
             "description": "Per-source provenance: what produced these values and when."
           }
@@ -405,7 +405,7 @@
           "light",
           "activity_duration_hours"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Find best weather window",
@@ -450,7 +450,7 @@
     {
       "name": "find_places",
       "title": "Find places",
-      "description": "Find places: a name, ZIP, venue or address to ranked candidates with lat/lon, or coordinates to the place and timezone. Pass `query` (fuzzy=true for partial input) or `lat`+`lon`; rows carry `type` place|zip|address|poi, `matched_via: \"autosuggest\"` marks fallback rows and `partial` a timed-out section. Weather tools take `location`; use this to disambiguate or name a point. Example: {\"lat\": 39.74, \"lon\": -104.99} -> Denver, Colorado, America/Denver.",
+      "description": "Find places: a name, ZIP, venue or address to ranked candidates with lat/lon, or coordinates to the place and timezone. Pass `query` (fuzzy=true for partial input) or `lat`+`lon`; rows carry `type` place|zip|address|poi|county, `matched_via: \"autosuggest\"` marks fallback rows and `partial` a timed-out section. Weather tools take `location`; use this to disambiguate or name a point. Example: {\"lat\": 39.74, \"lon\": -104.99} -> Denver, Colorado, America/Denver.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -597,7 +597,7 @@
         "required": [
           "candidates"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Find places",
@@ -703,7 +703,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "current": {
             "type": "array",
@@ -744,7 +744,7 @@
                 "units",
                 "data"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             }
           },
           "forecast": {
@@ -786,7 +786,7 @@
                 "units",
                 "data"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             }
           }
         },
@@ -794,7 +794,7 @@
           "location",
           "current"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get air quality",
@@ -915,7 +915,7 @@
                 ]
               }
             },
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "alert_id": {
             "type": "string"
@@ -974,12 +974,12 @@
                 "provider",
                 "label"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             },
             "description": "Per-source provenance: what produced these values and when."
           }
         },
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get NWS alerts",
@@ -1178,7 +1178,7 @@
           "unit_labels",
           "results"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get climate reports and records",
@@ -1251,7 +1251,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "units": {
             "type": "string",
@@ -1322,7 +1322,7 @@
                   "valid_times",
                   "data"
                 ],
-                "additionalProperties": false
+                "additionalProperties": {}
               },
               {
                 "type": "null"
@@ -1385,7 +1385,7 @@
                 "provider",
                 "label"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             },
             "description": "Per-source provenance: what produced these values and when."
           }
@@ -1396,7 +1396,7 @@
           "analysis",
           "nearest_station"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get current conditions",
@@ -1723,7 +1723,7 @@
                     "lat",
                     "lon"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": {}
                 },
                 "area": {
                   "description": "The area an element answers: a reference ({product, feature_id | filter}) or an inline one.",
@@ -1893,7 +1893,7 @@
                       "end",
                       "hours"
                     ],
-                    "additionalProperties": false
+                    "additionalProperties": {}
                   }
                 },
                 "passed": {
@@ -1962,7 +1962,7 @@
                       "id",
                       "properties"
                     ],
-                    "additionalProperties": false
+                    "additionalProperties": {}
                   }
                 },
                 "stats": {
@@ -2003,7 +2003,7 @@
                 "product",
                 "status"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             },
             "description": "One element per (select, place or area), tagged by kind."
           },
@@ -2080,7 +2080,7 @@
                 "provider",
                 "label"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             },
             "description": "Per-source provenance: what produced these values and when."
           }
@@ -2091,7 +2091,7 @@
           "truncated",
           "next_cursor"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get data",
@@ -2269,7 +2269,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "units": {
             "type": "string"
@@ -2329,7 +2329,7 @@
                 "provider",
                 "label"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             },
             "description": "Per-source provenance: what produced these values and when."
           }
@@ -2339,7 +2339,7 @@
           "units",
           "forecast"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get forecast",
@@ -2473,7 +2473,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "type": {
             "type": "string"
@@ -2491,7 +2491,7 @@
           "type",
           "products"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get forecast discussion",
@@ -2587,7 +2587,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "aspect": {
             "type": "string",
@@ -2663,7 +2663,7 @@
                 "data",
                 "unit_labels"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             }
           },
           "daily": {
@@ -2718,7 +2718,7 @@
                       "required": [
                         "p50"
                       ],
-                      "additionalProperties": false
+                      "additionalProperties": {}
                     },
                     "low": {
                       "type": "object",
@@ -2739,13 +2739,13 @@
                       "required": [
                         "p50"
                       ],
-                      "additionalProperties": false
+                      "additionalProperties": {}
                     }
                   },
                   "required": [
                     "date"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": {}
                 }
               }
             },
@@ -2756,7 +2756,7 @@
               "local_date",
               "days"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           }
         },
         "required": [
@@ -2766,7 +2766,7 @@
           "units",
           "series"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get forecast distribution",
@@ -2909,7 +2909,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "units": {
             "type": "string"
@@ -3016,7 +3016,7 @@
                     "meanObserved",
                     "observedVariance"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": {}
                 },
                 "probabilistic": {
                   "type": "object",
@@ -3060,7 +3060,7 @@
                           "meanForecast",
                           "observedFrequency"
                         ],
-                        "additionalProperties": false
+                        "additionalProperties": {}
                       }
                     }
                   },
@@ -3070,7 +3070,7 @@
                     "baseRate",
                     "reliability"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": {}
                 },
                 "categorical": {
                   "type": "object",
@@ -3139,7 +3139,7 @@
                     "correctNegatives",
                     "baseRate"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": {}
                 },
                 "vector": {
                   "type": "object",
@@ -3179,7 +3179,7 @@
                     "samples",
                     "vectorRmse"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": {}
                 }
               },
               "required": [
@@ -3273,7 +3273,7 @@
               "east",
               "north"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "slices": {
             "type": "array",
@@ -3343,7 +3343,7 @@
         "required": [
           "notes"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get forecast skill",
@@ -3568,7 +3568,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "scope": {
             "type": "string",
@@ -3601,7 +3601,7 @@
           "unit_labels",
           "lightning"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get lightning activity",
@@ -3794,7 +3794,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "station": {
             "type": "string"
@@ -3824,7 +3824,7 @@
           "unit_labels",
           "observations"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get station observations",
@@ -3937,7 +3937,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "units": {
             "type": "string",
@@ -4022,7 +4022,7 @@
                 "dataset_id",
                 "status"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             }
           },
           "quantization_step": {
@@ -4039,7 +4039,7 @@
               "value",
               "unit"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "nowcast": {
             "type": "object",
@@ -4075,7 +4075,7 @@
               "precip_type",
               "already_occurring"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "derived": {
             "type": "array",
@@ -4133,7 +4133,7 @@
                 "provider",
                 "label"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             },
             "description": "Per-source provenance: what produced these values and when."
           },
@@ -4151,7 +4151,7 @@
           "derived",
           "_sources"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Observed precipitation",
@@ -4275,7 +4275,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "hazard": {
             "type": "string"
@@ -4337,7 +4337,7 @@
           "day",
           "outlooks"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get hazard outlooks",
@@ -4584,7 +4584,7 @@
           "departures",
           "meta"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get route weather",
@@ -4670,7 +4670,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "units": {
             "type": "string",
@@ -4698,7 +4698,7 @@
           "unit_labels",
           "soundings"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get radiosonde sounding",
@@ -4903,7 +4903,7 @@
         "required": [
           "overall"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get status",
@@ -4993,7 +4993,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "summary": {
             "type": "string",
@@ -5031,7 +5031,7 @@
           "unit_labels",
           "detections"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get storm cells",
@@ -5122,7 +5122,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "hours": {
             "type": "number"
@@ -5154,7 +5154,7 @@
           "unit_labels",
           "reports"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get storm reports",
@@ -5226,7 +5226,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "current_time": {
             "type": "object",
@@ -5259,7 +5259,7 @@
           "moon",
           "calendar"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get time context",
@@ -5343,7 +5343,7 @@
           "unit_labels",
           "features"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get tropical activity",
@@ -5447,7 +5447,7 @@
           "unit_labels",
           "features"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Get tropical observations",
@@ -5463,7 +5463,7 @@
     {
       "name": "search_data",
       "title": "Search data",
-      "description": "Search the data catalog: which dataset's values answer a weather question, or what data exists at a point. With `query` it ranks grids, radar, satellite, outlooks and observations and returns hits with variable, units, cadence, why, the exact `call` to run next and any verified `example`; without it, it lists datasets at the place with freshness, or every public one. A place (`location` or lat/lon) or `domain` keeps datasets covering it; variables come from describe_data. Example: {\"location\": \"Anchorage, AK\"}.",
+      "description": "Search the data catalog: which dataset's values answer a question about weather and the people and places it affects, or what data exists at a point. With `query` it ranks grids, radar, satellite, outlooks and observations and returns hits with variable, units, cadence, why, the exact `call` to run next (a named place fills its `area`) and any verified `example`; without it, it lists datasets at the place with freshness, or every public one. A place (`location` or lat/lon) or `domain` keeps datasets covering it; variables come from describe_data. Example: {\"location\": \"Anchorage, AK\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -5545,7 +5545,7 @@
               "lat",
               "lon"
             ],
-            "additionalProperties": false
+            "additionalProperties": {}
           },
           "domain": {
             "description": "The coverage filter applied: the place's domain, or `domain`.",
@@ -5617,7 +5617,7 @@
                     "question",
                     "call"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": {}
                 },
                 "call": {
                   "description": "The exact call that answers from this dataset; through call_tool when that tool is not on this connection.",
@@ -5636,7 +5636,7 @@
                     "tool",
                     "arguments"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": {}
                 },
                 "toolset": {
                   "description": "When this connection does not list that tool: its toolset.",
@@ -5678,7 +5678,7 @@
                 "title",
                 "kind"
               ],
-              "additionalProperties": false
+              "additionalProperties": {}
             }
           },
           "data_status": {
@@ -5691,7 +5691,7 @@
         "required": [
           "hits"
         ],
-        "additionalProperties": false
+        "additionalProperties": {}
       },
       "annotations": {
         "title": "Search data",
