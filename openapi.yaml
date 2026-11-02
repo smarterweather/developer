@@ -831,7 +831,14 @@ paths:
         period counts from its onset. Alerts issued after the request, and
         alerts that have already ended, cannot be known, even for a
         departure in the past. Marine-zone and surf and beach alerts are
-        left out.
+        left out: the alerts are the `nws_alerts` crossings of
+        `POST /v1/series/batch` `path` with `filter` `["marine == false",
+        "event != Rip Current Statement", "event != Beach Hazards
+        Statement", "event != High Surf Advisory", "event != High Surf
+        Warning"]` (the `route_weather` query's call). A route that
+        crosses more than 500 alerts, or whose alerts read runs over its
+        time budget, answers `422` (send a shorter route); alerts that
+        change while they are read answer `503` with `Retry-After`.
 
         An alert counts while its window, from `onset` to `expiration`,
         overlaps the time from `enter_time` to `exit_time`. An alert the
@@ -971,6 +978,8 @@ paths:
           $ref: '#/components/responses/Problem404'
         '413':
           $ref: '#/components/responses/Problem413'
+        '422':
+          $ref: '#/components/responses/Problem422'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -4953,10 +4962,13 @@ paths:
 
         At most one time word, on a product whose `query.time_words` lists
         it: `hours` (ahead for a forward product, back for a backward one),
-        `start` and `end` (RFC 3339; overlap with each feature's time), or
-        `at` (RFC 3339, or a date: the features in effect at that instant;
-        `nws_alerts` reads its version history, as `GET /v1/alerts?at=`
-        does). With none, the features in effect now. A time-free layer
+        `start` and `end` (RFC 3339; overlap with each feature's own
+        window; a forecast product also reads the issuance in effect at
+        `start`), or `at` (RFC 3339, or a date: the features in effect at
+        that instant; `nws_alerts` reads its version history, as
+        `GET /v1/alerts?at=` does, and so does a window on it that starts
+        in the past, while one that starts now or later reads what is known
+        now). With none, the features in effect now. A time-free layer
         takes none.
 
         A `day_of_year` product (`time.axis`, such as station normals)
@@ -13215,6 +13227,21 @@ components:
                           type: number
         path:
           $ref: '#/components/schemas/SeriesPath'
+        filter:
+          type: array
+          maxItems: 16
+          description: |
+            Expressions `<property> <op> <value>` (op one of `==`, `!=`,
+            `>`, `>=`, `<`, `<=`, `in`) over the filterable properties of
+            the selected feature products, applied before their crossings
+            are found. Only with `path`: elsewhere `/v1/series` reads no
+            feature product, so a `filter` is `unsupported_word` with a
+            `suggested_call` that drops it (`GET /v1/features/{product_id}`
+            filters features at a point, a bbox or an area). Example, the
+            land alerts a road trip meets: `["marine == false", "event !=
+            High Surf Advisory"]`.
+          items:
+            type: string
         view:
           type: string
           enum: [concise, detailed]
@@ -13254,7 +13281,21 @@ components:
         grid or snapshot product reads each sample at its ETA; a feature
         product (`product:*`) answers `crossings`, the stretches of the
         path inside its features in effect when the departure is there
-        (the feature's own window: an alert's onset to its end). A path
+        (the feature's own window: an alert's onset to its end; a feature
+        that declares no end is unbounded). A timed feature product reads
+        what a departure could meet: the features in effect at some time
+        from the later of the request and the first departure to the last
+        arrival, as known at the request. An alert whose product expires
+        before a next-day departure while its hazard runs on is read; one
+        that had ended by the request is not, even for a departure already
+        under way, and none issued after the request is
+        (`POST /v1/weather/route`'s rule). A forecast frame product reads
+        the frame in effect at that start and the frames after it within
+        the trip.
+        The request's `filter` applies to the feature products along the
+        path: each expression goes to the selected feature products that
+        declare its property, and every expression must name a filterable
+        property of one of them. A path
         that crosses more than 500 of a product's features answers `422`
         `too_many_features`, and a feature read over its time budget
         `422` `query_too_slow` (send a shorter path);
@@ -13793,7 +13834,10 @@ components:
       description: |
         The read did not finish within its time budget (type
         `query-too-slow`, `reason` `query_too_slow`): narrow it, with a
-        smaller area or box, fewer ids, a filter or a lower `limit`.
+        smaller area or box, fewer ids, a filter or a lower `limit`. A
+        path that crosses more than 500 of a product's features is type
+        `too-many-features`, `reason` `too_many_features`: send a shorter
+        path (or, where the route takes one, a filter).
       content:
         application/problem+json:
           schema:
