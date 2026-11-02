@@ -1653,6 +1653,10 @@
               "max_windows": {
                 "type": "integer",
                 "description": "Most windows to return, earliest first (>= 1)."
+              },
+              "activity": {
+                "type": "string",
+                "description": "What the windows are for (mow the lawn); where the server rates, only the best window in the request is rated for it (non-empty; at most 200 characters)."
               }
             }
           },

@@ -87,6 +87,7 @@ info:
     | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
     | `climate`     | no    | experimental | NCEI day-of-year normals for the location, plus per-day departure from normal on `daily[]`. |
     | `metar`       | no    | experimental | Nearest METAR sky layers and present weather for the photoreal canvas. |
+    | `aqi`         | no    | experimental | Air quality index now and its daily forecast, from the catalog's products of record for `air_quality_index` (CONUS). |
     | `sky`         | no    | experimental | Sunrise/sunset color forecast inside `astro` and `daily[].astro` (CONUS). Implies `astro`. Not enabled for every key: `not_enabled` warning. |
 
     `location` and `gis` are valid tokens, but every 200 response carries
@@ -2503,6 +2504,22 @@ paths:
 
         ### Filters
 
+        - `filter` — `<property> <op> <value>`, repeatable (all must
+          pass): the text kind's generic filter, over the catalog text
+          product's (`nws_text_product`) `properties_schema` properties
+          marked `filterable`, with one of their `filter_ops` (`==`, `!=`,
+          `>`, `>=`, `<`, `<=`, `in` with a comma list): `product_type`,
+          `wfo`, `awips_id`, `outlook_day` and `issued_at` (RFC 3339).
+          A filter on `product_type` stands in for the parameter, as does
+          an `awips_id` filter (`==` or `in`): an AWIPS id's first three
+          characters are its product type (`QPFERD` is a `QPF`), so its
+          ids name the types read. A filter on `wfo` wins over a point. A
+          read that names no type is a `400` with `reason`
+          `unknown_property`, `unknown_property` `product_type` and a
+          `hint`. A property or operator the catalog does not declare is
+          a `400` with `reason` (`unknown_property`, `invalid_operator`),
+          `valid_values`, `did_you_mean` and `suggested_call`, as on
+          `GET /v1/features`.
         - `awips_id` — exact AWIPS identifier (e.g. `AFDLOT`).
         - `start` — RFC 3339 instant; only products issued after it.
         - `limit` — 1 to 10, default 1. There is no pagination.
@@ -2530,12 +2547,25 @@ paths:
       parameters:
         - name: product_type
           in: query
-          required: true
-          description: 3-character NWS product code (e.g. `AFD`, `HWO`, `NOW`). Upper-cased by the server.
+          required: false
+          description: 3-character NWS product code (e.g. `AFD`, `HWO`, `NOW`). Upper-cased by the server. Required unless a `filter` names `product_type` or `awips_id`.
           schema:
             type: string
             pattern: '^[A-Za-z0-9]{3}$'
           example: AFD
+        - name: filter
+          in: query
+          required: false
+          description: '`<property> <op> <value>` over the text product''s filterable properties, repeatable (all must pass), e.g. `product_type == SWO` and `outlook_day == 2`.'
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 16
+            items:
+              type: string
+              minLength: 1
+          example: ["product_type == AFD", "wfo == BOX"]
         - name: lat
           in: query
           required: false
@@ -4431,7 +4461,17 @@ paths:
           model such as `aifs_single_surface`, the last 5-minute mark for
           the `PT5M` nowcast, the hour for an hourly model), an analysis
           at now less `hours` rounded down to 5 minutes, and both end
-          rounded up to 5 minutes.
+          rounded up to 5 minutes. A daily product whose catalog
+          `time.day` is `local` (it files each place's local calendar day
+          under that date, as `nbm_daily_temps` and `astro` do) keeps each
+          location's local days instead: a forecast from the start of the
+          location's local today (so its first frame can fall on the
+          previous UTC date: at 15:00 in Honolulu, 01:00Z the next day,
+          today's high and tonight's low are both in a 24 h read), an
+          analysis the local days that start in its look-back. A location
+          whose timezone is not known keeps the window above, and the
+          response is `Cache-Control: no-store`. With `stats`, the
+          reduction covers the same local days.
         - `start` and `end` (RFC 3339, at most 16 days apart), applied
           exactly as given: a daily row stamped at 00:00Z is outside a
           window that starts later that day.
@@ -4498,6 +4538,13 @@ paths:
           contiguous samples that pass every `where`
           expression (every sample with none) and the light filter, read
           from the domain's sunrise and sunset product of record.
+          `windows[activity]` (at most 200 characters) says what the
+          windows are for (`mow the lawn`): where the server rates windows
+          (the `GET /v1/windows` rater), one rating per request, over every
+          element's windows together, marks the window it finds best for
+          the activity with `rating` and `limiting_factor` (that window
+          only); elsewhere the windows are returned unrated, the same as
+          without it.
         - `min_lon`, `min_lat`, `max_lon` and `max_lat` (all four, in place
           of `lat` and `lon`): statistics over every grid cell whose center
           is in the box and every sample of the window; needs `stats`.
@@ -4876,7 +4923,10 @@ paths:
 
         - `lat` and `lon`: the features containing the point (`position`),
           or, on a product whose `query.shapes` lists `nearest`, the
-          nearest features with `distance_m`. Coverage is the 50 US states
+          nearest features with `distance_m`, nearest first, within the
+          product's declared `query.nearest.max_m` metres (none declared:
+          no cap). The radius is catalog data, not a request word: for
+          your own radius send a box or an area. Coverage is the 50 US states
           and DC: a point outside them is a `404` `outside-coverage`, as is
           a box or inline area that misses every US domain.
         - `min_lon`, `min_lat`, `max_lon`, `max_lat`: the features
@@ -4909,6 +4959,13 @@ paths:
         does). With none, the features in effect now. A time-free layer
         takes none.
 
+        A `day_of_year` product (`time.axis`, such as station normals)
+        reads local days in each feature's own timezone: `start` and `end`
+        as dates (`YYYY-MM-DD`, inclusive, across a year end:
+        `start=2026-12-25&end=2027-01-05`), `at` as a date (that local
+        day), or RFC 3339 instants (the local days they touch); with none,
+        today.
+
         A parameter this route does not take (a field, on the POST twin)
         is a `400` `unsupported_word` (with `did_you_mean` for a near miss
         such as `filters`), never ignored; `lat` and `lon` go together; an
@@ -4922,7 +4979,11 @@ paths:
           `filterable`, with one of their `filter_ops` (`==`, `!=`, `>`,
           `>=`, `<`, `<=`, `in` with a comma list); a value of the
           property's type, one of its `enum` values when it declares them.
-          Applied before any statistic.
+          Applied before any statistic. A property with a catalog
+          `constant` (an outlook's `outlook_day`, a CPC `period`) is
+          decided against it before any read: a filter it fails matches
+          nothing (every element empty, nothing read), one it passes
+          tests nothing.
         - `stats`: `sum`, `count` and `count_by:<property>` (on a property
           whose `aggregate` is `count_by`), as the product's
           `query.reducers` lists them, over every matched feature, not only
@@ -5062,21 +5123,27 @@ paths:
         - name: start
           in: query
           required: false
-          description: Window start (RFC 3339), with `end`.
+          description: Window start (RFC 3339), with `end`; on a `day_of_year` product, a date (`YYYY-MM-DD`, the first local day) or RFC 3339.
           schema:
-            type: string
-            format: date-time
+            anyOf:
+              - type: string
+                format: date-time
+              - type: string
+                format: date
         - name: end
           in: query
           required: false
-          description: Window end (RFC 3339), after `start`.
+          description: Window end (RFC 3339), after `start`; on a `day_of_year` product, a date (`YYYY-MM-DD`, the last local day, inclusive) or RFC 3339.
           schema:
-            type: string
-            format: date-time
+            anyOf:
+              - type: string
+                format: date-time
+              - type: string
+                format: date
         - name: at
           in: query
           required: false
-          description: An instant (RFC 3339, or a date for its UTC midnight).
+          description: An instant (RFC 3339, or a date for its UTC midnight; on a `day_of_year` product, a date is that local day).
           schema:
             type: string
         - $ref: '#/components/parameters/FeaturesFilterQuery'
@@ -5861,8 +5928,9 @@ components:
       required: false
       description: |
         Window search over `where`: `windows[min_hours]` (required, at
-        least 1), `windows[light]` (`day`, `night` or `any`) and
-        `windows[max_windows]`.
+        least 1), `windows[light]` (`day`, `night` or `any`),
+        `windows[max_windows]` and `windows[activity]` (what the windows
+        are for; the server may rate them for it).
       style: deepObject
       explode: true
       schema:
@@ -5878,6 +5946,10 @@ components:
           max_windows:
             type: integer
             minimum: 1
+          activity:
+            type: string
+            minLength: 1
+            maxLength: 200
       example: {min_hours: 3, light: day}
     SeriesMinLonQuery:
       name: min_lon
@@ -7113,8 +7185,61 @@ components:
             failing the request.
         metar:
           $ref: '#/components/schemas/Metar'
+        aqi:
+          $ref: '#/components/schemas/AQISection'
         meta:
           $ref: '#/components/schemas/Meta'
+
+    AQISection:
+      type: object
+      x-stability: experimental
+      description: |
+        Populated when `include=aqi` is requested: the air quality index at
+        the point now (`current`) and its forecast by local day
+        (`forecast`). Both come from the catalog, never a fixed product:
+        `current` from the domain's product of record for
+        `air_quality_index` (`role.default_for`, as
+        `GET /v1/series?select=air_quality_index` resolves it), `forecast`
+        from its forecast tier (as `@forecast:air_quality_index`
+        resolves), each naming its `product`. `aqi_category` is the EPA
+        category, the same vocabulary as `current.aqi_category`. Omitted
+        where the domain has no air quality product or neither reads a
+        value; that case reports `coverage_limited` in `meta.warnings[]`.
+      required: [current, forecast]
+      properties:
+        current:
+          type: [object, "null"]
+          description: The latest index; null when the product of record has no value at the point.
+          required: [time, aqi, aqi_category, product]
+          properties:
+            time:
+              type: string
+              format: date-time
+            aqi:
+              type: integer
+            aqi_category:
+              type: string
+              enum: [good, moderate, unhealthy-sensitive, unhealthy, very-unhealthy, hazardous]
+            product:
+              type: string
+              description: The catalog product the value was read from.
+        forecast:
+          type: array
+          description: The forecast index per local day, from today; empty when none is issued.
+          items:
+            type: object
+            required: [date, aqi, aqi_category, product]
+            properties:
+              date:
+                type: string
+                format: date
+              aqi:
+                type: integer
+              aqi_category:
+                type: string
+                enum: [good, moderate, unhealthy-sensitive, unhealthy, very-unhealthy, hazardous]
+              product:
+                type: string
 
     Metar:
       type: object
@@ -9938,6 +10063,15 @@ components:
           type: [string, "null"]
           description: How far back the product can be read, an ISO 8601 duration; `null` when not stated.
           example: null
+        day:
+          type: [string, "null"]
+          description: |
+            A daily (`P1D`) product's calendar day: `local` files each
+            place's local calendar day under that date (a rolling read with
+            `hours` keeps the place's local days), `utc` the UTC day; `null`
+            when the product has no daily step or does not say (a read keeps
+            the requested window). New values may be added.
+          example: local
 
     CatalogQuery:
       type: object
@@ -12936,6 +13070,14 @@ components:
         limiting:
           type: string
           description: The `where` expression (or `light`) that ended the window; absent when the series did.
+        rating:
+          type: string
+          enum: [unworkable, poor, workable, good, ideal]
+          description: With `windows[activity]` where the server rates windows, present only on the one window of the request it found best for the activity.
+        limiting_factor:
+          type: string
+          enum: [wind, precip, temperature, visibility, storms, none]
+          description: The weather factor that most limits the activity in the rated window.
     SeriesBatchRequest:
       x-stability: experimental
       type: object
@@ -13015,6 +13157,11 @@ components:
             max_windows:
               type: integer
               minimum: 1
+            activity:
+              type: string
+              minLength: 1
+              maxLength: 200
+              description: What the windows are for; the server may rate them for it.
         min_lon:
           type: number
         min_lat:
@@ -13473,9 +13620,11 @@ components:
         start:
           type: string
           format: date-time
+          description: RFC 3339. A `day_of_year` product also takes a date (`YYYY-MM-DD`, the first local day), as on the GET route.
         end:
           type: string
           format: date-time
+          description: RFC 3339. A `day_of_year` product also takes a date (`YYYY-MM-DD`, the last local day, inclusive), as on the GET route.
         at:
           type: string
         filter:
