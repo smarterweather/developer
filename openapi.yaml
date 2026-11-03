@@ -10,7 +10,7 @@ info:
     - Path-based versioning (`/v1/`).
     - Endpoint removal: 6 months notice.
     - Breaking shape changes: 90 days notice.
-    - Active deprecations are listed at `GET /.well-known/deprecations`.
+    - Deprecations and removals are listed at `GET /.well-known/deprecations`.
     - Non-breaking additions ship without notice.
     - Fields marked `x-stability: experimental` (also flagged in their
       descriptions) are excluded from the 90-day breaking-change
@@ -3701,25 +3701,39 @@ paths:
   /.well-known/deprecations:
     get:
       operationId: getDeprecations
-      summary: List active API deprecations.
+      summary: List API deprecations and removals.
       description: |
-        Returns the current set of active deprecations as required by the
-        public-contract policy summarised in this document's Versioning and
-        deprecation section. Empty list when no deprecations are active.
+        Returns every planned deprecation and every removed surface, as
+        required by the public-contract policy summarised in this
+        document's Versioning and deprecation section. An entry is
+        `historical` once its `sunset_at` has passed and stays listed.
+        Empty list when there are none.
       tags: [Meta]
       security: []
       responses:
         '200':
-          description: Current deprecations (possibly empty).
+          description: Deprecations and removals (possibly empty).
           content:
             application/json:
               schema:
                 type: object
-                required: [deprecations]
+                required: [schema_version, service, generated_at, deprecations]
                 properties:
+                  schema_version:
+                    type: string
+                    description: Document schema version.
+                    example: "1"
+                  service:
+                    type: string
+                    description: The service serving this document.
+                    example: sw-api
+                  generated_at:
+                    type: string
+                    format: date-time
+                    description: When this response was generated (it sets `historical`).
                   deprecations:
                     type: array
-                    description: Active deprecations.
+                    description: Deprecations and removals, oldest first.
                     items:
                       $ref: '#/components/schemas/Deprecation'
 
@@ -7071,19 +7085,38 @@ components:
     Deprecation:
       type: object
       description: |
-        A single active deprecation entry. See the Versioning and
-        deprecation section in `info.description` for notice-period rules.
-      required: [surface, announced_at, sunset_at, migration]
+        One deprecation or removal. See the Versioning and deprecation
+        section in `info.description` for notice-period rules. A surface
+        removed before launch, with no notice window, has `sunset_at`
+        equal to `deprecated_at`: the date it was removed.
+      required: [id, kind, affects, summary, deprecated_at, sunset_at, historical]
       properties:
-        surface:
+        id:
+          type: string
+          description: Stable identifier; never changes once published.
+          example: sw-mcp-2026-11-02-render-fold
+        kind:
+          type: string
+          enum: [endpoint_removal, tool_removal, toolset_removal, response_shape, request_shape]
+          description: |
+            What changes: an endpoint or Weather MCP tool is removed, a
+            Weather MCP toolset path is removed, or a response or request
+            shape changes.
+        affects:
+          type: array
+          description: |
+            The exact surfaces: operations (`GET /v1/weather`), Weather
+            MCP tool names (`get_map_snapshot`) or Weather MCP toolset
+            paths (`/x/observed`).
+          items:
+            type: string
+          example: [get_map_snapshot, get_sounding_chart]
+        summary:
           type: string
           description: |
-            The deprecated surface, expressed as a stable identifier.
-            Common forms include an operation path (`/v1/weather`),
-            a parameter reference (`/v1/weather?param=foo`), or a
-            response-field JSON Pointer (`/v1/weather#/current/feels_like`).
-          example: "/v1/weather?param=legacy_include"
-        announced_at:
+            What changed and the successor call for each affected surface.
+            Documentation, not machine-parseable.
+        deprecated_at:
           type: string
           format: date
           description: ISO 8601 date on which the deprecation was announced.
@@ -7092,17 +7125,20 @@ components:
           type: string
           format: date
           description: |
-            ISO 8601 date on or after which the deprecated surface may be
-            removed (minimum 90 days for shape changes, 6 months for
-            endpoint removal).
+            ISO 8601 date on or after which the surface may be removed
+            (minimum 90 days for shape changes, 6 months for endpoint
+            removal), or was removed.
           example: "2026-07-01"
-        migration:
+        migration_guide_url:
           type: string
+          format: uri
+          description: The changelog post or guide for the change.
+        historical:
+          type: boolean
           description: |
-            Short prose pointer to the replacement surface or migration
-            guide. Clients should treat this as documentation, not a
-            machine-parseable URL.
-          example: "Use the `include=narrations` token instead."
+            True once `sunset_at` has passed: from the next day in
+            America/Chicago, the zone the changelog dates in. The entry
+            stays listed.
 
     # -----------------------------------------------------------------------
     # Top-level weather response
