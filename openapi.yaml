@@ -13626,6 +13626,14 @@ components:
           description: On an overlay, each summed property's share inside the area under its declared rule.
           additionalProperties:
             type: number
+        valid_start:
+          type: string
+          format: date-time
+          description: When the feature takes effect, on a product whose features carry their own validity (an outlook's period start); absent otherwise or when the feature has none. With no time word (or `at`), such a product answers the period in effect then, from its newest issuance, else its nearest upcoming period, so a `valid_start` after the read's time means not yet in effect; a window answers the periods that overlap it.
+        valid_end:
+          type: string
+          format: date-time
+          description: When the feature ends (an outlook's period end); absent otherwise or when the feature has none.
     FeaturesQueryRequest:
       x-stability: experimental
       type: object
