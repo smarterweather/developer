@@ -771,12 +771,17 @@ paths:
         ### Samples
 
         Each sample takes the forecast hour nearest its ETA, echoed as
-        `valid_time`, with no interpolation. Later in the forecast the
-        steps can be 3- or 6-hourly, so `valid_time` may sit up to 3 hours
-        from `eta`, before or after it (an early ETA of a departure in the
-        past hour can take the first forecast hour); a sample whose nearest
-        forecast hour is farther away is `unavailable`. A field missing at
-        that hour is omitted. `heading` is
+        `valid_time`, with no interpolation, by the rule of
+        `POST /v1/series/batch` `path`: the nearest hour within half the
+        product's catalog `time.max_step` (6 hours for the NBM: later in
+        the forecast the steps are 3- or 6-hourly), so `valid_time` may sit
+        up to 3 hours from `eta`, before or after it (an early ETA of a
+        departure in the past hour can take the first forecast hour, and an
+        ETA up to 3 hours past the last forecast hour read takes it); a tie
+        takes the earlier hour. A sample whose nearest forecast hour is
+        farther away is `unavailable` while the forecast run goes on, and
+        `beyond_horizon` past the run's end. A field missing at that hour is
+        omitted. `heading` is
         the direction of travel over a 1 km baseline; `crosswind` and
         `crosswind_gust` are the wind components across it.
 
@@ -784,10 +789,10 @@ paths:
         out every hazard, which `unevaluated_hazards` lists; for example the
         hourly precipitation amount is not forecast everywhere at every
         hour); `outside_coverage` (outside the 50 US states and DC);
-        `beyond_horizon` (the ETA is more than 30 minutes past the last
-        forecast hour); `unavailable` (no forecast for that sample, for
-        example when part of the forecast could not be loaded, for one
-        region or one hour). Only `ok` and `partial` samples carry weather
+        `beyond_horizon` (the ETA is more than 3 hours past the last
+        forecast hour of a run that has ended); `unavailable` (no forecast
+        for that sample, for example when part of the forecast could not be
+        loaded, for one region or one hour, or not yet ingested). Only `ok` and `partial` samples carry weather
         fields and hazards; the outlook fields are on every sample inside
         coverage. If coverage along the route cannot be checked
         in time, the request returns `503` with `Retry-After`; a retry is
@@ -7584,11 +7589,27 @@ components:
             data_age_seconds:
               type: [integer, "null"]
               description: Age of the newest model run used, in seconds. `null` when unknown.
+        truncated:
+          type: boolean
+          description: |
+            `true` when the forecast read was incomplete (part of it could
+            not be loaded): some values or samples may be missing (missing
+            hazard inputs make a sample `partial`, a frame without the
+            forecast makes it `unavailable`), and each affected departure's
+            `notes` says so; retry for them. Absent on a complete read. When
+            nothing at all can be served (no forecast sample, no alert, no
+            outlook band), the request answers `503` with `Retry-After`
+            instead.
 
     RouteDeparture:
       type: object
       required: [departure, departure_local, origin_timezone, arrival, arrival_local, destination_timezone, eta_source, summary, alerts, segments, samples]
       properties:
+        notes:
+          type: array
+          description: Present when the forecast read was incomplete for this departure's samples (part of the forecast failed to load); the answer is then `truncated`. Plain text, not a code.
+          items:
+            type: string
         departure:
           type: string
           format: date-time
@@ -10110,6 +10131,14 @@ components:
           type: [string, "null"]
           description: How far back the product can be read, an ISO 8601 duration; `null` when not stated.
           example: null
+        max_step:
+          type: string
+          description: |
+            The coarsest frame spacing, an ISO 8601 duration, of a product whose
+            frames thin out with lead (NBM: hourly, then 3-hourly, then
+            6-hourly); absent when it is `step`. A path or route sample takes
+            the frame nearest its ETA within half of it.
+          example: PT6H
         day:
           type: [string, "null"]
           description: |
@@ -13298,13 +13327,19 @@ components:
         departure), or by per-vertex `times` (a departure then shifts the
         schedule). The path is sampled about every 10 km, endpoints
         included, at most 100 samples, and each sample is read at its ETA
-        from the frame nearest it. A late ETA past the last frame read,
-        while the run continues (its catalog horizon), takes the run's
-        nearest frame; past the run's end it is `beyond_horizon`. A read
-        that missed frames a departure's samples need, and served none of
-        them, makes that element `unavailable` with a `notes` entry (the
-        response is `truncated`); only when nothing at all is served does
-        the request answer `503`. Limits, as on `POST /v1/weather/route`:
+        from the frame nearest it within half the product's catalog
+        `time.max_step` (its `step` when it declares none; 3 hours for the
+        NBM, whose steps widen to 6-hourly); a tie takes the earlier frame.
+        A sample with no frame that near is `unavailable` while the run
+        goes on (its catalog horizon), `beyond_horizon` past the run's end.
+        A read
+        reported incomplete for a departure's samples (frames or values it
+        could not load near their ETAs) adds a `notes` entry to the element
+        and marks the response `truncated`; the delivered frames still serve
+        (a frame without any selected variable is `unavailable`). If it
+        served none of the departure's samples, that element is
+        `unavailable`; only when nothing at all is served does the request
+        answer `503`. Limits, as on `POST /v1/weather/route`:
         at most 10,000 vertices and 5,000 km, no step of 180 degrees of
         longitude or more, departures from 1 hour ago to 168 hours ahead
         and within 24 hours of each other, travel of at most 72 hours. A
@@ -13457,9 +13492,11 @@ components:
             A grid or snapshot element's per-sample status: `ok`;
             `outside_coverage` (outside the 50 states and
             DC); `out_of_domain` (outside the product's coverage);
-            `beyond_horizon` (the ETA is past the run's last frame);
-            `unavailable` (no frame near the ETA, or none of the variables
-            at it). Values are null wherever it is not `ok`.
+            `beyond_horizon` (no frame within half of `time.max_step` and
+            the ETA past the end of the last frame's run); `unavailable` (no
+            frame within half of `time.max_step` while the run goes on, a
+            frame the read could not deliver, or none of the variables at
+            it). Values are null wherever it is not `ok`.
           items:
             type: string
             enum: [ok, outside_coverage, out_of_domain, beyond_horizon, unavailable]
