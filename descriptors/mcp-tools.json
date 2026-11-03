@@ -4652,6 +4652,12 @@
             "location": "Norman, OK"
           }
         ],
+        "ui": {
+          "resourceUri": "ui://weather-widget/v2/map.html"
+        },
+        "ui/resourceUri": "ui://weather-widget/v2/map.html",
+        "openai/toolInvocation/invoking": "Drawing the image…",
+        "openai/toolInvocation/invoked": "Image ready",
         "smarterweather.dev/toolset": "visual"
       }
     },
