@@ -82,7 +82,6 @@ info:
     | `gis`       | always  | stable    | Geographic metadata (population, timezone, nearest radar site). |
     | `narrations`| no      | experimental | LLM-generated narrative text for current/short-term conditions. |
     | `guidance`  | no      | experimental | Distilled NWS forecaster text-product data (AFD/HWO/NOW/HLS/MCD/MPD/PMD). Canonical for new clients. |
-    | `discussions` | no    | experimental | Deprecated. Prefer `include=guidance` (`guidance.mcds` / `guidance.afd`). |
     | `uncertainty` | no    | experimental | NBM probabilistic sub-objects on hourly and daily forecasts (CONUS/Alaska/Hawaii only): ensemble spread and probability-below-threshold fields. See `HourlyUncertainty` / `DailyUncertainty`. |
     | `nowcast`     | no    | experimental | MRMS radar precipitation nowcast (60 min @ 5-min steps, CONUS first). |
     | `climate`     | no    | experimental | NCEI day-of-year normals for the location, plus per-day departure from normal on `daily[]`. |
@@ -143,7 +142,6 @@ tags:
       precipitation discussions, area forecast discussions, hazardous
       weather outlooks, short-term NOW). GeoJSON overlays under
       `/v1/guidance/*` plus the weather `include=guidance` block.
-      `/v1/discussions/*` remains a temporary alias of mesoscale only.
   - name: Products
     description: |
       Gridded / vector weather products and derived summaries, such as
@@ -2376,8 +2374,7 @@ paths:
         `body` (bulletin text when available) live on each feature's `properties`
         bag (forward-compat).
 
-        The endpoint takes no parameters. Prefer this path over the
-        temporary `/v1/discussions/mesoscale` alias.
+        The endpoint takes no parameters.
 
         ### Caching
 
@@ -2440,8 +2437,7 @@ paths:
         bulletin `body` (bulletin text when available) live on each feature's
         `properties` bag. This is not SPC `/v1/guidance/mesoscale`.
 
-        The endpoint takes no parameters. There is no `/v1/discussions/precipitation`
-        alias.
+        The endpoint takes no parameters.
 
         ### Caching
 
@@ -2679,54 +2675,6 @@ paths:
           $ref: '#/components/responses/Problem403'
         '404':
           $ref: '#/components/responses/Problem404'
-        '429':
-          $ref: '#/components/responses/Problem429'
-        '500':
-          $ref: '#/components/responses/Problem500'
-        '502':
-          $ref: '#/components/responses/Problem502'
-        '503':
-          $ref: '#/components/responses/Problem503'
-        '504':
-          $ref: '#/components/responses/Problem504'
-
-  /v1/discussions/mesoscale:
-    get:
-      operationId: getDiscussionsMesoscale
-      summary: Temporary alias for GET /v1/guidance/mesoscale.
-      deprecated: true
-      description: |
-        Temporary alias of `GET /v1/guidance/mesoscale`. Prefer the
-        guidance path for new clients.
-      tags: [Guidance]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Same body as `/v1/guidance/mesoscale`.
-          headers:
-            RateLimit-Limit:
-              $ref: '#/components/headers/RateLimitLimit'
-            RateLimit-Remaining:
-              $ref: '#/components/headers/RateLimitRemaining'
-            RateLimit-Reset:
-              $ref: '#/components/headers/RateLimitReset'
-            RateLimit-Policy:
-              $ref: '#/components/headers/RateLimitPolicy'
-            RateLimit-Daily-Limit:
-              $ref: '#/components/headers/RateLimitDailyLimit'
-            RateLimit-Daily-Remaining:
-              $ref: '#/components/headers/RateLimitDailyRemaining'
-            RateLimit-Daily-Reset:
-              $ref: '#/components/headers/RateLimitDailyReset'
-          content:
-            application/geo+json:
-              schema:
-                $ref: '#/components/schemas/MesoscaleDiscussionsFeatureCollection'
-        '401':
-          $ref: '#/components/responses/Problem401'
-        '403':
-          $ref: '#/components/responses/Problem403'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
@@ -7215,8 +7163,6 @@ components:
           $ref: '#/components/schemas/Narrations'
         guidance:
           $ref: '#/components/schemas/Guidance'
-        discussions:
-          $ref: '#/components/schemas/Discussions'
         nowcast:
           $ref: '#/components/schemas/Nowcast'
         climate:
@@ -11894,31 +11840,6 @@ components:
         short_term:
           type: string
           description: Narrative covering the next few hours.
-
-    Discussions:
-      type: object
-      x-stability: experimental
-      description: |
-        Deprecated. Prefer `include=guidance` (`guidance.mcds` /
-        `guidance.afd`). Map polygons live on `GET /v1/guidance/mesoscale`.
-
-        **Experimental.** Field shapes may change without notice: excluded
-        from the 90-day breaking-change commitment.
-      required: [mesoscale]
-      properties:
-        mesoscale:
-          type: array
-          description: |
-            Active SPC Mesoscale Discussions whose polygons overlap the
-            location. Expired products are omitted. Cap 10 (newest first).
-          items:
-            $ref: '#/components/schemas/MCDGuidance'
-        area_forecast:
-          allOf:
-            - $ref: '#/components/schemas/AFDGuidance'
-          description: |
-            Latest Area Forecast Discussion for the WFO covering the point.
-            Omitted when no AFD is available.
 
     Guidance:
       type: object
