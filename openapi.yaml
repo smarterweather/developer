@@ -13587,7 +13587,7 @@ components:
         valid_start:
           type: string
           format: date-time
-          description: When the feature takes effect, on a product whose features carry their own validity (an outlook's period start); absent otherwise or when the feature has none. With no time word (or `at`), such a product answers the period in effect then, from its newest issuance, else its nearest upcoming period, so a `valid_start` after the read's time means not yet in effect; a window answers the periods that overlap it.
+          description: When the feature takes effect, on a product whose features carry their own validity (an outlook's period start); absent otherwise or when the feature has none. With no time word (or `at`), such a product answers the period in effect then, from its newest issuance of that period across the product's outlook days (so a Day 2 or Day 3 product answers nothing for a period a lower day has reissued), else its nearest upcoming period, so a `valid_start` after the read's time means not yet in effect; a window answers the periods that overlap it.
         valid_end:
           type: string
           format: date-time
