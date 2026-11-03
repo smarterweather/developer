@@ -1888,6 +1888,10 @@
             "units": "imperial"
           }
         ],
+        "ui": {
+          "resourceUri": "ui://weather-widget/v2/index.html"
+        },
+        "ui/resourceUri": "ui://weather-widget/v2/index.html",
         "smarterweather.dev/toolset": "catalog"
       }
     },
@@ -3397,6 +3401,10 @@
         "openWorldHint": true
       },
       "_meta": {
+        "ui": {
+          "resourceUri": "ui://weather-widget/v2/index.html"
+        },
+        "ui/resourceUri": "ui://weather-widget/v2/index.html",
         "smarterweather.dev/toolset": "core"
       }
     },
