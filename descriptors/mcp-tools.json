@@ -2562,6 +2562,11 @@
         "openWorldHint": true
       },
       "_meta": {
+        "ui": {
+          "resourceUri": "ui://weather-widget/v2/index.html"
+        },
+        "ui/resourceUri": "ui://weather-widget/v2/index.html",
+        "openai/widgetAccessible": true,
         "smarterweather.dev/toolset": "core"
       }
     },
