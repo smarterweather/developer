@@ -488,6 +488,7 @@
             "lon"
           ]
         ],
+        "openai/widgetAccessible": true,
         "smarterweather.dev/toolset": "core"
       }
     },
@@ -762,6 +763,7 @@
           "resourceUri": "ui://weather-widget/v2/index.html"
         },
         "ui/resourceUri": "ui://weather-widget/v2/index.html",
+        "openai/widgetAccessible": true,
         "smarterweather.dev/toolset": "core"
       }
     },
@@ -1893,6 +1895,7 @@
           "resourceUri": "ui://weather-widget/v2/index.html"
         },
         "ui/resourceUri": "ui://weather-widget/v2/index.html",
+        "openai/widgetAccessible": true,
         "smarterweather.dev/toolset": "catalog"
       }
     },
@@ -2074,6 +2077,7 @@
           "resourceUri": "ui://weather-widget/v2/index.html"
         },
         "ui/resourceUri": "ui://weather-widget/v2/index.html",
+        "openai/widgetAccessible": true,
         "smarterweather.dev/required_one_of": [
           [
             "location"
@@ -3406,6 +3410,7 @@
           "resourceUri": "ui://weather-widget/v2/index.html"
         },
         "ui/resourceUri": "ui://weather-widget/v2/index.html",
+        "openai/widgetAccessible": true,
         "smarterweather.dev/toolset": "core"
       }
     },
@@ -4665,6 +4670,7 @@
           "resourceUri": "ui://weather-widget/v2/map.html"
         },
         "ui/resourceUri": "ui://weather-widget/v2/map.html",
+        "openai/widgetAccessible": true,
         "openai/toolInvocation/invoking": "Drawing the image…",
         "openai/toolInvocation/invoked": "Image ready",
         "smarterweather.dev/toolset": "visual"
