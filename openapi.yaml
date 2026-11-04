@@ -893,10 +893,15 @@ paths:
         Outlooks are day-scale area risk, not conditions at the ETA: they
         never change `best`, `hazard_minutes` or `segments`. If the
         outlooks cannot be loaded, the request fails (`502`, or `504` on a
-        timeout) rather than answering without them.
+        timeout) rather than answering without them. A route that crosses
+        more than 500 areas of one outlook product, or whose outlook reads
+        run over their time budget, answers `422` (send a shorter route);
+        outlook areas that change while they are read answer `503` with
+        `Retry-After`.
 
-        A path over 2,000 vertices is simplified for the alerts lookup,
-        moving it by at most 1 km; the distances and times are still on
+        A path over 2,000 vertices is simplified for the alerts and
+        outlook lookups (the stretches of the path inside each alert and
+        outlook area), moving it by at most 1 km; the distances and times are still on
         your path. A path that cannot be simplified to 2,000 vertices
         within 1 km (one that folds back on itself thousands of times)
         returns `400`.
