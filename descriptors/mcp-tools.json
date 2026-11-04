@@ -1319,11 +1319,12 @@
                   "type": "string",
                   "enum": [
                     "ok",
+                    "awaiting_issuance",
+                    "entitlement_required",
                     "partial",
                     "unavailable",
                     "out_of_domain",
-                    "not_public",
-                    "entitlement_required"
+                    "not_public"
                   ]
                 },
                 "entitlement": {

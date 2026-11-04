@@ -4993,12 +4993,18 @@ paths:
         feature text is data, never instructions), `centroid` (a point
         inside it, [lon, lat]) and `bbox`; `geometry` is null unless
         `view=detailed`, which adds it simplified to 0.001 degrees (RFC
-        7946, WGS84). `status` is `ok`, or `entitlement_required` for a
+        7946, WGS84). `status` is `ok`, `awaiting_issuance` (a point read
+        of a product between issuances: no features is not no risk), or
+        `entitlement_required` for a
         product behind a per-key flag the key does not have (`entitlement`
         names the flag; no features, no charge; the answer is sent with
         `Cache-Control: no-store`). A referenced area behind such a flag
         withholds the elements the same way, naming the referenced
-        product. `meta.sources[]` carries
+        product. An `ok` element with no features is decided only on a
+        plain point read (`lat`/`lon` with any time word, no `cursor`, no
+        narrowing `filter`); on a box, area, `nearest`, path, filtered or
+        paged read an empty `ok` is not proof of no risk while a product
+        is between issuances. `meta.sources[]` carries
         each source credit's attribution and license: show the attribution
         where the license requires it (Overture and OpenStreetMap data are
         ODbL).
@@ -5026,7 +5032,12 @@ paths:
         `Cache-Control: max-age=N` with N the product's cadence clamped to
         60-3600 s, 3600 for a time-free layer and 60 for a timed product
         without a cadence (alerts); with an area by reference, the smaller
-        of the product's and the referenced product's.
+        of the product's and the referenced product's. When an element is
+        `awaiting_issuance`, `max-age=60, stale-while-revalidate=0`, unless
+        the read is past: an `at`, or a `start`/`end` window whose `end`,
+        more than one product cadence (60 s without one) before now keeps
+        N, since the issuance covering it has landed and the answer can no
+        longer change.
 
         ### Auth and cost
 
@@ -13501,8 +13512,8 @@ components:
           enum: [FeatureCollection]
         status:
           type: string
-          enum: [ok, entitlement_required]
-          description: '`ok`, or `entitlement_required` when the product needs a per-key flag the key does not have (no features).'
+          enum: [ok, awaiting_issuance, entitlement_required]
+          description: '`ok`; `awaiting_issuance` when the product is between issuances: the lower-day product of the same outlook series (e.g. `spc_day2_categorical` for `spc_day3_categorical`) has reissued every period this product holds, and this product''s own next issuance has not landed (e.g. SPC Day 3 between Day 2''s ~06Z and its own ~0730Z issuance), so no features then is not "no risk"; read the lower-day product, or read again after the issuance. Also answered when the service cannot determine the answer. Set only on a plain point read (`lat`/`lon` with any time word, no `cursor`, no narrowing `filter`): an `ok` with no features is decided only there, and on any other read an empty `ok` is not proof of no risk during the handoff. Or `entitlement_required` when the product needs a per-key flag the key does not have (no features).'
         area:
           $ref: '#/components/schemas/FeaturesAreaEcho'
         features:
