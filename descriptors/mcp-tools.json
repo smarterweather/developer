@@ -605,6 +605,66 @@
           "cursor": {
             "type": "string",
             "description": "next_cursor of the previous page, with the same arguments (non-empty)."
+          },
+          "card": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "description": "An answer, not a label; up to 48 characters.",
+                "type": "string"
+              },
+              "focus": {
+                "description": "ISO 8601 time inside the result's window to preselect.",
+                "type": "string"
+              },
+              "threshold": {
+                "description": "A line to preselect.",
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      ">=",
+                      "<="
+                    ],
+                    "description": "At or above, or at or below."
+                  },
+                  "value": {
+                    "type": "number",
+                    "description": "In the result's units."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "actions": {
+                "description": "Up to two follow-ups the user can tap, each sending its prompt as a new turn; never one the card answers itself.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "description": "Button text, up to 24 characters."
+                    },
+                    "prompt": {
+                      "type": "string",
+                      "description": "Up to 280 characters; no links."
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "prompt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false,
+            "description": "Shape the card (guide://smarterweather/views): intent only; the server fills the rest from the data."
           }
         },
         "additionalProperties": false
@@ -764,7 +824,10 @@
         },
         "ui/resourceUri": "ui://weather-widget/v2/index.html",
         "openai/widgetAccessible": true,
-        "smarterweather.dev/toolset": "core"
+        "smarterweather.dev/toolset": "core",
+        "smarterweather.dev/apps_only_inputs": [
+          "card"
+        ]
       }
     },
     {
@@ -1248,6 +1311,66 @@
           "cursor": {
             "type": "string",
             "description": "next_cursor of the previous page, with the same arguments (non-empty)."
+          },
+          "card": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "description": "An answer, not a label; up to 48 characters.",
+                "type": "string"
+              },
+              "focus": {
+                "description": "ISO 8601 time inside the result's window to preselect.",
+                "type": "string"
+              },
+              "threshold": {
+                "description": "A line to preselect.",
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      ">=",
+                      "<="
+                    ],
+                    "description": "At or above, or at or below."
+                  },
+                  "value": {
+                    "type": "number",
+                    "description": "In the result's units."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "actions": {
+                "description": "Up to two follow-ups the user can tap, each sending its prompt as a new turn; never one the card answers itself.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "description": "Button text, up to 24 characters."
+                    },
+                    "prompt": {
+                      "type": "string",
+                      "description": "Up to 280 characters; no links."
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "prompt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false,
+            "description": "Shape the card (guide://smarterweather/views): intent only; the server fills the rest from the data."
           }
         },
         "required": [
@@ -1896,7 +2019,10 @@
         },
         "ui/resourceUri": "ui://weather-widget/v2/index.html",
         "openai/widgetAccessible": true,
-        "smarterweather.dev/toolset": "catalog"
+        "smarterweather.dev/toolset": "catalog",
+        "smarterweather.dev/apps_only_inputs": [
+          "card"
+        ]
       }
     },
     {
@@ -1963,6 +2089,66 @@
               "concise",
               "detailed"
             ]
+          },
+          "card": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "description": "An answer, not a label; up to 48 characters.",
+                "type": "string"
+              },
+              "focus": {
+                "description": "ISO 8601 time inside the result's window to preselect.",
+                "type": "string"
+              },
+              "threshold": {
+                "description": "A line to preselect.",
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      ">=",
+                      "<="
+                    ],
+                    "description": "At or above, or at or below."
+                  },
+                  "value": {
+                    "type": "number",
+                    "description": "In the result's units."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "actions": {
+                "description": "Up to two follow-ups the user can tap, each sending its prompt as a new turn; never one the card answers itself.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "description": "Button text, up to 24 characters."
+                    },
+                    "prompt": {
+                      "type": "string",
+                      "description": "Up to 280 characters; no links."
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "prompt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false,
+            "description": "Shape the card (guide://smarterweather/views): intent only; the server fills the rest from the data."
           }
         }
       },
@@ -2087,7 +2273,10 @@
             "lon"
           ]
         ],
-        "smarterweather.dev/toolset": "core"
+        "smarterweather.dev/toolset": "core",
+        "smarterweather.dev/apps_only_inputs": [
+          "card"
+        ]
       }
     },
     {
@@ -2358,6 +2547,66 @@
               "wind"
             ],
             "description": "Which aspect to read: one of precip, aviation, confidence, ice, severe, snow, temperature, wind."
+          },
+          "card": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "description": "An answer, not a label; up to 48 characters.",
+                "type": "string"
+              },
+              "focus": {
+                "description": "ISO 8601 time inside the result's window to preselect.",
+                "type": "string"
+              },
+              "threshold": {
+                "description": "A line to preselect.",
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      ">=",
+                      "<="
+                    ],
+                    "description": "At or above, or at or below."
+                  },
+                  "value": {
+                    "type": "number",
+                    "description": "In the result's units."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "actions": {
+                "description": "Up to two follow-ups the user can tap, each sending its prompt as a new turn; never one the card answers itself.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "description": "Button text, up to 24 characters."
+                    },
+                    "prompt": {
+                      "type": "string",
+                      "description": "Up to 280 characters; no links."
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "prompt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false,
+            "description": "Shape the card (guide://smarterweather/views): intent only; the server fills the rest from the data."
           }
         },
         "required": [
@@ -2567,7 +2816,10 @@
         },
         "ui/resourceUri": "ui://weather-widget/v2/index.html",
         "openai/widgetAccessible": true,
-        "smarterweather.dev/toolset": "core"
+        "smarterweather.dev/toolset": "core",
+        "smarterweather.dev/apps_only_inputs": [
+          "card"
+        ]
       }
     },
     {
@@ -3231,6 +3483,66 @@
               "nowcast"
             ],
             "description": "Which product to read: one of observed, nowcast (default observed)."
+          },
+          "card": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "description": "An answer, not a label; up to 48 characters.",
+                "type": "string"
+              },
+              "focus": {
+                "description": "ISO 8601 time inside the result's window to preselect.",
+                "type": "string"
+              },
+              "threshold": {
+                "description": "A line to preselect.",
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      ">=",
+                      "<="
+                    ],
+                    "description": "At or above, or at or below."
+                  },
+                  "value": {
+                    "type": "number",
+                    "description": "In the result's units."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "actions": {
+                "description": "Up to two follow-ups the user can tap, each sending its prompt as a new turn; never one the card answers itself.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "description": "Button text, up to 24 characters."
+                    },
+                    "prompt": {
+                      "type": "string",
+                      "description": "Up to 280 characters; no links."
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "prompt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false,
+            "description": "Shape the card (guide://smarterweather/views): intent only; the server fills the rest from the data."
           }
         },
         "required": [
@@ -3416,7 +3728,10 @@
         },
         "ui/resourceUri": "ui://weather-widget/v2/index.html",
         "openai/widgetAccessible": true,
-        "smarterweather.dev/toolset": "core"
+        "smarterweather.dev/toolset": "core",
+        "smarterweather.dev/apps_only_inputs": [
+          "card"
+        ]
       }
     },
     {
@@ -4570,6 +4885,66 @@
               "imperial",
               "metric"
             ]
+          },
+          "card": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "description": "An answer, not a label; up to 48 characters.",
+                "type": "string"
+              },
+              "focus": {
+                "description": "ISO 8601 time inside the result's window to preselect.",
+                "type": "string"
+              },
+              "threshold": {
+                "description": "A line to preselect.",
+                "type": "object",
+                "properties": {
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      ">=",
+                      "<="
+                    ],
+                    "description": "At or above, or at or below."
+                  },
+                  "value": {
+                    "type": "number",
+                    "description": "In the result's units."
+                  }
+                },
+                "required": [
+                  "op",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "actions": {
+                "description": "Up to two follow-ups the user can tap, each sending its prompt as a new turn; never one the card answers itself.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "description": "Button text, up to 24 characters."
+                    },
+                    "prompt": {
+                      "type": "string",
+                      "description": "Up to 280 characters; no links."
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "prompt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false,
+            "description": "Shape the card (guide://smarterweather/views): intent only; the server fills the rest from the data."
           }
         },
         "required": [
@@ -4678,7 +5053,10 @@
         "openai/widgetAccessible": true,
         "openai/toolInvocation/invoking": "Drawing the image…",
         "openai/toolInvocation/invoked": "Image ready",
-        "smarterweather.dev/toolset": "visual"
+        "smarterweather.dev/toolset": "visual",
+        "smarterweather.dev/apps_only_inputs": [
+          "card"
+        ]
       }
     },
     {
