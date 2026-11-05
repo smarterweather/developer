@@ -7,7 +7,7 @@
     {
       "name": "describe_data",
       "title": "Describe data",
-      "description": "A dataset's variables or properties (standard names, units, categories, bands, aggregates), horizon, step, cadence, freshness, cost class, verified `examples` and an example_query to read its values. Free; call it after search_data, before get_data. Example: {\"dataset_id\": \"<from search_data>\"}.",
+      "description": "A dataset's variables or properties (standard names, units, categories, bands, aggregates), horizon, step, cadence, freshness, cost class, verified `examples` and an example_query to read its values; a map layer's axes (source, region, product facts) and render (visual) call. Free; call it after search_data, before get_data. Example: {\"dataset_id\": \"<from search_data>\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -40,6 +40,12 @@
           },
           "data_status": {
             "description": "Present only when the data service could not answer: a cached copy, or catalog facts without freshness.",
+            "type": "object",
+            "properties": {},
+            "additionalProperties": {}
+          },
+          "map": {
+            "description": "A map layer: its axes, sibling sectors, the render (visual) call that draws it, and a note.",
             "type": "object",
             "properties": {},
             "additionalProperties": {}
@@ -5266,7 +5272,7 @@
     {
       "name": "search_data",
       "title": "Search data",
-      "description": "Search the data catalog: which dataset's values answer a question about weather and the people and places it affects, or what data exists at a point. With `query` it ranks grids, radar, satellite, outlooks and observations and returns hits with variable, units, cadence, why, the exact `call` to run next (a named place fills its `area`) and any verified `example`; without it, it lists datasets at the place with freshness, or every public one. A place (`location` or lat/lon) or `domain` keeps datasets covering it; variables come from describe_data. Example: {\"location\": \"Anchorage, AK\"}.",
+      "description": "Search the data catalog: which dataset's values answer a question about weather and the people and places it affects, or what data exists at a point. With `query` it ranks grids, radar, satellite, outlooks, observations and map layers and returns hits with variable, units, cadence, why, the exact `call` to run next (render (visual) for a map layer; a named place fills its `area`) and any verified `example`; without it, it lists datasets at the place with freshness, or all. A place or `domain` keeps datasets covering it; variables come from describe_data. Example: {\"location\": \"Anchorage, AK\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
