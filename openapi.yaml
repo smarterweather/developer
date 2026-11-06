@@ -3556,12 +3556,15 @@ paths:
 
         Successful responses carry `Cache-Control: private,
         max-age=3600`. The underlying place-name <-> ZIP mapping is
-        stable on the order of months.
+        stable on the order of months. A response built while a lookup
+        behind it was degraded (a timezone or station-catalog read, or a
+        `boundaries` probe) carries `Cache-Control: no-store` instead;
+        repeat the request later for the complete answer.
 
         `private` lets your own client reuse the response for the full
         `max-age` while keeping shared caches (CDNs, proxies) out, since
         each request on a partner key is metered and rate-limited
-        individually.
+        individually. First-party callers get `public, max-age=3600`.
 
         ### Auth
 
