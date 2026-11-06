@@ -2261,7 +2261,38 @@
           },
           "forecast": {
             "type": "object",
-            "properties": {},
+            "properties": {
+              "daily": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "relative_day": {
+                          "description": "Calendar days from the place's local today: 0 today, 1 tomorrow. Between local midnight and 6 AM a leading -1 row is the night still in progress (active_period night).",
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "active_period": {
+                          "description": "Only on the row holding the current local time: day (06:00-17:59) or night (18:00-05:59); night on relative_day 0 means today's high has passed.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
             "additionalProperties": {}
           },
           "data_status": {
@@ -4761,7 +4792,7 @@
     {
       "name": "get_status",
       "title": "Get status",
-      "description": "Data freshness of the weather platform (no inputs needed; refreshed about every 5 minutes): overall state, per-source states (ok / degraded / outage / no_signal), open incidents with their cause (provider outage vs internal processing delay) and active provider advisories. Use it when asked whether data is current, when other tools return stale-looking data, or before presenting time-critical weather. If a source is degraded or in outage, say the data may be stale rather than presenting it as live. Example: {}.",
+      "description": "Data freshness of the weather platform (no inputs needed; refreshed about every 5 minutes): overall state, per-source states (ok / degraded / outage / no_signal), open incidents with their cause (provider outage vs internal processing delay) and active provider advisories. Use it when asked whether data is current, or when other tools return stale-looking data. If a source is degraded or in outage, say the data may be stale rather than presenting it as live. Example: {}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -5409,7 +5440,7 @@
     {
       "name": "search_data",
       "title": "Search data",
-      "description": "Search the data catalog: which dataset's values answer a question about weather and the people and places it affects, or what data exists at a point. With `query` it ranks grids, radar, satellite, outlooks, observations and map layers and returns hits with the exact `call` to run next (render (visual) for a map layer; a named place fills its `area`) and any verified `example`; without it, it lists datasets at the place with freshness, or all. A place or `domain` keeps datasets covering it; variables come from describe_data. Example: {\"query\": \"snow depth\", \"location\": \"Erie, PA\"}.",
+      "description": "Search the data catalog: which dataset's values answer a question about weather and the people and places it affects, or what data exists at a point. With `query` it ranks datasets and map layers and returns hits with the exact `call` to run next (render (visual) for a map layer; a named place fills its `area`) and any verified `example`; without it, it lists datasets at the place with freshness, or all. A place or `domain` keeps datasets covering it; `kind` and `family` filter a listing, rank a query; variables come from describe_data. Example: {\"query\": \"snow depth\", \"location\": \"Erie, PA\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -5441,7 +5472,7 @@
             ]
           },
           "kind": {
-            "description": "This kind only.",
+            "description": "grid: forecasts (incl. AQ, UV, HeatRisk, radar nowcast), normals, astronomy, observed daily extremes; snapshot: latest radar mosaics, satellite, analyses, AQ, soil moisture; feature: station obs and normals, soundings, recon, lightning flashes, radar cell detections, reports, alerts, outlooks, places; text: forecaster text; index: climate indices.",
             "type": "string",
             "enum": [
               "grid",
@@ -5452,7 +5483,7 @@
             ]
           },
           "family": {
-            "description": "Only this source family, describe_data's `family` (1-40 chars).",
+            "description": "Source family, describe_data's `family` (1-40 chars).",
             "type": "string"
           },
           "limit": {
