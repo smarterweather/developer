@@ -4616,6 +4616,16 @@ paths:
         product (nor a related one) serves is an `out_of_domain` element
         without the state check, since nothing would be served there.
 
+        A selected product whose catalog `coverage[]` names a non-land
+        token (a satellite sector or full disk, `atlantic_epac`, `pacus`,
+        `carib`) also serves the points inside that token's footprint
+        that resolve to no state (open water, foreign land, the US
+        territories); there the products without such a token are
+        `out_of_domain`, and with none selected the point is the `404`
+        above. Such a location's `timezone` is the nautical zone of its
+        longitude (`Etc/GMT+4` at 65W) on both routes, foreign land
+        included.
+
         ### Envelope
 
         `series[]` holds one element per (product, location), or per
@@ -4912,7 +4922,10 @@ paths:
           no cap). The radius is catalog data, not a request word: for
           your own radius send a box or an area. Coverage is the 50 US states
           and DC: a point outside them is a `404` `outside-coverage`, as is
-          a box or inline area that misses every US domain.
+          a box or inline area that misses every US domain, unless the
+          product's catalog `coverage[]` names a non-land token (the NHC
+          basins `atlantic_epac`, `carib`) whose footprint holds the point
+          or touches the box or area.
         - `min_lon`, `min_lat`, `max_lon`, `max_lat`: the features
           intersecting the box.
         - `area[product]` with one of `area[feature_id]`,
