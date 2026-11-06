@@ -4472,9 +4472,15 @@ paths:
         `start` and `end`; it is a `400` on a product that is not a
         `forecast`. With `stats` or `windows`, `run` reduces the whole run
         and takes no other time word. A window entirely past a forecast's
-        `horizon`, or before an analysis's `history`, is a `400` with
-        `time_hint`. `fields` and `format` are reserved and return `400`
-        for now.
+        `horizon`, or before an analysis's `history` (the catalog
+        `time.history`), is that product's refusal: when no selected
+        product can answer the window, a `400` `outside_time_range` with
+        `time_hint`, whatever the window's length; beside one that can, that
+        product's elements are `unavailable` with `reason:
+        outside_time_range` and `time_hint`, and the others are served.
+        `time_hint.earliest_valid` is where every frame is served (the
+        catalog `history_complete`), and `suggested_call` reads back that
+        far. `fields` and `format` are reserved and return `400` for now.
 
         `astro` is an `analysis` whose rows run through about 14 days
         ahead, so with no time word it returns the newest row and `hours`
@@ -6985,19 +6991,7 @@ components:
           type: string
           description: The name a `where` expression gave that is no selected variable, or the feature property a `filter`, `properties` or statistic named that the product does not declare for it (with `partition_required`, the partition property).
         time_hint:
-          type: object
-          description: The time range the product answers.
-          properties:
-            horizon:
-              type: string
-            history:
-              type: string
-            earliest_valid:
-              type: string
-              format: date-time
-            latest_valid:
-              type: string
-              format: date-time
+          $ref: '#/components/schemas/TimeHint'
         cells:
           type: integer
           description: With `area_too_large`, the estimated cells in the area.
@@ -10321,8 +10315,20 @@ components:
           example: null
         history:
           type: [string, "null"]
-          description: How far back the product can be read, an ISO 8601 duration; `null` when not stated.
-          example: null
+          description: |
+            How far back the product can be read, an ISO 8601 duration:
+            nothing older is served, and `/v1/series` refuses a window that
+            ends before it (`outside_time_range`). `null` when nothing
+            bounds the read.
+          example: PT37H
+        history_complete:
+          type: string
+          description: |
+            How far back every frame is still served, an ISO 8601 duration;
+            absent when it is `history`. Between the two, older frames thin
+            out (an hourly bundle keeps whole hours only) or wait on the
+            catalog prune.
+          example: PT36H
         max_step:
           type: string
           description: |
@@ -13123,6 +13129,27 @@ components:
           example: public_domain
         terms_url:
           type: [string, "null"]
+    TimeHint:
+      type: object
+      description: |
+        The time range the product answers (`reason: outside_time_range`):
+        the catalog bound the window falls outside (`horizon` past a
+        forecast's horizon, `history` before its history; neither for an
+        `@observed:` / `@forecast:` window on the other side of now), and
+        the bound it puts on a window at now. `earliest_valid` is now minus
+        the catalog `history_complete` (else `history`): every frame from
+        it on is served, and the `suggested_call` reads back that far.
+      properties:
+        horizon:
+          type: string
+        history:
+          type: string
+        earliest_valid:
+          type: string
+          format: date-time
+        latest_valid:
+          type: string
+          format: date-time
     SeriesElement:
       type: object
       description: |
@@ -13178,6 +13205,18 @@ components:
           type: string
           description: With `out_of_domain`, a related product that covers the point.
           example: hrrr_alaska_surface
+        reason:
+          type: string
+          enum: [outside_time_range]
+          description: |
+            With `unavailable`: the window is one this product cannot
+            answer (before its `history`, past its `horizon`, or wholly on
+            the other side of now for an `@observed:` / `@forecast:` token)
+            while another selection in the request can. The element is not
+            read; `time_hint` and `notes` say what it answers. When no
+            selection can, the request is a `400` with the same reason.
+        time_hint:
+          $ref: '#/components/schemas/TimeHint'
         times:
           type: array
           description: Frame valid times, RFC 3339 UTC, ascending.
