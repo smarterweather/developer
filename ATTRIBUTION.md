@@ -17,6 +17,10 @@ Observations, forecasts, model output, radar, satellite and alerts.
 - Attribution: Data provided by NOAA/NWS
 - Terms: https://www.weather.gov/disclaimer
 
+- License: Public domain (U.S. Government work)
+- Attribution: NOAA Climate Prediction Center and NOAA NCEI climate indices
+- Terms: https://www.weather.gov/disclaimer
+
 ### U.S. Environmental Protection Agency (EPA) AirNow
 
 Air quality observations and forecasts.
