@@ -1124,7 +1124,7 @@
     {
       "name": "get_data",
       "title": "Get data",
-      "description": "Values, totals, comparisons, people and POI counts, station observations, upper-air profiles, climate records and normals, degree days and forecaster text from any catalog dataset (models, radar, alerts, outlooks, tropical cyclones and aircraft recon, reference layers) at a place or several, over a bbox or area, along a path, or as items. `select` takes `product:variable` or `product:property` tokens, a standard name or a concept such as `population`; send one space word and at most one time word (hours, start+end or at; run pins a cycle); `stats` reduces per `step` or over the area; omit units for SI. Example: {\"select\": [\"wind_gusts_10m\"], \"locations\": [\"Cheyenne, WY\", \"Casper, WY\"], \"hours\": 36, \"stats\": [\"max\"]}.",
+      "description": "Values, totals, comparisons, people/POI counts, station observations, upper-air profiles, climate records, normals, degree days, teleconnection indices and forecaster text from any catalog dataset (models, radar, alerts, outlooks, tropical cyclones, aircraft recon, reference layers) at a place or several, over a bbox or area, along a path, or as items. `select` takes `product:variable` or `product:property` tokens, a standard name or a concept (`population`); send one space word and at most one time word (hours, start+end or at; run pins a cycle); `stats` reduces per `step` or over the area; omit units for SI. Example: {\"select\": [\"wind_gusts_10m\"], \"locations\": [\"Cheyenne, WY\", \"Casper, WY\"], \"hours\": 36, \"stats\": [\"max\"]}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1468,9 +1468,10 @@
                     "windows",
                     "features",
                     "text",
-                    "crossings"
+                    "crossings",
+                    "index"
                   ],
-                  "description": "series: values per frame (along a path: per sample, at its ETA); stats: reducers per step bucket; windows: runs where every `where` held; features: a feature product's matching features; text: a text product's newest matching products; crossings: the stretches of a path inside a feature product's features."
+                  "description": "series: values per frame (along a path: per sample, at its ETA); stats: reducers per step bucket; windows: runs where every `where` held; features: a feature product's matching features; text: a text product's newest matching products; crossings: the stretches of a path inside a feature product's features; index: an index product's values per valid time, location-free, in each variable's stored units (`units` per element; the call's `units` word does not convert them)."
                 },
                 "product": {
                   "type": "string"
@@ -1541,7 +1542,7 @@
                   "type": "string"
                 },
                 "runs": {
-                  "description": "Distinct runs, when values mix more than one.",
+                  "description": "Distinct runs, when values mix more than one; an analysis index: its values' revision times.",
                   "type": "array",
                   "items": {
                     "type": "string"
@@ -1862,7 +1863,7 @@
                   "maximum": 9007199254740991
                 },
                 "next_cursor": {
-                  "description": "This element's next page, as `cursor`. A series element: resend every series select alone, with the words a series takes and the same place or area, every feature_id kept. A features element: resend its select alone, with the words it takes and its place or area, narrowed to its feature_id when the call had several.",
+                  "description": "This element's next page, as `cursor`. A series element: resend every series select alone, with the words a series takes and the same place or area, every feature_id kept. A features element: resend its select alone, with the words it takes and its place or area, narrowed to its feature_id when the call had several. An index element: resend its select alone, with the words it takes, plus the cursor.",
                   "type": [
                     "string",
                     "null"
@@ -5413,7 +5414,7 @@
         "type": "object",
         "properties": {
           "query": {
-            "description": "The question in the user's words (2-200 characters); omit to list.",
+            "description": "The question in the user's words (2-200 chars); omit to list.",
             "type": "string"
           },
           "location": {
@@ -5440,17 +5441,18 @@
             ]
           },
           "kind": {
-            "description": "Only this dataset kind.",
+            "description": "This kind only.",
             "type": "string",
             "enum": [
               "grid",
               "snapshot",
               "feature",
-              "text"
+              "text",
+              "index"
             ]
           },
           "family": {
-            "description": "Only this source family, describe_data's `family` (1-40 characters).",
+            "description": "Only this source family, describe_data's `family` (1-40 chars).",
             "type": "string"
           },
           "limit": {
@@ -5519,7 +5521,9 @@
                     "grid",
                     "snapshot",
                     "feature",
-                    "text"
+                    "geojson",
+                    "text",
+                    "index"
                   ]
                 },
                 "domain": {
