@@ -5304,6 +5304,218 @@ paths:
         '504':
           $ref: '#/components/responses/Problem504'
 
+  /v1/indices/{product_id}:
+    get:
+      operationId: getIndices
+      x-stability: experimental
+      summary: Values of a catalog index product, such as a teleconnection index forecast.
+      description: |
+        The generic door of the catalog's `index` products: location-free
+        scalar series, such as a teleconnection index forecast (its
+        ensemble mean, percentiles and probabilities) or a monthly index
+        analysis. Any product `GET /v1/catalog` lists with `kind` `index`
+        qualifies; the product's catalog `query` block lists the time
+        words it takes, and a word it does not list is a `400` with
+        `unsupported_word` and the block's values in `valid_values`. A
+        product of another kind is a `404` naming its own route.
+
+        **Experimental** (`x-stability: experimental`): excluded from the
+        90-day breaking-change commitment while the grammar settles.
+
+        ### Selection
+
+        `var` (repeatable, or comma-joined) selects variables by
+        `standard_name` or stored name; without it, every variable of the
+        product. An index takes no location: `lat`, `lon`, a box, `area`
+        or `path` is a `400` `unsupported_word`, as is any other word this
+        route does not take (with `did_you_mean` for a near miss such as
+        `hour`), never ignored.
+
+        ### Time
+
+        At most one of `hours`, `start` and `end`, or `at`, on a product
+        whose `query.time_words` lists it. Each window is taken over valid
+        times and also holds the value in effect at its start (the latest
+        at or before it).
+
+        - `hours` (1-384): ahead of now on a forecast product, back from
+          now on an analysis one, so a monthly analysis read with
+          `hours=384` returns the month in effect 16 days ago and any
+          later one.
+        - `start` and `end` (RFC 3339, `end` not before `start`): applied
+          the same way, with no span cap; paging bounds it.
+        - `at`: the one value in effect at that instant.
+        - None: a forecast product's latest run, every lead; an analysis
+          product's latest value.
+
+        `run` (RFC 3339) pins a forecast product's run, beside `hours` or
+        `start` and `end`, never `at`; an analysis product does not take
+        it.
+
+        ### Envelope
+
+        The `GET /v1/series` envelope without a location: `truncated`,
+        `next_cursor`, `meta` (`step`, reserved and null, and `sources[]`,
+        each source credit's attribution and license) and `series[]`, one
+        element for the product. The element carries `times` (RFC 3339
+        UTC, ascending) with `values` per variable `standard_name`
+        aligned with them (null where a time has no value), `units` (each
+        variable's stored unit, such as `1` for a dimensionless index or
+        `percent`; there is no `units` word), `run` on a forecast product
+        or `runs` (each value's own revision time, aligned with `times`)
+        on an analysis one, `data_age_seconds` and `freshness_status` (the
+        product's latest data, or the pinned `run`, as on `GET /v1/series`;
+        null while the product's freshness is not tracked) and
+        `meta.timezone` (`UTC`). `status` is `ok`, `partial`
+        (a variable's values are missing from the answer: null, with a
+        note), `unavailable` (no values in the window, or none stored yet,
+        with a note), or `entitlement_required` for a product behind a per-key
+        flag the key does not have (`entitlement` names the flag; no
+        values, no charge; the answer is sent with
+        `Cache-Control: no-store`).
+
+        ### Paging
+
+        `limit` (1-744, default 168) times per page. A cut page has
+        `truncated` true and a `next_cursor`; send it back as `cursor`
+        with the same parameters to continue. A cursor keeps its first
+        page's variables, window and run: a page answers the cursor's
+        variables, and a `var` naming others is a `400`. A cursor that
+        cannot be resumed is a `400` whose `suggested_call` drops it.
+
+        ### Errors
+
+        A data-level `400` or `404` is an RFC 9457 problem with a `reason`
+        and the members that correct it (`valid_values`, `did_you_mean`,
+        `unsupported_word`, `suggested_call`), as on `GET /v1/series`.
+
+        ### Caching
+
+        `Cache-Control: max-age=N` with N the product's cadence clamped to
+        60-3600 s. A `partial` or `unavailable` answer is `max-age=60,
+        stale-while-revalidate=0`: it changes on a retry or the moment
+        values land.
+
+        ### Auth and cost
+
+        Standard sw-api Bearer auth and rate limits apply. Weight 1
+        (`data`).
+      tags: [Products]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          description: A catalog product id whose `kind` is `index` (`GET /v1/catalog`).
+          schema:
+            type: string
+            pattern: '^[a-z0-9_]+$'
+            minLength: 1
+            maxLength: 128
+          example: cpc_nao_gefs
+        - name: var
+          in: query
+          required: false
+          description: A variable by `standard_name` or stored name; repeatable or comma-joined. Omit for every variable of the product.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: hours
+          in: query
+          required: false
+          description: A window of this many hours (1-384), ahead of now on a forecast product, back from now on an analysis one.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 384
+        - name: start
+          in: query
+          required: false
+          description: Window start (RFC 3339), with `end`.
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          required: false
+          description: Window end (RFC 3339), not before `start`.
+          schema:
+            type: string
+            format: date-time
+        - name: at
+          in: query
+          required: false
+          description: An instant (RFC 3339, or a date for its UTC midnight); the value in effect then.
+          schema:
+            type: string
+        - name: run
+          in: query
+          required: false
+          description: A forecast product's run (RFC 3339), beside `hours` or `start` and `end`, never `at`.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Times per page (default 168, max 744).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 744
+            default: 168
+        - name: cursor
+          in: query
+          required: false
+          description: The opaque `next_cursor` of the previous page, sent with the same parameters.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 8192
+      responses:
+        '200':
+          description: The product's series.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
+            RateLimit-Policy:
+              $ref: '#/components/headers/RateLimitPolicy'
+            RateLimit-Daily-Limit:
+              $ref: '#/components/headers/RateLimitDailyLimit'
+            RateLimit-Daily-Remaining:
+              $ref: '#/components/headers/RateLimitDailyRemaining'
+            RateLimit-Daily-Reset:
+              $ref: '#/components/headers/RateLimitDailyReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndicesResponse'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '500':
+          $ref: '#/components/responses/Problem500'
+        '502':
+          $ref: '#/components/responses/Problem502'
+        '503':
+          $ref: '#/components/responses/Problem503'
+        '504':
+          $ref: '#/components/responses/Problem504'
+
   /v1/outlooks:
     get:
       operationId: getOutlookDetail
@@ -9922,9 +10134,10 @@ components:
           type: string
           description: |
             Data shape: `grid` (a gridded field over time), `snapshot` (the
-            latest gridded analysis), `feature` (vector features such as
-            outlook polygons) or `text` (text products). New kinds may be
-            added.
+            latest gridded analysis), `feature` and `geojson` (vector
+            features such as outlook polygons), `text` (text products) or
+            `index` (a location-free scalar series, such as a
+            teleconnection index). New kinds may be added.
           example: grid
         product_type:
           type: [string, "null"]
@@ -13031,6 +13244,116 @@ components:
               type: [string, "null"]
               description: IANA timezone of the location, null when it cannot be resolved.
               example: America/Chicago
+    IndicesResponse:
+      x-stability: experimental
+      type: object
+      description: The `GET /v1/indices/{product_id}` envelope, the `GET /v1/series` one without a location or a units system.
+      required: [truncated, next_cursor, meta, series]
+      properties:
+        truncated:
+          type: boolean
+          description: True when `limit` cut the series (`next_cursor` resumes it).
+        next_cursor:
+          type: [string, "null"]
+          description: Opaque cursor for the next page, null when not truncated.
+        meta:
+          type: object
+          required: [step, sources]
+          properties:
+            step:
+              type: ["null"]
+              description: Reserved, always null.
+            sources:
+              type: array
+              description: The catalog sources behind the response, with their attribution terms.
+              items:
+                $ref: '#/components/schemas/SeriesSource'
+        series:
+          type: array
+          description: One element, for the product in the path.
+          items:
+            $ref: '#/components/schemas/IndexElement'
+    IndexElement:
+      x-stability: experimental
+      type: object
+      description: |
+        An index product's series, column-oriented: every `values` array
+        and `runs` are aligned with `times`.
+      required: [product, status, times, values, units, data_age_seconds, freshness_status, meta]
+      properties:
+        product:
+          type: string
+          example: cpc_nao_gefs
+        status:
+          type: string
+          enum: [ok, partial, unavailable, not_public, entitlement_required]
+          description: |
+            `ok`; `partial` (a variable's values are missing from the
+            answer: they are null, with a note; retry shortly);
+            `unavailable` (no values in the window, or none stored yet,
+            with a note); `entitlement_required` (a product behind a
+            per-key flag the key does not have: no values, no charge,
+            `entitlement` names the flag, and the response is
+            `no-store`). `not_public` is reserved.
+        times:
+          type: array
+          description: Valid times, RFC 3339 UTC, ascending.
+          items:
+            type: string
+            format: date-time
+        values:
+          type: object
+          description: Values per variable `standard_name`, aligned with `times`; null where a time has no value.
+          additionalProperties:
+            type: array
+            items:
+              type: [number, "null"]
+        units:
+          type: object
+          description: Each variable's stored unit per `standard_name` (`1` for a dimensionless index); null when the variable has none.
+          additionalProperties:
+            type: [string, "null"]
+        run:
+          type: string
+          format: date-time
+          description: A forecast product's run behind every value.
+        runs:
+          type: array
+          description: An analysis product's per-value revision times, aligned with `times`.
+          items:
+            type: [string, "null"]
+            format: date-time
+        data_age_seconds:
+          type: [integer, "null"]
+          description: Age of the product's latest data (or of the pinned `run`), null when unknown.
+        freshness_status:
+          type: [string, "null"]
+          enum: [fresh, stale, missing, null]
+          description: The product's freshness, as on the catalog; with `run`, the pinned run's age against the product's freshness budget. Null when the product's freshness is not tracked.
+        notes:
+          type: array
+          description: Caveats on the element, such as no values stored for the product yet.
+          items:
+            type: string
+        entitlement:
+          type: object
+          description: With `entitlement_required`, the withheld product and the flag that grants it.
+          required: [field, flag, plan]
+          properties:
+            field:
+              type: string
+            flag:
+              type: string
+            plan:
+              type: [string, "null"]
+        meta:
+          type: object
+          required: [timezone]
+          properties:
+            timezone:
+              type: string
+              enum: [UTC]
+              description: Always `UTC`; an index has no location.
     SeriesStats:
       type: object
       description: |
