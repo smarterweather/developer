@@ -585,7 +585,7 @@
             }
           },
           "at": {
-            "description": "Time: one instant (at least 10 characters).",
+            "description": "Time: one instant.",
             "type": "string"
           },
           "filter": {
@@ -1225,7 +1225,7 @@
             }
           },
           "path": {
-            "description": "Space: a trajectory sampled at each vertex's ETA: geometry or polyline with times, or departure + speed; departures fans out one element per departure.",
+            "description": "Space: a trajectory sampled at each vertex's ETA (no time word or stats): geometry or polyline with times, or departure + speed; departures fans out one element per departure.",
             "type": "object",
             "additionalProperties": false,
             "properties": {
@@ -1291,15 +1291,15 @@
             "type": "integer"
           },
           "start": {
-            "description": "Time: window start (with `end`) (at least 10 characters).",
+            "description": "Time: window start (with `end`), a date or RFC 3339.",
             "type": "string"
           },
           "end": {
-            "description": "Time: window end (with `start`) (at least 10 characters).",
+            "description": "Time: window end (with `start`), inclusive.",
             "type": "string"
           },
           "at": {
-            "description": "Time: one instant (at least 10 characters).",
+            "description": "Time: one instant.",
             "type": "string"
           },
           "run": {
@@ -1307,7 +1307,7 @@
             "type": "string"
           },
           "step": {
-            "description": "Bucket size for `stats`, an ISO 8601 duration.",
+            "description": "Bucket size for `stats`: PT15M, PT1H, PT3H, PT6H or P1D.",
             "type": "string"
           },
           "stats": {
@@ -1935,7 +1935,7 @@
                         "type": "string"
                       },
                       "truncated": {
-                        "description": "True when body was cut to its size cap.",
+                        "description": "True when text was cut: the body at 16 KB, or with view concise a text property over 8 KB; the element's notes say how to get the rest.",
                         "type": "boolean"
                       },
                       "properties": {
@@ -3806,15 +3806,15 @@
             "default": 24
           },
           "start": {
-            "description": "Time: window start (with `end`) (at least 10 characters).",
+            "description": "Time: window start (with `end`), a date or RFC 3339.",
             "type": "string"
           },
           "end": {
-            "description": "Time: window end (with `start`) (at least 10 characters).",
+            "description": "Time: window end (with `start`), inclusive.",
             "type": "string"
           },
           "at": {
-            "description": "Time: one instant (at least 10 characters).",
+            "description": "Time: one instant.",
             "type": "string"
           },
           "units": {
@@ -4087,7 +4087,7 @@
     {
       "name": "get_outlooks",
       "title": "Get hazard outlooks",
-      "description": "Hazard outlooks and risk areas covering a place, with the forecasters' narrative: SPC severe (days 1-8 and the tornado, wind and hail probabilities; `hazard` severe, the default), SPC fire, WPC excessive rain, HeatRisk (heat) and the CPC temperature and precipitation outlooks whose climate variant says warmer, wetter or drier than normal over 6-10 days to a season. Narrow with `filter` on outlook_day (1-8) or the CPC period (610, 814, wk34, monthly, seasonal); each row carries its day or period, and no rows means no outlook covers the place. Example: {\"location\": \"Wichita, KS\", \"filter\": [\"outlook_day == 2\"]}.",
+      "description": "Hazard outlooks and risk areas covering a place, with the forecasters' narrative: SPC severe (days 1-8 and the tornado, wind and hail probabilities; the default), SPC fire, WPC excessive rain, HeatRisk (heat) and the CPC temperature and precipitation outlooks whose climate variant says warmer, wetter or drier than normal over 6-10 days to a season. Narrow with `filter` on outlook_day (1-8) or the CPC period (610, 814, wk34, monthly, seasonal); each row carries its day or period, and no rows means no outlook covers the place. `view` concise (default) lists every discussion by summary; detailed adds their text. Example: {\"location\": \"Wichita, KS\", \"filter\": [\"outlook_day == 2\"]}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -4103,6 +4103,14 @@
               "description": "`<name> <op> <value>`, op one of == != > >= < <= in (`in`: a comma-separated list); values in request units.",
               "type": "string"
             }
+          },
+          "view": {
+            "description": "concise (default): values and feature properties with a centroid and bbox; detailed adds simplified geometry, provenance and raw encodings.",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "default": "concise"
           },
           "hazard": {
             "type": "string",
@@ -4265,7 +4273,7 @@
             }
           },
           "narrative": {
-            "description": "The discussion the earliest-day row names; null when none is issued.",
+            "description": "The discussion the earliest-day row names (view concise: no body); null when none is issued.",
             "anyOf": [
               {
                 "type": "object",
@@ -4280,7 +4288,7 @@
             ]
           },
           "narratives": {
-            "description": "Each discussion the outlooks read name, the newest of each; a row's narrative_awips_id pairs it.",
+            "description": "Each discussion the outlooks read name, the newest of each, the narrative first (view concise: its summary only; detailed: in full); a row's narrative_awips_id pairs it.",
             "type": "array",
             "items": {
               "type": "object",
@@ -4289,6 +4297,10 @@
               },
               "additionalProperties": {}
             }
+          },
+          "more": {
+            "description": "view concise: what the discussions leave out and how to get it.",
+            "type": "string"
           },
           "status": {
             "type": "string"

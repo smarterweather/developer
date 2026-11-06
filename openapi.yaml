@@ -2619,11 +2619,25 @@ paths:
         - name: start
           in: query
           required: false
-          description: RFC 3339 instant. Only products issued after it are returned.
+          description: RFC 3339 instant, or a date (from that local calendar day's midnight at the point; a UTC day for a national or office read). Only products issued after it are returned.
           schema:
-            type: string
-            format: date-time
+            anyOf:
+              - type: string
+                format: date-time
+              - type: string
+                format: date
           example: "2026-05-07T00:00:00Z"
+        - name: end
+          in: query
+          required: false
+          description: RFC 3339 instant, or a date (through that local calendar day's last second at the point; a UTC day for a national or office read). Only products issued at or before it are returned.
+          schema:
+            anyOf:
+              - type: string
+                format: date-time
+              - type: string
+                format: date
+          example: "2026-05-08"
         - name: limit
           in: query
           required: false
@@ -5150,7 +5164,7 @@ paths:
         - name: start
           in: query
           required: false
-          description: Window start (RFC 3339), with `end`; on a `day_of_year` product, a date (`YYYY-MM-DD`, the first local day) or RFC 3339.
+          description: Window start, RFC 3339 or a date (`YYYY-MM-DD`, from that local calendar day's midnight at the point; a UTC day over a box or an area; on a `day_of_year` product, the first local day), with `end`.
           schema:
             anyOf:
               - type: string
@@ -5160,7 +5174,7 @@ paths:
         - name: end
           in: query
           required: false
-          description: Window end (RFC 3339), after `start`; on a `day_of_year` product, a date (`YYYY-MM-DD`, the last local day, inclusive) or RFC 3339.
+          description: Window end, RFC 3339 or a date (`YYYY-MM-DD`, through that local calendar day at the point; a UTC day over a box or an area; on a `day_of_year` product, the last local day, inclusive), after `start`.
           schema:
             anyOf:
               - type: string
@@ -5468,17 +5482,23 @@ paths:
         - name: start
           in: query
           required: false
-          description: Window start (RFC 3339), with `end`.
+          description: Window start (RFC 3339, or a date, read as a UTC day since an index has no location), with `end`.
           schema:
-            type: string
-            format: date-time
+            anyOf:
+              - type: string
+                format: date-time
+              - type: string
+                format: date
         - name: end
           in: query
           required: false
-          description: Window end (RFC 3339), not before `start`.
+          description: Window end (RFC 3339, or a date through its last second UTC), not before `start`.
           schema:
-            type: string
-            format: date-time
+            anyOf:
+              - type: string
+                format: date-time
+              - type: string
+                format: date
         - name: at
           in: query
           required: false
@@ -6080,19 +6100,25 @@ components:
       name: start
       in: query
       required: false
-      description: Window start (RFC 3339), with `end`; at most 16 days before `end`.
+      description: Window start (RFC 3339, or a date, read from that local calendar day's midnight at each location), with `end`; at most 16 days before `end`.
       schema:
-        type: string
-        format: date-time
+        anyOf:
+          - type: string
+            format: date-time
+          - type: string
+            format: date
       example: '2026-10-14T00:00:00Z'
     SeriesEndQuery:
       name: end
       in: query
       required: false
-      description: Window end (RFC 3339, inclusive), with `start`.
+      description: Window end (RFC 3339, or a date, read through the last second of that local calendar day at each location; inclusive), with `start`.
       schema:
-        type: string
-        format: date-time
+        anyOf:
+          - type: string
+            format: date-time
+          - type: string
+            format: date
       example: '2026-10-15T00:00:00Z'
     SeriesRunQuery:
       name: run
@@ -6117,7 +6143,7 @@ components:
       name: step
       in: query
       required: false
-      description: Bucket size for `stats`; `P1D` is the location's local day. Never finer than the product's frames.
+      description: Bucket size for `stats`; `P1D` is the location's local calendar day. An ISO 8601 duration equal to one of these reads as it (PT24H as P1D, with a note saying so). Never finer than the product's frames.
       schema:
         type: string
         enum: [PT15M, PT1H, PT3H, PT6H, P1D]
@@ -13550,9 +13576,11 @@ components:
           minimum: 1
           maximum: 384
         start:
+          description: RFC 3339. The server also reads a date (from that local calendar day's midnight at each location), as on the GET route.
           type: string
           format: date-time
         end:
+          description: RFC 3339, inclusive. The server also reads a date (through that local calendar day's last second at each location), as on the GET route.
           type: string
           format: date-time
         at:
@@ -13563,6 +13591,7 @@ components:
         step:
           type: string
           enum: [PT15M, PT1H, PT3H, PT6H, P1D]
+          description: An ISO 8601 duration equal to one of these reads as it (PT24H as P1D, with a note saying so).
         stats:
           type: array
           maxItems: 32
@@ -14096,11 +14125,11 @@ components:
         start:
           type: string
           format: date-time
-          description: RFC 3339. A `day_of_year` product also takes a date (`YYYY-MM-DD`, the first local day), as on the GET route.
+          description: RFC 3339. The server also reads a date (`YYYY-MM-DD`, a UTC day over the inline area; on a `day_of_year` product, the first local day), as on the GET route.
         end:
           type: string
           format: date-time
-          description: RFC 3339. A `day_of_year` product also takes a date (`YYYY-MM-DD`, the last local day, inclusive), as on the GET route.
+          description: RFC 3339. The server also reads a date (`YYYY-MM-DD`, through that UTC day over the inline area; on a `day_of_year` product, the last local day, inclusive), as on the GET route.
         at:
           type: string
         filter:
