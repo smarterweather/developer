@@ -5649,7 +5649,7 @@
             "type": "number"
           },
           "domain": {
-            "description": "Coverage filter without a place; omit for tropical or recon.",
+            "description": "Coverage filter without a place; global = no filter.",
             "type": "string",
             "enum": [
               "conus",
