@@ -3719,7 +3719,9 @@ paths:
           tracks against crop growth-stage milestones. If part of the season
           window has no observed data, the per-day series still comes back
           `200` but `cumulative_total` is omitted and `meta.gaps` carries an
-          `unfilled` span — a partial sum is not a season total.
+          `unfilled` span — a partial sum is not a season total. Days lost
+          to a failed observed read are also listed in `meta.unavailable`,
+          so a temporary outage is told apart from data that never existed.
 
         **Crops.** Pass a catalog `crop` id (e.g. `corn`, `soybean`,
         `wheat_winter`, `cotton`, `alfalfa`) to use calibrated thresholds, or
@@ -3857,6 +3859,8 @@ paths:
           $ref: '#/components/responses/Problem404'
         '502':
           $ref: '#/components/responses/Problem502'
+        '499':
+          $ref: '#/components/responses/Problem499'
         '503':
           $ref: '#/components/responses/Problem503'
         '504':
@@ -12550,6 +12554,32 @@ components:
           description: Missing-day runs affecting a cumulative total.
           items:
             $ref: '#/components/schemas/GddGap'
+        unavailable:
+          type: array
+          description: |
+            Days lost to a failed observed read (a temporary upstream
+            outage), not days the data never had. These days are reported
+            `missing` and are never interpolated. The response omits
+            `cumulative_total` when any day is unavailable; retrying later
+            may fill them, so such a response is sent
+            `Cache-Control: no-store`. Absent when every observed read
+            succeeded.
+          items:
+            $ref: '#/components/schemas/GddDateRange'
+
+    GddDateRange:
+      type: object
+      description: An inclusive run of local calendar dates.
+      required: [start, end]
+      properties:
+        start:
+          type: string
+          format: date
+          description: First day of the run (inclusive).
+        end:
+          type: string
+          format: date
+          description: Last day of the run (inclusive).
 
     GddDay:
       type: object
@@ -14284,6 +14314,16 @@ components:
       description: |
         Gateway timeout. An upstream data source did not respond within
         the service's budget.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem499:
+      description: |
+        Client closed the request (type `client-closed-request`): the
+        caller went away before the answer was ready. Nobody is left to
+        read it; it is recorded in logs and metrics, not as a server error.
+        Send the request again if the answer is still needed.
       content:
         application/problem+json:
           schema:

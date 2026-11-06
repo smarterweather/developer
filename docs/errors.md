@@ -220,6 +220,7 @@ human does open it.
 | <a id="conflict"></a>`conflict` | 409 | The write conflicts with current state. On `GET /v1/features/{product_id}`, `reason` `cursor_stale`: the data changed between pages. | Re-read state and retry once if the conflict is stale; for `cursor_stale`, page again from the start (`suggested_call` drops the cursor). |
 | <a id="query-too-slow"></a>`query-too-slow` | 422 | `GET /v1/features/{product_id}`: the read did not finish within its time budget (`reason` `query_too_slow`). | Narrow it: a smaller area or box, fewer `area[feature_ids]`, a `filter`, or a lower `limit`. Do not retry as-is. |
 | <a id="flag-disabled"></a>`flag-disabled` | 403 | The endpoint exists but is not enabled for this key. | Treat as not available for this key. |
+| <a id="client-closed-request"></a>`client-closed-request` | 499 | The client closed the connection before the answer was ready (today on `GET /v1/agriculture/growing-degree-days`). Nobody reads this body; it is in the access log and request metrics, not counted as a server error. | None: it describes a request you already abandoned. Send it again if you still need the answer. |
 | <a id="internal"></a>`internal` | 500  | Unhandled server error. Logged with a request id we can look up.                                         | Retry with exponential backoff (max 3); on persistent failure, open a support ticket.  |
 | <a id="upstream"></a>`upstream` | 502  | A backing data source returned an error or an undecodable response.                                      | Retry with exponential backoff. Usually transient.                                    |
 | <a id="service-unavailable"></a>`service-unavailable` | 503  | A dependency needed to authorize or serve the request is temporarily unreachable.                        | Retry with exponential backoff. Never treat as an auth failure.                        |
@@ -250,6 +251,7 @@ control flow.
 | `trial-mint-unavailable` | After `Retry-After`. |
 | `payload-too-large`, `flag-disabled`, `query-too-slow` | No; `query-too-slow` after narrowing the request. |
 | `conflict` | Once, after re-reading state. |
+| `client-closed-request` | Not applicable; you closed the request. |
 | `internal`, `upstream`, `service-unavailable`, `timeout`            | Exponential backoff, max 3 retries. |
 
 Start retries at 250 ms, double the wait each time up to about 2 s, and
