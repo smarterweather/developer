@@ -3545,6 +3545,13 @@ paths:
         most populous first), so a county name many states share
         ("Washington County") returns every one.
 
+        A `city` written as a weather-station id in capitals, either an
+        ICAO id (`KSLC`, `PANC`) or a 3-character FAA id with its `state`
+        (`SLC` + `UT`), that no place or county matches by name also
+        returns `station` rows from the METAR station catalog: first, after
+        only a place whose name holds every word of `city` ("Kailua-Kona"
+        for `KONA`).
+
         ### Caching
 
         Successful responses carry `Cache-Control: private,
@@ -6378,7 +6385,8 @@ components:
       in: query
       description: |
         Free-text location name. Examples: `"Boston, MA"`, `"94043"`,
-        `"Denver"`. Resolved by the Smarter Weather geocoder. Mutually exclusive with
+        `"Denver"`, `"KSLC"`. Resolved by the Smarter Weather geocoder (a
+        station id resolves as on `/v1/geocode/search`). Mutually exclusive with
         `lat`/`lon` and `zip`.
       required: false
       schema:
@@ -11340,7 +11348,7 @@ components:
       description: |
         Single forward-geocode candidate. Most fields are JSON `null`
         when the source record lacks them. `type` is the result kind
-        (`place`, `zip`, `county`, `address`, `poi`).
+        (`place`, `zip`, `county`, `station`, `address`, `poi`).
 
         Forward-compat: additional fields may appear without a
         sw-api release.
@@ -11387,9 +11395,11 @@ components:
           type: string
           description: |
             Result kind. Emitted values are
-            `place`, `zip`, `county`, `address`, `poi`; a `county` row
-            is a county-equivalent matched by its legal name
-            ("Travis County", "Orleans Parish"). Treat as opaque --
+            `place`, `zip`, `county`, `station`, `address`, `poi`; a
+            `county` row is a county-equivalent matched by its legal name
+            ("Travis County", "Orleans Parish"), a `station` row a METAR
+            station matched by its id ("Salt Lake City Intl (KSLC)").
+            Treat as opaque --
             new types may appear without a sw-api release.
           example: "place"
         place_id:
@@ -11397,8 +11407,8 @@ components:
           description: |
             Census place GEOID. Same key as the v2 basemap tile `id`.
             Present on place results; the 5-digit county FIPS geoid on
-            `county` rows (the `us_counties` feature id); omitted for
-            ZIP results.
+            `county` rows (the `us_counties` feature id); the ICAO id on
+            `station` rows; omitted for ZIP results.
           example: "1714000"
         id:
           type: string

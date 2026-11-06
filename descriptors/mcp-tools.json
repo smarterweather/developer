@@ -315,7 +315,7 @@
     {
       "name": "find_places",
       "title": "Find places",
-      "description": "Find places: a name, ZIP, venue or address to ranked candidates with lat/lon, or coordinates to the place and timezone. Pass `query` (fuzzy=true for partial input) or `lat`+`lon`; rows carry `type` place|zip|address|poi|county, `matched_via: \"autosuggest\"` marks fallback rows and `partial` a timed-out section. Weather tools take `location`; use this to disambiguate or name a point. Example: {\"lat\": 39.74, \"lon\": -104.99} -> Denver, Colorado, America/Denver.",
+      "description": "Find places: a name, ZIP, venue or address to ranked candidates with lat/lon, or coordinates to the place and timezone. Pass `query` or `lat`+`lon`; rows carry `type` place|zip|address|poi|county|station, `matched_via: \"autosuggest\"` marks fallback rows and `partial` a timed-out section. Weather tools take `location`; use this to disambiguate or name a point. Example: {\"lat\": 39.74, \"lon\": -104.99} -> Denver, Colorado, America/Denver.",
       "inputSchema": {
         "type": "object",
         "properties": {
