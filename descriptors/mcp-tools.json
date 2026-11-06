@@ -45,7 +45,7 @@
             "additionalProperties": {}
           },
           "map": {
-            "description": "A map layer: its axes, sibling sectors, the render (visual) call that draws it, and a note.",
+            "description": "A map layer: its axes, sibling sectors, `select` (its id and its <family>:<pick>), the render (visual) call, and a note.",
             "type": "object",
             "properties": {},
             "additionalProperties": {}
@@ -5121,7 +5121,7 @@
             "description": "map: weather layers over a basemap; sounding: the nearest radiosonde as a skew-T and hodograph chart."
           },
           "select": {
-            "description": "Map layers, bottom to top (at most 6): a product id with a map, a standard_name drawn in the place's domain, a feature product (alerts, storm cells, reports) drawn over the rasters, or one radar site as nexrad_l3:{SITE}:{KEY}, KEY N0B reflectivity, N0S storm-relative velocity (rotation), N0G base velocity, N0C correlation coefficient, N0X differential reflectivity. Default precipitation_hybrid.",
+            "description": "Map layers, bottom to top (at most 6): a product id with a map, a standard_name drawn in the place's domain, a catalog pick <family>:<pick>[:<pick>] over a map layer's axes (satellite:13, satellite:water_vapor, satellite:2:goes_west, composite:reflectivity), a feature product (alerts, storm cells, reports) drawn over the rasters, or one radar site as nexrad_l3:{SITE}:{KEY}, KEY N0B reflectivity, N0S storm-relative velocity (rotation), N0G base velocity, N0C correlation coefficient, N0X differential reflectivity. Default precipitation_hybrid.",
             "type": "array",
             "items": {
               "type": "string"
