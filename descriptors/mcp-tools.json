@@ -1363,6 +1363,176 @@
               }
             }
           },
+          "criteria": {
+            "description": "What makes an hour good or bad for the caller's purpose: one entry per condition over the selected variables. Each scores every sample from +1 (ideal) through 0 (the acceptable limit) to -1 (unacceptable); the result's `suitability` block carries the per-criterion scores, the combined score (the minimum over the `must` criteria; a `must: false` criterion lowers the score but never below 0), the limiting criterion per sample, the windows of acceptable hours (at least windows.min_hours, default 2; windows.max_windows caps them, windows.activity names the purpose) and the best one. Say the ranges in request units. Send location or locations. With criteria, windows.light is refused: use a daylight criterion (at most 8 items).",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "A short handle for the result and the chart. Default: the variable's standard name, `expr_<n>` for a formula (n its 1-based position), a mask's label in snake case (else `daylight` / `hours`). Unique within the call (at most 24 characters)."
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Words for people (Wind, Fresh snow). Default: the variable's catalog title, else the key humanized (at most 24 characters)."
+                },
+                "source": {
+                  "enum": [
+                    "model",
+                    "user",
+                    "memory"
+                  ],
+                  "description": "Who asked for it: the model's own judgment (default), the user's stated preference, or a remembered preference; carried through to the chart's attribution."
+                },
+                "glyph": {
+                  "type": "string",
+                  "description": "The chart's small drawn glyph for this criterion, one of: wind, gust, rain, cloud, sun, snow, visibility, temperature. Default: from the variable's standard name; give it for a formula (a gust factor: gust) or leave it out for none."
+                },
+                "var": {
+                  "type": "string",
+                  "description": "A selected variable's standard_name (one of `select`). Exactly one of var, expr, daylight or hours_of_day."
+                },
+                "expr": {
+                  "type": "string",
+                  "description": "A formula over selected standard_names: numbers, + - * /, unary minus, parentheses, abs(x), min(a, b), max(a, b); at most 32 tokens, depth 6 (wind_gusts_10m - wind_speed_10m). Its ranges are in the formula's own units; give `unit` for the chart (at most 120 characters)."
+                },
+                "daylight": {
+                  "enum": [
+                    "sun",
+                    "civil",
+                    "night"
+                  ],
+                  "description": "A mask, not a score: hours between the place's sunrise and sunset (sun), civil dawn and dusk (civil), or sunset and sunrise (night) are scored; the rest are unscored (a gap, never poor), read from the sun times at the place, no select needed. A sample counts as inside when more than half of it is. A day without a sunrise or sunset (polar) is unscored. Takes no ranges or must; `before` and `after` name its gaps."
+                },
+                "hours_of_day": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "A mask on the local clock: hours from `from` to `to` (HH:MM, the place's zone; a span past midnight wraps) are scored, the rest unscored (a gap, never poor); a sample counts as inside when more than half of it is. Operating hours (lifts 08:30-16:00, a pool's hours). Takes no ranges or must; `before` and `after` name its gaps.",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "description": "Pattern ^([01]\\d|2[0-3]):[0-5]\\d$."
+                    },
+                    "to": {
+                      "type": "string",
+                      "description": "Pattern ^([01]\\d|2[0-3]):[0-5]\\d$."
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to"
+                  ]
+                },
+                "unit": {
+                  "type": "string",
+                  "description": "With expr: the unit word for the chart (kt, °F) (at most 12 characters)."
+                },
+                "window": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Score a trailing reduction instead of the sample: the sum, mean, max or min over the `hours` ending at the sample (24 h snowfall: {hours: 24, reduce: sum}). The read looks back over the variable's observed product for the first samples where one serves the place; where none does, those samples have no score.",
+                  "properties": {
+                    "hours": {
+                      "type": "integer",
+                      "description": "Hours, up to 72 (>= 1)."
+                    },
+                    "reduce": {
+                      "enum": [
+                        "sum",
+                        "mean",
+                        "max",
+                        "min"
+                      ],
+                      "description": "How the hours combine."
+                    }
+                  },
+                  "required": [
+                    "hours",
+                    "reduce"
+                  ]
+                },
+                "low": {
+                  "type": "string",
+                  "description": "The words for an hour this criterion limits from below (light wind, no new snow, cold). Default: '<label> low' (at most 16 characters)."
+                },
+                "high": {
+                  "type": "string",
+                  "description": "The words for an hour it limits from above (gusty, too hot, cloudy). Default: '<label> high'. Not on a clock mask (at most 16 characters)."
+                },
+                "before": {
+                  "type": "string",
+                  "description": "Clock masks only: the words for a gap that ends when the hours begin (before dawn, before opening). Defaults: daylight sun 'before sunrise', civil 'before dawn', night 'before dusk'; hours_of_day 'before opening' (at most 16 characters)."
+                },
+                "after": {
+                  "type": "string",
+                  "description": "Clock masks only: the words for a gap that starts when the hours end (after dark, after closing). Defaults: daylight sun 'after sunset', civil 'after dark', night 'after dawn'; hours_of_day 'after closing' (at most 16 characters)."
+                },
+                "ideal": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "The range that scores +1. An absent side is open (ideal: {max: 30} is 'the lower the better, 30 or less is ideal').",
+                  "properties": {
+                    "min": {
+                      "type": "number",
+                      "description": "Lower edge."
+                    },
+                    "max": {
+                      "type": "number",
+                      "description": "Upper edge."
+                    }
+                  }
+                },
+                "ok": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "The acceptable range, containing ideal; its edges score 0. Required with ideal.",
+                  "properties": {
+                    "min": {
+                      "type": "number",
+                      "description": "Lower edge."
+                    },
+                    "max": {
+                      "type": "number",
+                      "description": "Upper edge."
+                    }
+                  }
+                },
+                "bad": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Where the score reaches -1, outside ok. Default: as far beyond each ok edge as ideal lies inside it.",
+                  "properties": {
+                    "min": {
+                      "type": "number",
+                      "description": "Lower edge."
+                    },
+                    "max": {
+                      "type": "number",
+                      "description": "Upper edge."
+                    }
+                  }
+                },
+                "utility": {
+                  "type": "array",
+                  "description": "The general form instead of the ranges: control points [value, score] with values ascending and scores from -1 to 1; linear between, flat beyond the ends. Several ranges, two peaks, any direction: [[0,-1],[6,0],[10,1],[18,1],[24,0],[35,-1]] (at least 2 items; at most 8 items).",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "Exactly 2 items."
+                  }
+                },
+                "must": {
+                  "type": "boolean",
+                  "description": "true (default): this criterion can make an hour unacceptable. false: a preference; it lowers the score toward 0 but never below it."
+                }
+              }
+            }
+          },
           "units": {
             "description": "metric, imperial or si; omitted returns each variable's catalog `units` (SI).",
             "enum": [
@@ -1875,6 +2045,12 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "suitability": {
+                  "description": "With criteria, on the element carrying the first one: times; per criterion its values and scores (-1 to 1) or a clock mask; total (the score, null where masked or missing); limiting, masked_by and missing (criterion keys); the acceptable windows (start, end, hours, mean, limiting) and the best (tier good or okay); min_hours; scored, masked and missing hours.",
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {}
                 },
                 "provenance": {
                   "description": "view detailed: store, run and source credits.",
