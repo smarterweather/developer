@@ -64,6 +64,14 @@ info:
     `Retry-After` header. See individual operation responses for header
     definitions.
 
+    ## Query parameters
+
+    Unknown query parameters are ignored. How a known parameter treats a
+    value outside its documented set is stated on that parameter: for
+    example, `units` on `/v1/point` and `/v1/series` answers `400` with a
+    `detail` naming it, while `include` on `/v1/weather` ignores unknown
+    tokens.
+
     ## `/v1/weather` include tokens
 
     `/v1/weather` returns a composite response. The `include` query parameter
@@ -4207,10 +4215,10 @@ paths:
         Returns the value in effect now of allowlisted stored data sampled at
         a point: the latest frame of an analysis, or the forecast frame whose
         period contains now, from the newest run that has one (HeatRisk:
-        today's level; `unavailable` when no frame covers now). Output is
-        friendly (canonical `unit`, an optional `category` label,
-        `observed_at`, and a staleness flag). The other days of a forecast
-        are on `GET /v1/series`.
+        today's level; `unavailable` when no frame covers now). Each value
+        carries its `unit` in the requested `units` system (see Units), an
+        optional `category` label, `observed_at`, and a staleness flag. The
+        other days of a forecast are on `GET /v1/series`.
 
         This is the one curated point lookup over stored data: it serves
         only the `(product, var)` pairs on a server-side **allowlist**, so the
@@ -4241,6 +4249,23 @@ paths:
           whole family card (several metrics) or a map of locations; partial
           conditions (out of domain, not allowlisted, no data) are reported
           per item and never fail the whole request.
+
+        ### Units
+
+        `units` takes `si`, `metric` or `imperial`, the same values as
+        `GET /v1/series` and MCP `get_data`, converted through the same
+        table and labelled with the same unit. Omitted means `si` here
+        (stored values labelled with the variable's stored catalog `units`),
+        as on `get_data`;
+        `/v1/series` requires `units`, and MCP's other tools default to
+        `imperial`. Pass `units` explicitly to compare doors. `metric` and `imperial` convert to each variable's catalog
+        display unit (MRMS QPE `mm` to `in` under `imperial`); categorical
+        and percentile values, and zone levels, are unchanged under every
+        system. Both forms echo the system served as a top-level `units`,
+        and each value's `unit` names its unit in that system, including a
+        value that is `unavailable` or `out_of_domain`. Any other `units`
+        value, including an empty one, is a `400` (`units must be si,
+        metric or imperial.`).
 
         ### Coverage
 
@@ -4373,6 +4398,7 @@ paths:
               minLength: 3
               maxLength: 64
           example: ["41.9,-93.6", "42.0,-93.4"]
+        - $ref: '#/components/parameters/PointUnitsQuery'
       responses:
         '200':
           description: |
@@ -4404,6 +4430,8 @@ paths:
           $ref: '#/components/responses/Problem400'
         '404':
           $ref: '#/components/responses/Problem404'
+        '500':
+          $ref: '#/components/responses/Problem500'
         '502':
           $ref: '#/components/responses/Problem502'
         '504':
@@ -6083,6 +6111,23 @@ components:
       schema:
         type: string
         enum: [si, metric, imperial]
+      example: imperial
+    PointUnitsQuery:
+      name: units
+      in: query
+      required: false
+      description: |
+        Units system. Omitted or `si` serves stored values labelled with the
+        variable's stored catalog `units`; `metric` and `imperial` convert to each variable's
+        catalog display unit (`mm` to `in` for MRMS QPE; categorical and
+        percentile values are unchanged). The same values and labels as
+        `GET /v1/series` and MCP `get_data`; omitted is `si`, as on
+        `get_data`, where `/v1/series` requires it. Pass it explicitly to
+        compare doors.
+      schema:
+        type: string
+        enum: [si, metric, imperial]
+        default: si
       example: imperial
     SeriesHoursQuery:
       name: hours
@@ -10885,7 +10930,9 @@ components:
             - type: 'null'
         point:
           description: |
-            How `/v1/point` serves the variable: the `unit` it reports
+            How `/v1/point` serves the variable: the `unit` it labels the value
+            with under `units=si` (or with `units` omitted), which is the
+            variable's stored `units` and the same label `/v1/series` gives
             (`null` for a categorical zone). `null` when `/v1/point` does not
             serve the variable.
           oneOf:
@@ -12702,7 +12749,7 @@ components:
       description: |
         A single allowlisted value sampled at a point, with friendly metadata.
         The single-form wire shape for GET /v1/point (scalar or zone).
-      required: [product, var, value, approximate]
+      required: [product, var, value, approximate, units]
       properties:
         product:
           type: string
@@ -12722,7 +12769,7 @@ components:
           example: 34.2
         unit:
           type: string
-          description: Canonical unit of `value` (clients convert for display).
+          description: Unit of `value` in the served `units`.
           example: percentile
         category:
           type: string
@@ -12756,6 +12803,11 @@ components:
             `unavailable` when no sample exists at the location (within domain).
           enum: [ok, unavailable]
           example: ok
+        units:
+          type: string
+          description: The units system served, as requested or `si`.
+          enum: [si, metric, imperial]
+          example: si
 
     PointValueItem:
       type: object
@@ -12782,7 +12834,7 @@ components:
           example: 2
         unit:
           type: string
-          description: Canonical unit of `value` (clients convert for display).
+          description: Unit of `value` in the served `units`.
           example: mm
         category:
           type: string
@@ -12840,8 +12892,13 @@ components:
       description: |
         The batch-form wire shape for GET /v1/point: per-point, per-selector
         values. Returned when `select` and/or `points` is provided.
-      required: [results]
+      required: [units, results]
       properties:
+        units:
+          type: string
+          description: The units system served, as requested or `si`.
+          enum: [si, metric, imperial]
+          example: si
         results:
           type: array
           description: One entry per requested point, in request order.
