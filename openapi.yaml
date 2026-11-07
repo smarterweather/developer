@@ -4434,10 +4434,11 @@ paths:
 
         - `product:variable`, or `product:*` for every variable;
         - a bare `standard_name`, resolved in each location's domain to
-          the catalog's product of record for it (`role.default_for`),
-          else to the one public forecast serving it (the domain's own
-          before a global one), else to the one public product serving
-          it;
+          the catalog's product of record (`resolution` in the catalog):
+          the explicit role; else a forecast over an analysis (an analysis
+          only when no forecast serves the name), the domain's own product
+          over a covering one, then the catalog's ranked precedence
+          among products of one value period;
         - `@observed:<standard_name>`, the domain's observed product of
           record, and `@forecast:<standard_name>`, as a bare name but only
           ever a forecast. Over one window the two stitch at now: the
