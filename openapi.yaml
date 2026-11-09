@@ -1330,11 +1330,40 @@ paths:
         a threshold level for a risk-zone product's latest issuance — the data
         behind headlines like "~57M under major heat risk".
 
-        Generic across every product that publishes exclusive risk-band
-        polygons (NWS HeatRisk today; SPC categorical, WPC flood, and
-        winter/cold outlooks later). Because the bands are spatially exclusive,
-        a cumulative `>= min_level` figure is a straight sum with no
-        double-counting.
+        Generic across every product that publishes risk-band polygons with
+        a population per band (NWS HeatRisk, WPC excessive rainfall, WPC
+        winter storm severity, SPC outlooks). Each band's population is the
+        people in its exclusive ring: the band less every band of a higher
+        level. So the `>= min_level` total is the population of the union
+        of those bands, whether the source draws them side by side or
+        layered (a higher level inside a lower), never counted twice. A
+        significance overlay (SPC's hatched significant-severe area) is not
+        a level and is never summed.
+
+        The issuance is the one in force, the same one `/v1/outlooks`
+        answers for the SPC and WPC outlooks: an issuance that drew no areas
+        is a true `0` dated by that issuance, and one whose period has ended
+        is never current.
+
+        ### Withheld totals
+
+        A total that would be wrong is withheld, never approximated:
+        `population` is `null` and `unavailable` says why.
+        `no_current_issuance`: no issuance is in force (the last one has
+        ended or aged out). `no_population`: a band at or above `min_level`
+        carries no population, so the sum would undercount.
+        `population_not_exclusive`: a band was counted whole (an issuance
+        written before ring counting), so overlapping bands would count
+        people twice; the product's next issuance clears it. For the last
+        two, `unavailable.detail` names the `get_data` read that answers it
+        (a block-group population sum over the dissolved bands). An
+        issuance in force with no band at or above `min_level` is a true
+        `0`.
+
+        A product that is not a risk-zone product with a population per
+        band (see `GET /v1/catalog`), or a `valid_time` that names no
+        issuance, is a `404`. A `valid_time` naming an issuance that drew no
+        areas is a `0`.
 
         ### Parameters
 
@@ -1415,25 +1444,52 @@ paths:
                     type: integer
                     example: 3
                   population:
-                    type: integer
+                    type: ["integer", "null"]
                     format: int64
-                    description: Total population under risk_level >= min_level.
+                    description: |
+                      Total population under risk_level >= min_level. `null`
+                      when the sum would be wrong; `unavailable` says why.
                     example: 57000000
                   feature_count:
                     type: integer
-                    description: Number of risk-band polygons contributing to the sum.
+                    description: Number of risk-band polygons at or above min_level.
                     example: 2
                   valid_time:
                     type: ["string", "null"]
                     format: date-time
                     description: Issuance the summary was computed for (null if no features).
                     example: "2026-06-30T22:00:00Z"
+                  unavailable:
+                    type: object
+                    description: Present only when `population` is `null`.
+                    required: [reason, detail]
+                    properties:
+                      reason:
+                        type: string
+                        enum: [no_current_issuance, no_population, population_not_exclusive]
+                        description: |
+                          `no_current_issuance`: no issuance is in force.
+                          `no_population`: a band carries no population.
+                          `population_not_exclusive`: a band was counted
+                          whole, so overlapping bands would double count.
+                      bands_without_population:
+                        type: integer
+                        description: Bands at or above min_level with no population (`no_population`).
+                      bands_not_exclusive:
+                        type: integer
+                        description: Bands at or above min_level counted whole (`population_not_exclusive`).
+                      detail:
+                        type: string
+                        description: What is missing and the `get_data` read that answers it.
+                        example: '2 of the 2 ero_day1 bands at 2026-11-09T15:59:00Z carry no population, so the sum would undercount. Read it as get_data {select: ["census_block_groups:population"], area: {product: "ero_day1", filter: ["risk_level >= 1"]}, stats: ["sum"]}.'
         '400':
           $ref: '#/components/responses/Problem400'
         '401':
           $ref: '#/components/responses/Problem401'
         '403':
           $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
         '429':
           $ref: '#/components/responses/Problem429'
         '500':
