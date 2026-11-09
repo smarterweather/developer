@@ -13401,7 +13401,10 @@ components:
           description: The model run behind every frame, when they share one.
         runs:
           type: array
-          description: Per-frame model runs aligned with `times`, when frames mix runs.
+          description: >-
+            Per-frame model runs aligned with `times`, when frames mix runs.
+            The run behind the frame's values; where a frame's variables were
+            refreshed by different cycles (a rolling lane), the newest of them.
           items:
             type: [string, "null"]
             format: date-time
