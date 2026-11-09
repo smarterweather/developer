@@ -3805,7 +3805,10 @@ paths:
         - name: days
           in: query
           required: false
-          description: Forecast horizon in days (default 10).
+          description: |
+            Forecast days requested (default 10). The window ends at the
+            forecast's last complete day when that comes first;
+            `meta.forecast_end` and `meta.requested_end` then state the cut.
           schema:
             type: integer
             minimum: 1
@@ -3815,8 +3818,16 @@ paths:
           in: query
           required: false
           description: |
-            Daily boundary: `nws` (default; native NBM MaxT/MinT period
-            extremes) or `local_calendar` (midnight-to-midnight local day).
+            Daily boundary: `nws` (default for forecast-only requests); season
+            requests always use `local_calendar`. `nws` is the NDFD MaxT/MinT
+            pairing: date D is one UTC day, night first, its low the NBM MinT
+            over D 00Z-12Z and its high the NBM MaxT over D 12Z-00Z (6 pm-6 pm
+            CST). `local_calendar` is midnight to midnight in the point's local
+            zone (`meta.timezone`). With `season_start` the season is counted
+            in `local_calendar` days end to end (observed and forecast), so no
+            hour counts twice; `meta.day_definition` reports the definition
+            used, and `meta.notes` says so unless `local_calendar` was
+            requested.
           schema:
             type: string
             enum: [nws, local_calendar]
@@ -12631,12 +12642,14 @@ components:
     GddMeta:
       type: object
       description: Provenance for a GDU response. Nothing is silently assumed.
-      required: [day_definition, computation_path, source, unit]
+      required: [day_definition, computation_path, source, unit, timezone]
       properties:
         day_definition:
           type: string
           enum: [nws, local_calendar]
-          description: The daily boundary used.
+          description: |
+            The day definition used: the requested one for a forecast-only
+            request, always `local_calendar` with `season_start`.
         computation_path:
           type: string
           description: |
@@ -12672,6 +12685,34 @@ components:
             succeeded.
           items:
             $ref: '#/components/schemas/GddDateRange'
+        timezone:
+          type: string
+          description: |
+            The point's IANA zone the days are drawn in (which date is today,
+            `local_calendar` day bounds), e.g. `America/Los_Angeles`.
+        forecast_end:
+          type: string
+          format: date
+          description: |
+            Set only when the window was cut: the window ends at the
+            forecast's last complete day when that comes first. It is the last
+            day returned, earlier than `requested_end`. Days past it are not
+            returned and are not gaps. Absent when the window was not cut.
+        requested_end:
+          type: string
+          format: date
+          description: |
+            The window end the request asked for (today plus `days`). Set
+            only together with `forecast_end`.
+        notes:
+          type: array
+          items:
+            type: string
+          description: |
+            Plain-language remarks on how the request was served, e.g.
+            "season requests use local_calendar days end to end" when a
+            request with `season_start` requested, or defaulted to,
+            `day_definition=nws`. Absent when there are none.
 
     GddDateRange:
       type: object
@@ -12695,7 +12736,11 @@ components:
         date:
           type: string
           format: date
-          description: Local calendar date for this day.
+          description: |
+            The day's label. For a forecast-only `day_definition=nws` request
+            it is the UTC day D, night first (low over D 00Z-12Z, high over
+            D 12Z-00Z). For `local_calendar`, and for every request with
+            `season_start`, it is the local calendar date in `meta.timezone`.
         gdu:
           type: number
           format: double
@@ -12728,6 +12773,15 @@ components:
         interpolated:
           type: boolean
           description: True when this day's value was interpolated across a gap.
+        partial:
+          type: boolean
+          description: |
+            The day was computed from an open window: observed so far and/or
+            forecast samples, not a native issued value. Today is partial
+            until its periods close and are observed; in a forecast-only
+            `day_definition=nws` request, after 00Z, so is tomorrow (its low's
+            period has opened). A partial day counts toward the season total.
+            Absent when false.
 
     GddMilestone:
       type: object
@@ -12933,10 +12987,12 @@ components:
           type: number
           format: double
           description: |
-            Season-to-date GDU total in the requested unit. Present only in
-            cumulative mode (when `season_start` was supplied), and omitted
-            even then when `meta.gaps` contains an `unfilled` span: those days
-            have no observed data, so the sum would under-count the season.
+            Season GDU total in the requested unit, from `season_start`
+            through the window end (`meta.forecast_end` when the window was
+            cut). Present only in cumulative mode (when `season_start` was
+            supplied), and omitted even then when `meta.gaps` contains an
+            `unfilled` span or `meta.unavailable` is set: those days have no
+            data, so the sum would under-count the season.
             Treat an absent total on a `season_start` request as "season total
             unavailable" and fall back to the per-day series, which is still
             good for the days it covers. `meta.gaps` names the window that was
