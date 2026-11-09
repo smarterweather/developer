@@ -10275,10 +10275,15 @@ components:
             product's frames are (`PT6H` for a 6-hourly model, `PT2M` for an
             MRMS mosaic, `P1D` for a daily product). Set on every `grid` and
             `snapshot` product; `null` for `feature` and `text` products,
-            which have no frames. A sub-day step divides 24 h and a longer
-            one is whole days. A rolling `/v1/series` forecast window starts
-            at now floored to it from 00:00Z (a step of a day or more floors
-            to UTC midnight), so the frame covering now is in.
+            which have no frames. A frame product's sub-day step divides
+            24 h and a longer one is whole days. A rolling `/v1/series`
+            forecast window starts at now floored to it from 00:00Z (a step
+            of a day or more floors to UTC midnight), so the frame covering
+            now is in; that flooring applies to frame products only. On an
+            `index` product, `step` is the spacing of its stored values
+            (`P1D` daily, `PT6H` 6-hourly, `P5D` pentads, `P7D` weekly,
+            `P1M` monthly), not a frame step: it may be a calendar month,
+            and no window floors to it.
           example: PT1H
         temporal_type:
           type: [string, "null"]

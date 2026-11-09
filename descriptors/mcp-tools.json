@@ -1641,7 +1641,7 @@
                     "crossings",
                     "index"
                   ],
-                  "description": "series: values per frame (along a path: per sample, at its ETA); stats: reducers per step bucket; windows: runs where every `where` held; features: a feature product's matching features; text: a text product's newest matching products; crossings: the stretches of a path inside a feature product's features; index: an index product's values per valid time, location-free, in each variable's stored units (`units` per element; the call's `units` word does not convert them)."
+                  "description": "series: values per frame (along a path: per sample, at its ETA); stats: reducers per step bucket; windows: runs where every `where` held; features: a feature product's matching features; text: a text product's newest matching products; crossings: the stretches of a path inside a feature product's features; index: an index product's values per valid time, location-free, in each variable's stored units (`units` per element; the call's `units` word does not convert them; a `step` no longer than the product's `time.step` spacing, and identity `stats` beside it, change no index value and are named in its notes)."
                 },
                 "product": {
                   "type": "string"
@@ -1804,6 +1804,13 @@
                       "string",
                       "null"
                     ]
+                  }
+                },
+                "unread_variables": {
+                  "description": "index: the product's variables this select did not read; select product:* for all of them.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
                   }
                 },
                 "windows": {
@@ -5750,12 +5757,19 @@
                   "type": "string"
                 },
                 "variable": {
-                  "description": "Best-matching standard variable name.",
+                  "description": "The standard variable the call reads; absent when it reads several (an index `*` call lists `variables`).",
                   "type": "string"
                 },
                 "units": {
                   "description": "Served units of `variable`.",
                   "type": "string"
+                },
+                "variables": {
+                  "description": "index: every variable the call reads (standard names).",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 },
                 "cadence": {
                   "description": "ISO 8601 update interval.",
