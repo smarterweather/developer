@@ -5660,7 +5660,7 @@
             ]
           },
           "kind": {
-            "description": "grid: forecasts (incl. AQ, UV, HeatRisk, radar nowcast), normals, astronomy, observed daily extremes; snapshot: latest radar mosaics, satellite, analyses, AQ, soil moisture; feature: station obs and normals, soundings, recon, lightning flashes, radar cell detections, reports, alerts, outlooks, places; text: forecaster text; index: climate indices.",
+            "description": "grid: forecasts (incl. AQ, UV, HeatRisk, radar nowcast), normals, astronomy, observed daily extremes; snapshot: latest radar mosaics, satellite, analyses, AQ, soil moisture; feature: station obs and normals, soundings, recon, lightning flashes, radar cell detections, reports, alerts, outlooks, places; text: forecaster text; index: climate indices, SSW.",
             "type": "string",
             "enum": [
               "grid",
