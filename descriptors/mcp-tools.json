@@ -7,13 +7,13 @@
     {
       "name": "describe_data",
       "title": "Describe data",
-      "description": "A dataset's variables or properties (standard names, units, categories, bands, aggregates), horizon, step, cadence, freshness, cost class, verified `examples` and an example_query to read its values; a map layer's axes (source, region, product facts) and render (visual) call. Free; call it after search_data, before get_data. Example: {\"dataset_id\": \"<from search_data>\"}.",
+      "description": "A dataset's variables or properties (standard names, units, categories, bands, aggregates), horizon, step, cadence, freshness, cost class, verified `examples` and an example_query to read its values; a map layer's axes (source, region, facts) and render (visual) call. Free. Call it when a grid or snapshot hit's `call` lacks the variable you need (with no `variable`, it may read only the headline one), or to check units, horizon or cost; not needed when the hit's `call` already names what you need: run that. Example: {\"dataset_id\": \"<from search_data>\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "dataset_id": {
             "type": "string",
-            "description": "A dataset id from search_data or get_data (1-80 characters)."
+            "description": "A dataset id from search_data or get_data (1-80 chars)."
           }
         },
         "required": [
@@ -5628,7 +5628,7 @@
     {
       "name": "search_data",
       "title": "Search data",
-      "description": "Search the data catalog: which dataset's values answer a question about weather and the people and places it affects, or what data exists at a point. With `query` it ranks datasets and map layers and returns hits with the exact `call` to run next (render (visual) for a map layer; a named place fills its `area`) and any verified `example`; without it, it lists datasets at the place with freshness, or all. A place or `domain` keeps datasets covering it; `kind` and `family` filter a listing, rank a query; variables come from describe_data. Example: {\"query\": \"snow depth\", \"location\": \"Erie, PA\"}.",
+      "description": "Search the data catalog: which dataset's values answer a question about weather and the people and places it affects, or what data exists at a point. With `query` it ranks datasets and map layers and returns hits with the next `call` (a named place fills its `area`; add a place if `note` asks) and any verified `example`; without it, it lists datasets at the place with freshness, or all. A place or `domain` keeps datasets covering it; `kind` and `family` filter a listing, rank a query; describe_data lists other variables for get_data. Example: {\"query\": \"snow depth\", \"location\": \"Erie, PA\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
