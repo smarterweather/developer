@@ -45,7 +45,7 @@
             "additionalProperties": {}
           },
           "map": {
-            "description": "A map layer: its axes, sibling sectors, `select` (its id and its <family>:<pick>), the render (visual) call, and a note.",
+            "description": "Its map (its own layer, or the one search_data's `map` names): axes, sibling sectors, `select` (an id and its <family>:<pick>, or a standard name), the render (visual) call, and a note.",
             "type": "object",
             "properties": {},
             "additionalProperties": {}
@@ -5812,6 +5812,31 @@
                       "type": "object",
                       "properties": {},
                       "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "tool",
+                    "arguments"
+                  ],
+                  "additionalProperties": {}
+                },
+                "map": {
+                  "description": "The render (visual) call that draws this dataset's map beside a call that reads it; when this connection does not list it, through call_tool with `toolset` and `connect` as for `call`.",
+                  "type": "object",
+                  "properties": {
+                    "tool": {
+                      "type": "string"
+                    },
+                    "arguments": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {}
+                    },
+                    "toolset": {
+                      "type": "string"
+                    },
+                    "connect": {
+                      "type": "string"
                     }
                   },
                   "required": [
