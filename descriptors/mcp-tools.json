@@ -482,7 +482,7 @@
             "limit": 3
           },
           {
-            "query": "50219"
+            "query": "59101"
           }
         ],
         "smarterweather.dev/required_one_of": [
@@ -1124,7 +1124,7 @@
     {
       "name": "get_data",
       "title": "Get data",
-      "description": "Values, totals, comparisons, people/POI counts, station observations, upper-air profiles, climate records, normals, degree days, teleconnection indices and forecaster text from any catalog dataset (models, radar, alerts, outlooks, tropical cyclones, aircraft recon, reference layers) at a place or several, over a bbox or area, along a path, or as items. `select` takes `product:variable` or `product:property` tokens, a standard name or a concept (`population`); send one space word and at most one time word (hours, start+end or at; run pins a cycle); `stats` reduces per `step` or over the area; omit units for SI. Example: {\"select\": [\"wind_gusts_10m\"], \"locations\": [\"Cheyenne, WY\", \"Casper, WY\"], \"hours\": 36}.",
+      "description": "Values, totals, comparisons, people/POI counts, station observations, upper-air profiles, climate records, normals, degree days, teleconnection indices and forecaster text from any catalog dataset (models, radar, alerts, outlooks, tropical cyclones, aircraft recon, reference layers) at a place or several, over a bbox or area, along a path, or as items. `select` takes `product:variable` or `product:property` tokens, a standard name or a concept (`population`); send one space word and at most one time word (hours, start+end or at; run pins a cycle); `stats` reduces per `step` or over the area; omit units for SI. Example: {\"select\": [\"temperature_2m\"], \"locations\": [\"Savannah, GA\", \"Macon, GA\"], \"hours\": 36}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2174,9 +2174,9 @@
           {
             "area": {
               "feature_ids": [
-                "40109",
-                "40027",
-                "40143"
+                "30111",
+                "30031",
+                "30063"
               ],
               "product": "us_counties"
             },
@@ -2189,10 +2189,10 @@
           },
           {
             "bbox": [
-              -105.3,
-              39.5,
-              -104.6,
-              40
+              -106.85,
+              34.95,
+              -106.45,
+              35.25
             ],
             "hours": 24,
             "select": [
@@ -2205,7 +2205,7 @@
           },
           {
             "hours": 168,
-            "location": "Phoenix, AZ",
+            "location": "Tucson, AZ",
             "select": [
               "temperature_2m"
             ],
@@ -2244,20 +2244,16 @@
               "geometry": {
                 "coordinates": [
                   [
-                    -104.99,
-                    39.74
+                    -111.04,
+                    45.68
                   ],
                   [
-                    -105.52,
-                    39.7
+                    -110.8,
+                    45.66
                   ],
                   [
-                    -106.07,
-                    39.63
-                  ],
-                  [
-                    -106.37,
-                    39.64
+                    -110.56,
+                    45.66
                   ]
                 ],
                 "type": "LineString"
@@ -3783,10 +3779,10 @@
           },
           {
             "bbox": {
-              "west": -105.2,
-              "south": 39.5,
-              "east": -104.7,
-              "north": 40
+              "west": -106.85,
+              "south": 34.95,
+              "east": -106.45,
+              "north": 35.25
             },
             "model": "nbm",
             "variable": "temperature_2m",
@@ -4094,7 +4090,7 @@
     {
       "name": "get_outlooks",
       "title": "Get hazard outlooks",
-      "description": "Hazard outlooks and risk areas covering a place, with the forecasters' narrative: SPC severe (days 1-8 and the tornado, wind and hail probabilities; the default), SPC fire, WPC excessive rain, HeatRisk (heat) and the CPC temperature and precipitation outlooks whose climate variant says warmer, wetter or drier than normal over 6-10 days to a season. Narrow with `filter` on outlook_day (1-8) or the CPC period (610, 814, wk34, monthly, seasonal); each row carries its day or period, and no rows means no outlook covers the place. `view` concise (default) lists every discussion by summary; detailed adds their text. Example: {\"location\": \"Wichita, KS\", \"filter\": [\"outlook_day == 2\"]}.",
+      "description": "Hazard outlooks and risk areas covering a place, with the forecasters' narrative: SPC severe (days 1-8 and the tornado, wind and hail probabilities; the default), SPC fire, WPC excessive rain, HeatRisk (heat) and the CPC temperature and precipitation outlooks whose climate variant says warmer, wetter or drier than normal over 6-10 days to a season. Narrow with `filter` on outlook_day (1-8) or the CPC period (610, 814, wk34, monthly, seasonal); each row carries its day or period, and no rows means no outlook covers the place. `view` concise (default) lists every discussion by summary; detailed adds their text. Example: {\"location\": \"Joplin, MO\", \"filter\": [\"outlook_day == 3\"]}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -4669,7 +4665,7 @@
     {
       "name": "get_severe_activity",
       "title": "Get severe activity",
-      "description": "Severe weather happening near a place now: radar storm cells with their hail, rotation and tornado detections, local storm reports, and lightning (satellite flashes nearby plus density and 30-minute probability at the place), each nearest the place within its radius. `activity` reads one part (cells, reports or lightning; default all), `hours` looks back, and `filter` narrows on a report or detection property; a concept with no rows means none inside its radius and window, a quiet observation rather than a data gap. Example: {\"location\": \"Tampa, FL\", \"activity\": \"lightning\"}.",
+      "description": "Severe weather happening near a place now: radar storm cells with their hail, rotation and tornado detections, local storm reports, and lightning (satellite flashes nearby plus density and 30-minute probability at the place), each nearest the place within its radius. `activity` reads one part (cells, reports or lightning; default all), `hours` looks back, and `filter` narrows on a report or detection property; a concept with no rows means none inside its radius and window, a quiet observation rather than a data gap. Example: {\"location\": \"Peoria, IL\", \"activity\": \"lightning\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -5910,9 +5906,9 @@
       "_meta": {
         "smarterweather.dev/input_examples": [
           {
-            "query": "how much rain fell in the last day",
-            "lat": 39.74,
-            "lon": -104.99,
+            "query": "relative humidity this afternoon",
+            "lat": 35.96,
+            "lon": -83.92,
             "limit": 3
           }
         ],
