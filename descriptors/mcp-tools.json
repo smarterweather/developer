@@ -1885,7 +1885,7 @@
                         }
                       },
                       "geometry": {
-                        "description": "view detailed: GeoJSON simplified to 0.001 degrees.",
+                        "description": "view detailed: GeoJSON simplified to 0.001 degrees, left out past get_data's 100,000-character result budget (truncated; the element's notes say on how many features and the read that keeps it).",
                         "type": "object",
                         "properties": {},
                         "additionalProperties": {}
