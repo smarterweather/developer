@@ -5517,6 +5517,24 @@ paths:
         values, no charge; the answer is sent with
         `Cache-Control: no-store`).
 
+        ### Normals and anomalies
+
+        A variable whose catalog entry carries `climatology` (a raw index
+        such as the 10 hPa polar vortex wind or the QBO, its mean and
+        percentiles) also answers `normals`, its day-of-year normal for
+        each time's UTC month and day, and `anomalies`, the value less the
+        normal, both keyed and aligned as `values`, in stored units, null
+        where the value or the normal is missing. There is no word for
+        them: they come with every read of such a variable. A spread,
+        a probability or an already standardized index has none. An
+        anomaly is a difference: convert it by scale only, as its link's
+        `anomaly_display_units` (conversion `delta`) says, never with the
+        variable's offset (+5 K is +9 delta_F, not -450 F). The normal's
+        source is credited in `meta.sources`. Each link joins on its own:
+        a variable whose normals have not been loaded yet is answered as
+        one without them, and while a variable's normals cannot be read
+        it is answered without both fields and a note says so.
+
         ### Paging
 
         `limit` (1-744, default 168) times per page. A cut page has
@@ -10897,6 +10915,41 @@ components:
                 units:
                   type: string
             - type: 'null'
+        climatology:
+          type: object
+          description: |
+            The variable's day-of-year normal, on an index variable that has
+            one: `GET /v1/indices` answers it as `normals` and the value less
+            it as `anomalies`. `product` and `variable` are provenance, where
+            the normal is stored: that product is on no door and is not
+            directly readable. `description` says what the normal is
+            (source, base period, method) and how it is read.
+          required: [product, variable, description, anomaly_display_units]
+          properties:
+            product:
+              type: string
+              example: era5_index_normals
+            variable:
+              type: string
+              example: u_10hpa_60n
+            description:
+              type: [string, "null"]
+            anomaly_display_units:
+              type: object
+              description: |
+                The anomalies' display unit per system. An anomaly is a
+                difference, so `conversion` is always `delta`: scale only,
+                never an offset (`delta_C` / `delta_F` for temperature).
+                Normals convert as the variable (its `display_units`).
+              required: [conversion, metric, imperial]
+              properties:
+                conversion:
+                  type: string
+                  enum: [delta]
+                metric:
+                  type: [string, "null"]
+                imperial:
+                  type: [string, "null"]
         period:
           type: [string, "null"]
           description: Accumulation or aggregation period, an ISO 8601 duration.
@@ -13644,6 +13697,33 @@ components:
           description: Each variable's stored unit per `standard_name` (`1` for a dimensionless index); null when the variable has none.
           additionalProperties:
             type: [string, "null"]
+        normals:
+          type: object
+          description: |
+            The day-of-year normal of each time, per `standard_name` of a
+            variable whose catalog entry carries `climatology`, aligned with
+            `times`, in the variable's stored units: the normal of the
+            time's UTC month and day. Present only for the selected
+            variables whose link has normals loaded; a variable whose
+            normals cannot be read is left out, with a note. A spread or a
+            probability variable has none.
+          additionalProperties:
+            type: array
+            items:
+              type: [number, "null"]
+        anomalies:
+          type: object
+          description: |
+            Each value less its normal, keyed and aligned as `normals`;
+            null where the value or the normal is missing. On a percentile
+            variable it is the percentile of the anomaly. A difference in
+            the stored unit: convert it by scale only, never with an offset
+            (the catalog link's `anomaly_display_units`, conversion
+            `delta`).
+          additionalProperties:
+            type: array
+            items:
+              type: [number, "null"]
         run:
           type: string
           format: date-time

@@ -1813,6 +1813,34 @@
                     "type": "string"
                   }
                 },
+                "normals": {
+                  "description": "index: each time's 1991-2020 day-of-year normal, per variable that has one, aligned with times, in the variable's units.",
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                "anomalies": {
+                  "description": "index: each value less its normal, keyed and aligned as normals: a difference, so it converts by scale only, never with an offset.",
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  }
+                },
                 "windows": {
                   "type": "array",
                   "items": {
