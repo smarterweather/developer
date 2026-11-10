@@ -1124,7 +1124,7 @@
     {
       "name": "get_data",
       "title": "Get data",
-      "description": "Values, totals, comparisons, people/POI counts, station observations, upper-air profiles, climate records, normals, degree days, teleconnection indices and forecaster text from any catalog dataset (models, radar, alerts, outlooks, tropical cyclones, aircraft recon, reference layers) at a place or several, over a bbox or area, along a path, or as items. `select` takes `product:variable` or `product:property` tokens, a standard name or a concept (`population`); send one space word and at most one time word (hours, start+end or at; run pins a cycle); `stats` reduces per `step` or over the area; omit units for SI. Example: {\"select\": [\"wind_gusts_10m\"], \"locations\": [\"Cheyenne, WY\", \"Casper, WY\"], \"hours\": 36, \"stats\": [\"max\"]}.",
+      "description": "Values, totals, comparisons, people/POI counts, station observations, upper-air profiles, climate records, normals, degree days, teleconnection indices and forecaster text from any catalog dataset (models, radar, alerts, outlooks, tropical cyclones, aircraft recon, reference layers) at a place or several, over a bbox or area, along a path, or as items. `select` takes `product:variable` or `product:property` tokens, a standard name or a concept (`population`); send one space word and at most one time word (hours, start+end or at; run pins a cycle); `stats` reduces per `step` or over the area; omit units for SI. Example: {\"select\": [\"wind_gusts_10m\"], \"locations\": [\"Cheyenne, WY\", \"Casper, WY\"], \"hours\": 36}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1614,7 +1614,7 @@
               }
             },
             "additionalProperties": false,
-            "description": "Shape the card (guide://smarterweather/views): intent only; the server fills the rest from the data."
+            "description": "Shape the card (guide://smarterweather/views): intent only; the server fills the rest from the data. A card draws for `criteria` at one place (suitability); one variable, not a period total or probability, at 2-6 places in one zone over a window (compare rows); forecaster text alone (text card); alerts with no time word (banners); any other feature read (list; with `stats`, tiles); one value per variable at one place: latest, `stats` without `step`, today of up to 3 days, or up to 3 h back of an analysis or observations (tiles); one variable at one place over a window ahead, of period totals, or over 3 h (chart); over such a window, two variables at one place, exactly one a period total or probability (bars under a line); or two in one unit, neither a total nor probability (two lines); or a variable's `_pNN` percentiles, or it and its `_stddev`, alone, hourly or daily (band); `locations` draws only compare rows; `path`, `cursor` or a truncated or paged series none; anything else answers in text."
           }
         },
         "required": [
