@@ -12312,13 +12312,13 @@ components:
           type: array
           description: |
             Latest national Prognostic Discussion per enabled desk: WPC
-            (`PMDSPD`, `PMDEPD`, `PMDHI`, `PMDCA`) and CPC
+            (`PMDSPD`, `PMDEPD`, `PMDHI`) and CPC
             (`PMDMRD` 6-10/8-14 day, `PMDTHR` week-2 hazards, `PMDENS`
-            ENSO). Omitted when
+            ENSO, `PMDSST` Nino 3.4 SST outlook). Omitted when
             empty. Distinct from `mpds` (precipitation discussions).
             Each desk is fetched by `awips_id` (limit 1) and dropped
-            when older than its cadence allows (3 days; `PMDCA` and
-            `PMDTHR` 7, `PMDENS` 45).
+            when older than its cadence allows (3 days; `PMDTHR` 7,
+            `PMDENS` and `PMDSST` 45).
           items:
             $ref: '#/components/schemas/PMDGuidance'
         swo_day1_risk:
@@ -12489,7 +12489,7 @@ components:
           description: Full AWIPS identifier (e.g. PMDSPD).
         pmd_desk:
           type: string
-          description: Desk suffix after the PMD prefix (SPD, EPD, HI, CA, MRD, THR, ENS).
+          description: Desk suffix after the PMD prefix (SPD, EPD, HI, MRD, THR, ENS, SST).
         issued_at:
           type: [string, "null"]
           format: date-time
