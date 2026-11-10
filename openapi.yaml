@@ -518,9 +518,9 @@ paths:
         and `fields`. Rows whose offset from `hourly[0].time` is below
         `hourly_step_from` hours are all kept; from there on, only rows at
         `hourly_step_from + k * hourly_step` hours are kept. A row's offset
-        is the whole hours between its `time` and `hourly[0].time`, both
-        floored to the hour, so a partial first hour (`14:30`, then
-        `15:00`, ...) is offset 0 and the full hours after it are 1, 2, ...
+        is the whole hours between its `time` and `hourly[0].time` (rows
+        are labelled by hour start), so the first row is offset 0 and the
+        hours after it are 1, 2, ...
         Offsets come from timestamps, not array indexes, so a gap in the
         series does not shift the grid. `hourly_step=3&hourly_step_from=24`
         keeps the first day at full resolution and every third hour after
@@ -6792,7 +6792,7 @@ components:
           icon: "partly-cloudy-day"
           severe: false
         hourly:
-          - time: "2026-04-20T15:00:00Z"
+          - time: "2026-04-20T14:00:00Z"
             temperature: 58.4
             feels_like: 58.4
             humidity: 62
@@ -6802,7 +6802,7 @@ components:
             precip_amount: 0
             conditions: "Partly Cloudy"
             icon: "partly-cloudy-day"
-          - time: "2026-04-20T16:00:00Z"
+          - time: "2026-04-20T15:00:00Z"
             temperature: 59.1
             feels_like: 59.1
             humidity: 60
@@ -6812,7 +6812,7 @@ components:
             precip_amount: 0
             conditions: "Partly Cloudy"
             icon: "partly-cloudy-day"
-          - time: "2026-04-20T17:00:00Z"
+          - time: "2026-04-20T16:00:00Z"
             temperature: 59.6
             feels_like: 59.6
             humidity: 58
@@ -8610,23 +8610,38 @@ components:
     Hourly:
       type: object
       description: |
-        Single hourly forecast point.
+        Single hourly forecast point. Rows are labelled by hour start: a
+        row covers the hour starting at its `time`. The first row is
+        normally the hour in progress: its `time` is the request time
+        floored to the hour. It is a later hour only when no forecast
+        source has a frame for the hour in progress.
 
-        The Now hour (the first row, when its `time` is in the current
-        hour) carries the current observation where `include=current`
-        resolves it, so it matches `current`: `temperature`, and each of
-        `feels_like`, `humidity`, `dew_point`, `wind_speed` with
-        `wind_direction`, `wind_gust`, `pressure`, `visibility`,
-        `cloud_ceiling`, `cloud_cover`, `aqi`, `uv_index`, `conditions`
-        with `precip_type`, and `icon` that the current observation
-        resolved. A field it did not resolve keeps the forecast's value.
-        Later hours are the forecast.
+        The Now hour (the first row, when it is the hour in progress)
+        carries the current observation where `include=current`
+        resolves it, so it matches `current`: those fields read the
+        observation at the request instant, not the forecast at `time`.
+        They are `temperature`, and each of `feels_like`, `humidity`,
+        `dew_point`, `wind_speed` with `wind_direction`, `wind_gust`,
+        `pressure`, `visibility`, `cloud_ceiling`, `cloud_cover`, `aqi`,
+        `uv_index`, `conditions` with `precip_type` (a dry observation
+        without conditions clears a wet forecast pair to the hour's sky),
+        and `icon` that the current observation resolved; `severe` is set
+        when either the forecast or the observation is severe. A field it
+        did not resolve keeps the forecast's value. The hour's
+        `precip_amount` and `snow_amount` stay the forecast's, and its
+        `precip_probability` too, except that `include=nowcast` reconciles
+        it with the radar nowcast as on later hours (see
+        `precip_probability`). Later hours are the forecast.
       required: [time]
       properties:
         time:
           type: string
           format: date-time
-          description: Forecast valid time (ISO 8601, UTC).
+          description: >-
+            Start of the hour the row covers (ISO 8601, UTC). Instantaneous
+            fields (temperature, wind, humidity, dew point, cloud cover,
+            pressure, visibility, UV, CAPE, AQI) are valid at `time`; the
+            precipitation fields cover the hour starting at `time`.
         temperature:
           type: [number, "null"]
           format: double
@@ -8657,18 +8672,20 @@ components:
           minimum: 0
           maximum: 100
           description: >
-            Probability of measurable precipitation (0–100) for the hour.
-            When `include=nowcast` is requested, near-term hours overlapping the
-            radar nowcast horizon are reconciled against the nowcast summary:
-            wet peak intensity may floor values upward; when peak intensity is
-            `none`, covered hours may be pulled down toward zero (unless the
-            hour already carries precip conditions). Null when the hour's
+            Probability of measurable precipitation (0–100) for the hour
+            starting at `time`. When `include=nowcast` is requested, near-term
+            hours are reconciled against the radar nowcast: a wet peak
+            intensity may floor the PoP of each row holding a wet nowcast
+            step; when peak intensity is `none`, the rows the nowcast horizon
+            covers (the row holding the request time, and each later row
+            whose whole hour the horizon reaches) may be pulled down toward
+            zero, unless the hour already carries precip conditions. Null when the hour's
             amount is no data and no model PoP covers the hour.
         precip_amount:
           type: [number, "null"]
           format: double
           description: >-
-            Liquid-equivalent precipitation for the hour ending at `time`.
+            Liquid-equivalent precipitation for the hour starting at `time`.
             `0` is a dry hour; null when no forecast source covers the hour.
         conditions:
           type: string
@@ -8714,6 +8731,7 @@ components:
           format: double
           minimum: 0
           maximum: 100
+          description: Probability of thunder (0–100) for the hour starting at `time`.
         uv_index:
           type: [number, "null"]
           format: double
@@ -8723,7 +8741,7 @@ components:
           type: string
           enum: [none, rain, snow, mix, sleet, freezing_rain, hail, unknown]
           description: |
-            Precipitation type for the hour. Omitted when the hour has no
+            Precipitation type for the hour starting at `time`. Omitted when the hour has no
             type, or has neither a precipitation chance nor an amount.
             `mix` is rain and snow, or a wintry mix; `sleet` is ice pellets.
             `none`, `hail` and `unknown` are reserved and not currently
@@ -8759,7 +8777,7 @@ components:
           type: [number, "null"]
           format: double
           description: >-
-            Snow for the hour ending at `time`. `0` on a dry hour a snow
+            Snow for the hour starting at `time`. `0` on a dry hour a snow
             source covers; null only when no source covers the hour.
         cloud_ceiling:
           type: [number, "null"]
@@ -9012,7 +9030,13 @@ components:
         precip_total:
           type: [number, "null"]
           format: double
-          description: Null when no forecast source provides precipitation for the row.
+          description: >-
+            Null when no forecast source provides precipitation for the row.
+            The row holding the request time counts whole hours from the hour
+            in progress on, the same hours the hourly rows for its window
+            cover (before `hourly_hours` and `hourly_step` trim the rows and
+            before rounding); a total under the trace threshold reads `0`.
+            Within one forecast cycle it changes only at the top of the hour.
         snow_total:
           type: [number, "null"]
           format: double
@@ -9331,7 +9355,15 @@ components:
         precip_total:
           type: [number, "null"]
           format: double
-          description: Null when the row's `precip_total` is null.
+          description: >-
+            Null when the row's `precip_total` is null. The half holding the
+            request time counts whole hours from the hour in progress on, the
+            same hours the hourly rows for its window cover (before
+            `hourly_hours` and `hourly_step` trim the rows and before
+            rounding). Both halves read `0` when the row's `precip_total` is
+            under the trace threshold; otherwise a half keeps its own amount,
+            however small, so the halves sum to the row. Within one forecast
+            cycle it changes only at the top of the hour.
         snow_total:
           type: [number, "null"]
           format: double
@@ -9401,7 +9433,7 @@ components:
           enum: ["", none, rain, snow, mix, sleet, freezing_rain, unknown]
           description: |
             Precipitation type for the period: the precipitation its
-            `conditions` and `narrative` report, read from the hours ending
+            `conditions` and `narrative` report, read from the hours starting
             within the period (06:00 to 18:00 local for `day`, 18:00 to
             06:00 for `night`). Where daily forecast products cover the
             location, every such hour counts, within `hourly_hours` or past
