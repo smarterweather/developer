@@ -75,12 +75,38 @@ Map and geographic reference data.
 - Attribution: © OpenStreetMap contributors. Available under the Open Database License.
 - Terms: https://www.openstreetmap.org/copyright
 
+### Esri Community Maps contributors
+
+Building footprints in the basemap, through Overture Maps.
+
+- License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+- Attribution: Esri Community Maps contributors. Available under CC BY 4.0.
+- Terms: https://creativecommons.org/licenses/by/4.0/
+
+### Microsoft Global ML Building Footprints
+
+Building footprints and heights in the basemap, through Overture Maps.
+
+- License: Open Database License (ODbL) 1.0
+- Attribution: Global ML Building Footprints. Licensed by Microsoft under the Open Database License.
+- Terms: https://opendatacommons.org/licenses/odbl/1-0/
+
+### ESA WorldCover
+
+Land cover in the basemap.
+
+- License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+- Attribution: © ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium
+- Terms: https://creativecommons.org/licenses/by/4.0/
+
 ### NOAA Open Data Dissemination (NODD) on AWS
 
 Bulk distribution of NOAA datasets.
 
 - Attribution: NOAA data accessed through the NOAA Open Data Dissemination (NODD) program on AWS.
 - Terms: https://registry.opendata.aws/collab/noaa/
+
+Data has been modified by Smarter Weather. Where we use data available under the Open Database License, we will provide the derived database, or a description of how it was altered, on request: hello@smarterweather.com.
 
 When you build on the Smarter Weather API or MCP server, you remain
 responsible for complying with upstream license and attribution requirements
