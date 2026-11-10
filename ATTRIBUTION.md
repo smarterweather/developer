@@ -60,8 +60,8 @@ Boundaries, places, and population and housing counts.
 Places and building footprints.
 
 - License: Community Data License Agreement Permissive, Version 2.0 (CDLA-Permissive-2.0)
-- Attribution: Overture Maps Foundation, overturemaps.org. Places data available under CDLA Permissive 2.0.
-- Terms: https://docs.overturemaps.org/attribution/
+- Attribution: Overture Maps Foundation places data, available under CDLA-Permissive-2.0: https://cdla.dev/permissive-2-0/
+- Terms: https://cdla.dev/permissive-2-0/
 
 - License: Open Database License (ODbL) 1.0
 - Attribution: © OpenStreetMap contributors, Overture Maps Foundation. Available under the Open Database License.
