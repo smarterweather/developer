@@ -4322,10 +4322,9 @@ paths:
         `units` takes `si`, `metric` or `imperial`, the same values as
         `GET /v1/series` and MCP `get_data`, converted through the same
         table and labelled with the same unit. Omitted means `si` here
-        (stored values labelled with the variable's stored catalog `units`),
-        as on `get_data`;
-        `/v1/series` requires `units`, and MCP's other tools default to
-        `imperial`. Pass `units` explicitly to compare doors. `metric` and `imperial` convert to each variable's catalog
+        (stored values labelled with the variable's stored catalog `units`);
+        `/v1/series` requires `units`, and MCP tools, `get_data` included,
+        default to `imperial`. Pass `units` explicitly to compare doors. `metric` and `imperial` convert to each variable's catalog
         display unit (MRMS QPE `mm` to `in` under `imperial`); categorical
         and percentile values, and zone levels, are unchanged under every
         system. Both forms echo the system served as a top-level `units`,
@@ -6206,9 +6205,9 @@ components:
         variable's stored catalog `units`; `metric` and `imperial` convert to each variable's
         catalog display unit (`mm` to `in` for MRMS QPE; categorical and
         percentile values are unchanged). The same values and labels as
-        `GET /v1/series` and MCP `get_data`; omitted is `si`, as on
-        `get_data`, where `/v1/series` requires it. Pass it explicitly to
-        compare doors.
+        `GET /v1/series` and MCP `get_data`; omitted is `si` here, where
+        `/v1/series` requires it and MCP `get_data` defaults to `imperial`.
+        Pass it explicitly to compare doors.
       schema:
         type: string
         enum: [si, metric, imperial]

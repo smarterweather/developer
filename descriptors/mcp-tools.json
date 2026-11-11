@@ -128,13 +128,13 @@
             }
           },
           "units": {
-            "description": "metric, imperial or si; omitted returns each variable's catalog `units` (SI).",
+            "description": "imperial (default), metric or si (each variable's catalog `units`).",
+            "default": "imperial",
             "enum": [
               "metric",
               "imperial",
               "si"
-            ],
-            "default": "imperial"
+            ]
           }
         },
         "required": [
@@ -849,13 +849,13 @@
             "type": "string"
           },
           "units": {
-            "description": "metric, imperial or si; omitted returns each variable's catalog `units` (SI).",
+            "description": "imperial (default), metric or si (each variable's catalog `units`).",
+            "default": "imperial",
             "enum": [
               "metric",
               "imperial",
               "si"
-            ],
-            "default": "imperial"
+            ]
           },
           "card": {
             "type": "object",
@@ -1125,7 +1125,7 @@
     {
       "name": "get_data",
       "title": "Get data",
-      "description": "Values, totals, comparisons, best times for a purpose (`criteria`), people/POI counts, station observations, upper-air profiles, climate records, normals, degree days, teleconnection indices and forecaster text from any dataset (models, radar, alerts, outlooks, tropical cyclones, aircraft recon, reference layers) at places, over a bbox or area, along a path, or as items. `select` takes `product:variable` or `product:property`, a standard name or a concept (`population`); one space word, at most one time word (hours, start+end, at; run pins a cycle); `stats` reduces per `step` or area-wide; omit units for SI. Example: {\"select\": [\"temperature_2m\"], \"locations\": [\"Savannah, GA\", \"Macon, GA\"], \"hours\": 36}.",
+      "description": "Values, totals, comparisons, best times for a purpose (`criteria`), people/POI counts, station observations, upper-air profiles, climate records, normals, degree days, teleconnection indices and forecaster text from any dataset (models, radar, alerts, outlooks, tropical cyclones, aircraft recon, reference layers) at places, over a bbox or area, along a path, or as items. `select` takes `product:variable` or `product:property`, a standard name or a concept (`population`); one space word, at most one time word (hours, start+end, at; run pins a cycle); `stats` reduces per `step` or area-wide. Example: {\"select\": [\"temperature_2m\"], \"locations\": [\"Savannah, GA\", \"Macon, GA\"], \"hours\": 36}.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1534,7 +1534,8 @@
             }
           },
           "units": {
-            "description": "metric, imperial or si; omitted returns each variable's catalog `units` (SI).",
+            "description": "imperial (default), metric or si (each variable's catalog `units`).",
+            "default": "imperial",
             "enum": [
               "metric",
               "imperial",
@@ -2107,6 +2108,16 @@
             "type": "string",
             "enum": [
               "si",
+              "metric",
+              "imperial",
+              "mixed"
+            ],
+            "description": "The units every value is in: the call's `units`; si when every element is stored (features, index); mixed when both kinds answer, each element naming its own in `units`."
+          },
+          "converted_to": {
+            "description": "With mixed: the system the series, stats and windows are in.",
+            "type": "string",
+            "enum": [
               "metric",
               "imperial"
             ]
@@ -2907,13 +2918,13 @@
             "default": 72
           },
           "units": {
-            "description": "metric, imperial or si; omitted returns each variable's catalog `units` (SI).",
+            "description": "imperial (default), metric or si (each variable's catalog `units`).",
+            "default": "imperial",
             "enum": [
               "metric",
               "imperial",
               "si"
-            ],
-            "default": "imperial"
+            ]
           },
           "aspect": {
             "type": "string",
@@ -3849,13 +3860,13 @@
             "type": "string"
           },
           "units": {
-            "description": "metric, imperial or si; omitted returns each variable's catalog `units` (SI).",
+            "description": "imperial (default), metric or si (each variable's catalog `units`).",
+            "default": "imperial",
             "enum": [
               "metric",
               "imperial",
               "si"
-            ],
-            "default": "imperial"
+            ]
           },
           "product": {
             "type": "string",
@@ -4715,13 +4726,13 @@
             }
           },
           "units": {
-            "description": "metric, imperial or si; omitted returns each variable's catalog `units` (SI).",
+            "description": "imperial (default), metric or si (each variable's catalog `units`).",
+            "default": "imperial",
             "enum": [
               "metric",
               "imperial",
               "si"
-            ],
-            "default": "imperial"
+            ]
           },
           "activity": {
             "type": "string",
@@ -5785,7 +5796,7 @@
                   "type": "string"
                 },
                 "units": {
-                  "description": "Served units of `variable`.",
+                  "description": "`variable`'s stored catalog unit; a read names the unit it served.",
                   "type": "string"
                 },
                 "variables": {
@@ -5797,6 +5808,10 @@
                 },
                 "cadence": {
                   "description": "ISO 8601 update interval.",
+                  "type": "string"
+                },
+                "history": {
+                  "description": "ISO 8601: how far back a read reaches; nothing older is served.",
                   "type": "string"
                 },
                 "entitlement": {
