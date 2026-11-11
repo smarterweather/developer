@@ -14249,7 +14249,7 @@ components:
         status:
           type: string
           enum: [ok, awaiting_issuance, entitlement_required]
-          description: '`ok`; `awaiting_issuance` when the product is between issuances: the lower-day product of the same outlook series (e.g. `spc_day2_categorical` for `spc_day3_categorical`) has reissued every period this product holds, and this product''s own next issuance has not landed (e.g. SPC Day 3 between Day 2''s ~06Z and its own ~0730Z issuance), so no features then is not "no risk"; read the lower-day product, or read again after the issuance. Also answered when the service cannot determine the answer. Set only on a plain point read (`lat`/`lon` with any time word, no `cursor`, no narrowing `filter`): an `ok` with no features is decided only there, and on any other read an empty `ok` is not proof of no risk during the handoff. Or `entitlement_required` when the product needs a per-key flag the key does not have (no features).'
+          description: '`ok`; `awaiting_issuance` when the product is between issuances: the lower-day product of the same outlook series (e.g. `spc_day2_categorical` for `spc_day3_categorical`) has reissued every period this product holds, and this product''s own next issuance has not landed (e.g. SPC Day 3 between Day 2''s ~06Z and its own ~0730Z issuance), so no features then is not "no risk"; read the lower-day product, or read again after the issuance. Also answered when the service cannot determine the answer, then with no features, stats or `as_of` and `matched: 0`. Set only on a plain point read (`lat`/`lon` with any time word, no `cursor`, no narrowing `filter`): an `ok` with no features is decided only there, and on any other read an empty `ok` is not proof of no risk during the handoff. Or `entitlement_required` when the product needs a per-key flag the key does not have (no features).'
         area:
           $ref: '#/components/schemas/FeaturesAreaEcho'
         features:
@@ -14269,6 +14269,27 @@ components:
         next_cursor:
           type: [string, "null"]
           description: Send as `cursor` with the same parameters for the next page; null on the last.
+        as_of:
+          type: string
+          format: date-time
+          description: |
+            The data the read saw, UTC to the second; a later page carries
+            its first page's. With no time word it is the product's newest
+            data time (or the instant a timed reference layer or an outlook
+            was read at); on a window read only for a layer read as it
+            stands now (a window that starts now). It dates the product
+            read, not an `area` reference product. A product that serves
+            each station's newest report (catalog `time.latest_by`: observed
+            soundings, climate reports) leaves it out when features match,
+            because each feature carries its own time, and keeps it on an
+            empty read: then it is the newest data at or before now, so
+            `matched: 0` reads as "nothing as of this time". Absent on an
+            `at` read and every other window read (the request alone fixes
+            them), when the product has no data yet, on an
+            `entitlement_required` element, on an `awaiting_issuance` answer
+            the service could not determine, and when the service decides
+            the filter cannot match without reading (a filter on a constant
+            property that never holds).
         entitlement:
           type: object
           description: With `entitlement_required`, what is withheld and the flag that grants it.
