@@ -2068,6 +2068,11 @@
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
                 },
+                "as_of": {
+                  "description": "features: the data time the read saw (UTC), when the service dates it.",
+                  "type": "string",
+                  "format": "date-time"
+                },
                 "next_cursor": {
                   "description": "This element's next page, as `cursor`. A series element: resend every series select alone, with the words a series takes and the same place or area, every feature_id kept. A features element: resend its select alone, with the words it takes and its place or area, narrowed to its feature_id when the call had several. An index element: resend its select alone, with the words it takes, plus the cursor.",
                   "type": [
