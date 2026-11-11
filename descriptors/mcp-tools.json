@@ -2274,7 +2274,7 @@
           },
           {
             "hours": 72,
-            "location": "Chicago, IL",
+            "location": "Columbus, OH",
             "select": [
               "nbm_conus:wspd10m"
             ],
