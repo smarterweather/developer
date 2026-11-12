@@ -298,12 +298,12 @@
     {
       "name": "get_data",
       "title": "Get data",
-      "description": "Values, totals, comparisons, best times for a purpose (`criteria`), people/POI counts, station observations, upper-air profiles, climate records, normals, degree days, teleconnection indices and forecaster text from any dataset (models, radar, alerts, outlooks, tropical cyclones, aircraft recon, reference layers) at places, over a bbox or area, along a path, or as items. `select` takes `product:variable` or `product:property`, a standard name or a concept (`population`); one space word, at most one time word (hours, start+end, at; run pins a cycle); `stats` reduces per `step` or area-wide. Example: {\"select\": [\"temperature_2m\"], \"locations\": [\"Savannah, GA\", \"Macon, GA\"], \"hours\": 36}.",
+      "description": "Values, totals, comparisons, best times for a purpose (`criteria`), people/POI counts, station observations, upper-air profiles, climate records, normals, degree days, teleconnection indices and forecaster text from any dataset (models, radar, alerts, outlooks, tropical cyclones, aircraft recon, reference layers) at places, over a bbox or area, along a path, or as items. `select` takes `product:variable` or `product:property`, a standard name or a concept (`population`), from describe_data or search_data; one space word, at most one time word (hours, start+end, at; run pins a cycle); `stats` reduces per `step` or area-wide. Example: {\"select\": [\"temperature_2m\"], \"locations\": [\"Savannah, GA\", \"Macon, GA\"], \"hours\": 36}.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "select": {
-            "description": "What to read: `product:variable`, `product:*`, `product` (a feature or text product's properties), a bare standard_name (resolved in the place's domain), `@observed:<standard_name>` (analysis: `@observed:temperature_2m`) or `@forecast:<standard_name>`; or alone, a derived id: `forecast` (the blend at one `location`: days, alerts; a window adds hours), `forecast:hourly` (hourly only), `forecast:aqi`, `forecast_skill` (accuracy), `forecast_skill:map` (at most 25 items).",
+            "description": "What to read: `product:variable`, `product:*`, `product` (a feature or text product's properties), a bare standard_name (resolved in the place's domain; alerts in effect: `weather_alert`), `@observed:<standard_name>` (conditions now, the analysis: `@observed:temperature_2m`; a miss lists the names it has) or `@forecast:<standard_name>`; or alone, a derived id: `forecast` (a multi-day forecast at one `location`; a window adds hours), `forecast:hourly` (hourly only), `forecast:aqi`, `forecast_skill` (accuracy), `forecast_skill:map` (at most 25 items).",
             "type": "array",
             "minItems": 1,
             "items": {
