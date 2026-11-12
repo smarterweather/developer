@@ -102,6 +102,16 @@ Building footprints, through Overture Maps, drawn in the basemap and counted in 
 - Obligation: required, with the data in API and MCP results and on https://smarterweather.com/acknowledgements/
 - Basis: CC BY 4.0 §3(a)(1), including in modified form; §3(a)(2) lets a link to a page with the information satisfy it.
 
+### Foursquare OS Places
+
+Points of interest, through Overture Maps Foundation places.
+
+- License: Apache License, Version 2.0
+- Attribution: Points of interest include Foursquare OS Places data. Copyright 2024 Foursquare Labs, Inc. All rights reserved. Licensed under the Apache License, Version 2.0: https://www.apache.org/licenses/LICENSE-2.0. Foursquare data was transformed to the Overture schema, then filtered and reclassified by Smarter Weather. NOTICE: https://opensource.foursquare.com/places-notice-txt/
+- Terms: https://www.apache.org/licenses/LICENSE-2.0
+- Obligation: required, on https://smarterweather.com/acknowledgements/
+- Basis: Overture places 2026-10-21.0 carries 1,109,358 US places whose primary dataset is Foursquare (sources[].license Apache-2.0); 47,261 of the 1,197,296 US places the POI filter admits are Foursquare-sourced (read 2026-11-11). docs.overturemaps.org/attribution (read 2026-11-12): "Data from Foursquare. Copyright 2024 Foursquare Labs, Inc. All rights reserved. Available under Apache 2.0. Foursquare data was transformed to the Overture schema. Changed: 2026-03-18. NOTICE.txt." Foursquare's notice (opensource.foursquare.com/places-notice-txt, read 2026-11-12) asks recipients to get a copy of the License, prominent notices of changes and the attribution preserved, and for an API recommends the notice in the developer documentation; Apache 2.0 §4(d) allows the documentation. The year is the one Overture transmits with the data; the live notice page shows 2026.
+
 ### Microsoft Global ML Building Footprints
 
 Building footprints and heights, through Overture Maps, drawn in the basemap and counted in the block group building totals.
@@ -186,7 +196,7 @@ Points of interest.
 - Attribution: Overture Maps Foundation places data, available under CDLA-Permissive-2.0: https://cdla.dev/permissive-2-0/
 - Terms: https://cdla.dev/permissive-2-0/
 - Obligation: required, with the data in API and MCP results and on https://smarterweather.com/acknowledgements/
-- Basis: CDLA-Permissive-2.0 §2.1: shared Data carries the agreement text, which the credit links. docs.overturemaps.org/attribution: CDLA-Permissive-2.0 for most sources, AllThePlaces CC0; Foursquare rows (Apache 2.0, with their own copyright line) are credited only if our data includes them.
+- Basis: CDLA-Permissive-2.0 §2.1: shared Data carries the agreement text, which the credit links. docs.overturemaps.org/attribution: CDLA-Permissive-2.0 for most sources, AllThePlaces CC0; Foursquare rows (Apache 2.0) are in the data and carry their own entry, `foursquare`.
 
 ### timezone-boundary-builder
 
