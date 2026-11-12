@@ -4599,7 +4599,15 @@ paths:
         outside_time_range` and `time_hint`, and the others are served.
         `time_hint.earliest_valid` is where every frame is served (the
         catalog `history_complete`), and `suggested_call` reads back that
-        far. `fields` and `format` are reserved and return `400` for now.
+        far. A product with a `time.history_start` holds nothing earlier:
+        the bound is the later of now minus `history` and it, and
+        `earliest_valid` is never before it. For a `time.day: local`
+        product the bound is the first held day (the UTC midnight of its
+        date), so every zone keeps that day. A window that straddles the
+        bound is read from it, and each element whose read it shortens
+        says so in `notes`.
+        `fields` and `format` are
+        reserved and return `400` for now.
 
         `astro` is an `analysis` whose rows run through about 14 days
         ahead, so with no time word it returns the newest row and `hours`
@@ -10523,7 +10531,8 @@ components:
             How far back the product can be read, an ISO 8601 duration:
             nothing older is served, and `/v1/series` refuses a window that
             ends before it (`outside_time_range`). `null` when nothing
-            bounds the read.
+            bounds the read. A product younger than its history holds
+            less: see `history_start`.
           example: PT37H
         history_complete:
           type: string
@@ -10533,6 +10542,14 @@ components:
             out (an hourly bundle keeps whole hours only) or wait on the
             catalog prune.
           example: PT36H
+        history_start:
+          type: string
+          format: date-time
+          description: |
+            The first valid time the product holds (RFC 3339 UTC); absent
+            when not declared. Nothing earlier is served: the read bound is
+            the later of now minus `history` and this.
+          example: "2026-11-06T06:00:00Z"
         max_step:
           type: string
           description: |
@@ -13435,8 +13452,9 @@ components:
         forecast's horizon, `history` before its history; neither for an
         `@observed:` / `@forecast:` window on the other side of now), and
         the bound it puts on a window at now. `earliest_valid` is now minus
-        the catalog `history_complete` (else `history`): every frame from
-        it on is served, and the `suggested_call` reads back that far.
+        the catalog `history_complete` (else `history`), or the catalog
+        `history_start` when that is later: every frame from it on is
+        served, and the `suggested_call` reads back that far.
       properties:
         horizon:
           type: string
