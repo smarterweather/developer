@@ -68,19 +68,9 @@ Boundaries, places, ZIP codes, address ranges, population estimates and centers 
 
 - License: Public domain (U.S. Government work)
 - Attribution: Source: U.S. Census Bureau (TIGER/Line, decennial census, American Community Survey).
-- Terms: https://www.census.gov/data/developers/about/terms-of-service.html
+- Terms: https://www.census.gov/about/policies/citation.html
 - Obligation: none
-- Basis: 17 U.S.C. §105; the TIGER/Line 2025 documentation (§1.2) asks that the Census Bureau be cited (a request).
-
-### U.S. Census Bureau Data API
-
-Population and housing counts (2020 PL and DHC, ACS) through the keyed Data API.
-
-- License: Public domain (U.S. Government work)
-- Attribution: This product uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau.
-- Terms: https://www.census.gov/data/developers/about/terms-of-service.html
-- Obligation: required, on https://smarterweather.com/acknowledgements/
-- Basis: Census Bureau Data API terms of service (page last revised 2026-04-14): "should display this notice prominently", read conservatively.
+- Basis: 17 U.S.C. §105; the TIGER/Line 2025 documentation (§1.2) and the Bureau's citation page ask that the Census Bureau be cited (requests).
 
 ### ESA WorldCover
 
