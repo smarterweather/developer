@@ -10642,9 +10642,10 @@ components:
             line's first vertex (now) and widening linearly to (n - 1) x
             `step_m` (at least `start_m`, capped at `max_m`) at its last of n
             vertices, with flat ends. `times` names the property holding one
-            instant per vertex. A match with no line (a cell with no forecast
-            positions, new or not moving, is a point) is a 404
-            `area_not_found`.
+            instant per vertex; rows that a timed track's corridor touches
+            carry `eta` (see `FeaturesFeature.eta`). A match with no line (a
+            cell with no forecast positions, new or not moving, is a point)
+            is a 404 `area_not_found`.
           required: [start_m, step_m, max_m, times]
           properties:
             start_m:
@@ -14463,6 +14464,10 @@ components:
           type: string
           format: date-time
           description: When the feature ends (an outlook's period end); absent otherwise or when the feature has none.
+        eta:
+          type: string
+          format: date-time
+          description: On a read whose `area` names a product that declares a `swath` (a forecast track), the earliest time any matched track whose corridor intersects the feature (its geometry or its representative point) passes nearest that representative point, interpolated between the track's vertex times and clamped to the track's first and last times; absent on every other read, when no such track has a time array with one entry per vertex, and when the times around the feature's projection onto the track don't parse.
     FeaturesQueryRequest:
       x-stability: experimental
       type: object
