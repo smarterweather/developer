@@ -4112,7 +4112,8 @@ paths:
       summary: Consecutive hours that meet activity criteria.
       description: |
         Returns runs of forecast hours that satisfy the caller's
-        criteria, the REST twin of MCP `find_best_window`. The scan is
+        criteria, the REST twin of an MCP `get_data` window read (`where`
+        and `windows`). The scan is
         deterministic: the criteria are `where` expressions on the window
         search `GET /v1/series` serves (`windows`), over the location's
         forecast that serves every variable the criteria test. An optional `activity` string may attach a
@@ -5850,8 +5851,8 @@ paths:
             outlook; `fire` is the SPC fire-weather outlook; `rain` is
             the WPC Excessive Rainfall Outlook; `temperature` and
             `precipitation` are the CPC 6-10 day, 8-14 day, week 3-4,
-            and monthly outlooks. Matches the vocabulary used by
-            sw-mcp's `get_outlooks`.
+            and monthly outlooks. The same families as the outlooks
+            preset's `hazard` variants, which MCP `get_data` reads.
           schema:
             type: string
             enum: [severe, fire, rain, temperature, precipitation]

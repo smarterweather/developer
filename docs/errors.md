@@ -324,9 +324,10 @@ still have settled: check your wallet before paying again.
 
 - Argument errors (a value that fails the tool's input schema, or a
   precondition such as an ambiguous place name) are `bad-request` with the
-  reason in `detail`. A tool the connection does not serve is not a tool
-  result: it is a JSON-RPC error `-32602` whose message names the path that
-  serves it (`connect to /x/...`). An ambiguous place
+  reason in `detail`. A tool the server does not serve is not a tool
+  result: it is a JSON-RPC error `-32602` whose message lists the server's
+  tools and says that `search_data` returns the `get_data` call for a
+  question. An ambiguous place
   name adds `candidates`, an array of `{name}` objects to offer the user
   (names only, no coordinates).
 - A `400` or `404` problem from the API behind a tool reaches you as the
@@ -340,13 +341,10 @@ still have settled: check your wallet before paying again.
   withheld datasets returns `flag-disabled` (`403`, no `next_steps`)
   without calling the API behind it. A second text block tells a model not
   to retry. The `detail` says "this caller" rather than "this API key",
-  because an MCP caller may have no key. `search_locations` does not fail in that case: it
+  because an MCP caller may have no key. `get_context` does not fail in that case: it
   returns place and ZIP rows without address or POI rows.
-- `get_route_weather` returns the same `flag-disabled` `403` when route
-  weather is not enabled for the caller, without calling the API behind it;
-  its second text block also tells a model not to retry. A tool whose API
-  answers `flag-disabled` itself returns the same `403` and stop, not a
-  retryable `503`.
+- A tool whose API answers `flag-disabled` itself returns the same `403`
+  and stop, not a retryable `503`.
 - `next_steps` appears on `401`, `402` (`trial-ended`, `payment-required`),
   `403` (trial keys), `404` (`outside-coverage`, and `not-found` for a
   place), `429` (`rate-limit-exceeded`) and on the `503` a
