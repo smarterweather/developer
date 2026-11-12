@@ -4967,7 +4967,7 @@
     {
       "name": "get_severe_activity",
       "title": "Get severe activity",
-      "description": "Severe weather happening near a place now: radar storm cells with their hail, rotation and tornado detections, local storm reports, and lightning (satellite flashes nearby plus density and 30-minute probability at the place), each nearest the place within its radius. `activity` reads one part (cells, reports or lightning; default all), `hours` looks back, and `filter` narrows on a report or detection property; a concept with no rows means none inside its radius and window, a quiet observation rather than a data gap. Example: {\"location\": \"Peoria, IL\", \"activity\": \"lightning\"}.",
+      "description": "Severe weather near a place now, nearest first: each radar site's newest storm cells with hail, rotation, tornado detections; storm reports (each one's latest from 24 h of bulletins); lightning (flashes, density, 30-min probability at the place). `activity` reads one part (cells, reports, lightning; default all); `hours` reads every scan, report, flash in its window; `filter` narrows reports (`type`: H hail, T tornado, G/D storm wind; `state`, `wfo`). No rows: none in the radius and window, quiet, not a data gap. Example: {\"location\": \"Peoria, IL\", \"activity\": \"lightning\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {

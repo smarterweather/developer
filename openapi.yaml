@@ -5092,6 +5092,20 @@ paths:
         now). With none, the features in effect now. A time-free layer
         takes none.
 
+        With no time word (and with `at`), a product whose catalog
+        `time.latest_by` names its sources serves each source's newest
+        data no older than `time.latest_by_window` before the newest
+        (and nothing when the newest is older than that window):
+        each station's newest report, or with `time.latest_by_keep:
+        frame` every feature of each radar site's newest scan (the NEXRAD
+        storm tracks and detections), not only the one site that scanned
+        last; a radar scan that found nothing ends its site's earlier
+        features. Storm reports and record events, dated by the bulletin
+        that carried them, serve each report's newest version from the
+        last day of bulletins (`PT24H`), so a report repeated by later
+        bulletins is one feature; `hours` reads every bulletin's features
+        in its window.
+
         A `day_of_year` product (`time.axis`, such as station normals)
         reads local days in each feature's own timezone: `start` and `end`
         as dates (`YYYY-MM-DD`, inclusive, across a year end:
@@ -14297,13 +14311,17 @@ components:
             was read at); on a window read only for a layer read as it
             stands now (a window that starts now). It dates the product
             read, not an `area` reference product. A product that serves
-            each station's newest report (catalog `time.latest_by`: observed
-            soundings, climate reports) leaves it out when features match,
-            because each feature carries its own time, and keeps it on an
-            empty read: then it is the newest data at or before now, so
-            `matched: 0` reads as "nothing as of this time". Absent on an
-            `at` read and every other window read (the request alone fixes
-            them), when the product has no data yet, on an
+            each source's newest report or scan (catalog `time.latest_by`:
+            observed soundings and climate reports per station, the NEXRAD
+            storm tracks and detections per radar site, storm reports and
+            record events per report) carries it too, though each feature
+            carries its own time: it is the newest data at or before now, so
+            its age shows, and `matched: 0` reads as "nothing as of this
+            time". When that newest data is older than
+            `time.latest_by_window` (the source stopped updating), nothing
+            is served and `as_of` says how old it is.
+            Absent on an `at` read and every other window read (the request
+            alone fixes them), when the product has no data yet, on an
             `entitlement_required` element, on an `awaiting_issuance` answer
             the service could not determine, and when the service decides
             the filter cannot match without reading (a filter on a constant
