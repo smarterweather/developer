@@ -807,6 +807,57 @@
       "outputSchema": {
         "type": "object",
         "properties": {
+          "unresolved": {
+            "description": "Present, first, only when some select tokens did not resolve and others did: each token answered without, with its corrective members; the results answer the rest.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "token": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "locations": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "feature_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "valid_values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "did_you_mean": {
+                  "type": "string"
+                },
+                "suggested_call": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "token",
+                "reason"
+              ],
+              "additionalProperties": {}
+            }
+          },
           "results": {
             "type": "array",
             "items": {

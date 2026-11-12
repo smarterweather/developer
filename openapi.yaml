@@ -4544,8 +4544,11 @@ paths:
         product share its element. In a batch a bare token can resolve to
         a different product in each location's domain; each location then
         gets the elements of its own domain. An unknown product, variable
-        or standard name is a `404` (with `did_you_mean` and
-        `suggested_call` when one is close). A catalog product that is
+        or standard name, or an ambiguous one, beside a token that resolves
+        is answered without and listed in `unresolved`, first in the
+        response; when no token resolves, or `where` names a dropped
+        token, it is a `404` (`400` when ambiguous) with `did_you_mean`
+        and `suggested_call` when one is close. A catalog product that is
         public but not served by this route (an MCP-only product, or a REST
         product that is not a grid or snapshot) is a `404` when it is the
         only selection, and a `not_public` element beside a servable one.
@@ -7206,25 +7209,38 @@ components:
         hint:
           type: string
         suggested_call:
+          $ref: '#/components/schemas/SuggestedCall'
+        unresolved:
+          type: array
+          description: |
+            On `/v1/series`, when some `select` tokens resolved and others
+            missed by name before this refusal (a time, run, operator or
+            `where` word): the tokens the call would have answered without,
+            as `SeriesResponse.unresolved` lists them, so one round trip
+            names both fixes.
+          items:
+            $ref: '#/components/schemas/SeriesUnresolved'
+
+    SuggestedCall:
+      type: object
+      description: The corrected request on the same route; a GET also as its `query` parameters (one value as a string, several as an array).
+      required: [method, url]
+      properties:
+        method:
+          type: string
+          enum: [GET, POST]
+        url:
+          type: string
+        query:
           type: object
-          description: The corrected request on the same route; a GET also as its `query` parameters (one value as a string, several as an array).
-          required: [method, url]
-          properties:
-            method:
-              type: string
-              enum: [GET, POST]
-            url:
-              type: string
-            query:
-              type: object
-              additionalProperties:
-                oneOf:
-                  - type: string
-                  - type: array
-                    items:
-                      type: string
-            body:
-              type: object
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: array
+                items:
+                  type: string
+        body:
+          type: object
 
     ProblemTrialEnded:
       allOf:
@@ -13447,6 +13463,27 @@ components:
       description: The `GET /v1/series` and `POST /v1/series/batch` envelope.
       required: [units, truncated, next_cursor, meta, series]
       properties:
+        unresolved:
+          type: array
+          description: |
+            Present, and first, only when some `select` tokens resolve and
+            others miss by name (`unknown_standard_name`, `ambiguous_select`,
+            `unknown_product`, `unknown_variable`): the call answers the
+            tokens that resolve and lists each one it answered without, in
+            request order, with the members the miss would have refused
+            with. The same on a location, `locations[]`, a bbox, an area
+            (inline or by reference) and a path. A bare name that resolves
+            in some locations' (or areas') domains and not another's is
+            listed once per domain it missed in, with the `locations` (or
+            `feature_ids`) it missed at; only those lack its element, and
+            an area where no token resolves has none. An unresolved token
+            has no element and is never billed. The call is refused as
+            before, with the first miss's `400` or `404`, when no token
+            resolves (in any area), or when `where` names a token it would
+            drop; so is any other error (a word conflict, a bad word, a
+            place outside the 50 US states and DC).
+          items:
+            $ref: '#/components/schemas/SeriesUnresolved'
         units:
           type: string
           enum: [si, metric, imperial]
@@ -13473,6 +13510,62 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SeriesElement'
+    SeriesUnresolved:
+      x-stability: experimental
+      type: object
+      description: |
+        A `select` token the call answered without, with the corrective
+        members its refusal would carry. One entry per token and `detail`:
+        a standard name missing in two domains is two entries.
+        `locations` or `feature_ids` say where it missed when that is some
+        of the call's locations or areas, not all.
+      required: [token, reason, detail]
+      properties:
+        token:
+          type: string
+          description: The `select` token as sent.
+          example: '@observed:relative_humidity_2m'
+        reason:
+          type: string
+          description: The corrective reason it missed with, `unknown_standard_name`, `ambiguous_select`, `unknown_product` or `unknown_variable`.
+          example: unknown_standard_name
+        detail:
+          type: string
+          description: Why it missed, naming the domain for a standard name.
+        locations:
+          type: array
+          description: The indexes into the request's `locations` it missed at, when it missed at some of them; absent when it missed at every one.
+          items:
+            type: integer
+            minimum: 0
+        feature_ids:
+          type: array
+          description: The `area.feature_ids` it missed in, when it missed in some of them; absent when it missed in every area.
+          items:
+            type: string
+        valid_values:
+          type: array
+          description: |
+            By `reason`: `unknown_standard_name`, standard names near it
+            in that domain as `select` tokens (with the token's role
+            prefix); `ambiguous_select`, the `product:variable` tokens
+            that serve it; `unknown_variable`, the product's standard
+            names, each selected as `product:<name>`.
+          items:
+            type: string
+        did_you_mean:
+          type: string
+          description: |
+            The nearest valid value. A `select` token for
+            `unknown_standard_name`; a bare standard name for
+            `unknown_variable` and a product id for `unknown_product`,
+            each with a `suggested_call` that selects it. Absent when the
+            token was answered at another location or area (a
+            replacement would rewrite what was answered).
+        suggested_call:
+          allOf:
+            - $ref: '#/components/schemas/SuggestedCall'
+          description: The request with only this token replaced, when one edit corrects it and the replacement resolves at every location the call reads; never for a token answered elsewhere, nor an ambiguous name read in several domains.
     SeriesSource:
       type: object
       required: [id, name, attribution, license, terms_url]
