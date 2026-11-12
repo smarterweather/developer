@@ -1485,7 +1485,15 @@
               },
               "polyline": {
                 "type": "string",
-                "description": "The route as an encoded polyline (precision 5), instead of geometry (non-empty)."
+                "description": "The route as an encoded polyline, instead of geometry (non-empty)."
+              },
+              "polyline_precision": {
+                "type": "integer",
+                "description": "Polyline decimal places; 6 for polyline6.",
+                "enum": [
+                  5,
+                  6
+                ]
               },
               "times": {
                 "type": "array",
