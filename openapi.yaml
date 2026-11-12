@@ -10625,6 +10625,29 @@ components:
         area_as_reference:
           type: boolean
           description: Whether the product's features can be referenced as an area.
+        swath:
+          type: object
+          description: |
+            A forecast track's corridor, present only on a line product that
+            declares one (it makes `area_as_reference` true): an `area`
+            naming the product reads the union of its matched lines'
+            corridors, a cone reaching `start_m` metres either side of a
+            line's first vertex (now) and widening linearly to (n - 1) x
+            `step_m` (at least `start_m`, capped at `max_m`) at its last of n
+            vertices, with flat ends. `times` names the property holding one
+            instant per vertex. A match with no line (a cell with no forecast
+            positions, new or not moving, is a point) is a 404
+            `area_not_found`.
+          required: [start_m, step_m, max_m, times]
+          properties:
+            start_m:
+              type: integer
+            step_m:
+              type: integer
+            max_m:
+              type: integer
+            times:
+              type: string
         nearest:
           description: |
             The `nearest` shape's radius, present exactly when `shapes` lists

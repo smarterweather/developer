@@ -1125,6 +1125,14 @@
                           "valid_end": {
                             "description": "When it ends (UTC): the feature applies only between the two.",
                             "type": "string"
+                          },
+                          "eta": {
+                            "description": "Through an area naming a forecast track (a product whose describe_data query has a swath): when the track passes nearest the feature (UTC), interpolated between its forecast times; the earliest when several tracks match.",
+                            "type": "string"
+                          },
+                          "eta_local": {
+                            "description": "eta in the feature's own zone (its timezone property: a census place carries one), with its weekday when on another local day than the read; absent when it names none.",
+                            "type": "string"
                           }
                         },
                         "required": [
