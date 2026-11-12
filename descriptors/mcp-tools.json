@@ -590,7 +590,7 @@
             "type": "string"
           },
           "filter": {
-            "description": "On a feature product: expressions over its filterable properties, applied before aggregation.",
+            "description": "On a feature product or derived id: expressions over its filterable properties (describe_data), applied before aggregation.",
             "type": "array",
             "minItems": 1,
             "items": {
@@ -1357,7 +1357,7 @@
         "type": "object",
         "properties": {
           "select": {
-            "description": "What to read: `product:variable`, `product:*`, `product` (a feature or text product's properties), a bare standard_name (resolved in the place's domain), or `@observed:<standard_name>` / `@forecast:<standard_name>`; or alone, a derived id: `forecast` (the blend), `forecast:hourly`, `forecast:aqi` (at most 25 items).",
+            "description": "What to read: `product:variable`, `product:*`, `product` (a feature or text product's properties), a bare standard_name (resolved in the place's domain), or `@observed:<standard_name>` / `@forecast:<standard_name>`; or alone, a derived id: `forecast` (the blend), `forecast:hourly`, `forecast:aqi`, `forecast_skill` (accuracy), `forecast_skill:map` (at most 25 items).",
             "type": "array",
             "minItems": 1,
             "items": {
@@ -1555,7 +1555,7 @@
             }
           },
           "filter": {
-            "description": "On a feature product: expressions over its filterable properties, applied before aggregation.",
+            "description": "On a feature product or derived id: expressions over its filterable properties (describe_data), applied before aggregation.",
             "type": "array",
             "minItems": 1,
             "items": {
@@ -2878,7 +2878,7 @@
             "type": "string"
           },
           "filter": {
-            "description": "On a feature product: expressions over its filterable properties, applied before aggregation.",
+            "description": "On a feature product or derived id: expressions over its filterable properties (describe_data), applied before aggregation.",
             "type": "array",
             "minItems": 1,
             "items": {
@@ -4401,7 +4401,7 @@
             "type": "string"
           },
           "filter": {
-            "description": "On a feature product: expressions over its filterable properties, applied before aggregation.",
+            "description": "On a feature product or derived id: expressions over its filterable properties (describe_data), applied before aggregation.",
             "type": "array",
             "minItems": 1,
             "items": {
@@ -4980,7 +4980,7 @@
             "type": "integer"
           },
           "filter": {
-            "description": "On a feature product: expressions over its filterable properties, applied before aggregation.",
+            "description": "On a feature product or derived id: expressions over its filterable properties (describe_data), applied before aggregation.",
             "type": "array",
             "minItems": 1,
             "items": {
@@ -6047,7 +6047,8 @@
                     "feature",
                     "geojson",
                     "text",
-                    "index"
+                    "index",
+                    "derived"
                   ]
                 },
                 "domain": {
