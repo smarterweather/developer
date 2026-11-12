@@ -4590,7 +4590,9 @@ paths:
         `climate_normals_conus`, requires `start` and `end`. `run` (RFC
         3339) pins a forecast model cycle and composes with `hours` or
         `start` and `end`; it is a `400` on a product that is not a
-        `forecast`. With `stats` or `windows`, `run` reduces the whole run
+        `forecast`. It returns that run alone, with only its own leads;
+        without it, each valid time holds the newest run that reaches it.
+        With `stats` or `windows`, `run` reduces the whole run
         and takes no other time word. A window entirely past a forecast's
         `horizon`, or before an analysis's `history` (the catalog
         `time.history`), is that product's refusal: when no selected
@@ -6280,6 +6282,11 @@ components:
       description: |
         Model cycle: the RFC 3339 initialization time of the run to read
         (forecast products only). Absent means the latest run per frame.
+        Without `run`, each valid time holds the newest run that reaches
+        it, so a shorter newest run is followed by an older, longer one;
+        `run_spans` says which run serves which times and `notes` where
+        the run changes. With `run`, that run alone, with only its own
+        leads.
       schema:
         type: string
         format: date-time
@@ -13655,7 +13662,10 @@ components:
         run:
           type: string
           format: date-time
-          description: The model run behind every frame, when they share one.
+          description: >-
+            The model run behind every frame, when they share one; with
+            `stats` or `windows`, or over an area, the newest run behind the
+            values. See `run_spans` when they mix.
         runs:
           type: array
           description: >-
@@ -13665,6 +13675,34 @@ components:
           items:
             type: [string, "null"]
             format: date-time
+        run_spans:
+          type: array
+          description: >-
+            A forecast read without `run` whose values mix model runs: each
+            valid time holds the newest run that reaches it, so a shorter
+            newest run is followed by an older, longer one. One item per run
+            per contiguous stretch of valid time it serves, across the
+            variables (and along a path, the samples); items may overlap
+            where variables or places at one time come from different runs.
+            Ordered by `start`, then the newest run. Absent with one run,
+            with `run`, and for an analysis. The element's `notes` says
+            where the run changes.
+          items:
+            type: object
+            required: [run, start, end]
+            properties:
+              run:
+                type: string
+                format: date-time
+                description: The run's initialization time.
+              start:
+                type: string
+                format: date-time
+                description: The first valid time it serves (UTC, inclusive).
+              end:
+                type: string
+                format: date-time
+                description: The last valid time it serves (UTC, inclusive).
         data_age_seconds:
           type: [integer, "null"]
           description: Age of the product's latest data (or of the pinned `run`), null when unknown.

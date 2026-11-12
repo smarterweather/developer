@@ -892,14 +892,38 @@
                       "type": "string"
                     },
                     "run": {
-                      "description": "The model run behind every value.",
+                      "description": "The model run behind every value; with runs or run_spans beside it, the newest run behind the values.",
                       "type": "string"
                     },
                     "runs": {
-                      "description": "Distinct runs, when values mix more than one; an analysis index: its values' revision times.",
+                      "description": "Distinct runs, when values mix more than one (without `run`, each time holds the newest run that reaches it, so a shorter newest run is followed by an older, longer one; run_spans says which run serves which times, notes where it changes); an analysis index: its values' revision times.",
                       "type": "array",
                       "items": {
                         "type": "string"
+                      }
+                    },
+                    "run_spans": {
+                      "description": "When values mix runs: each run's stretch of valid time (start and end inclusive), by start; stretches overlap where variables or places come from different runs.",
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "run": {
+                            "type": "string"
+                          },
+                          "start": {
+                            "type": "string"
+                          },
+                          "end": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "run",
+                          "start",
+                          "end"
+                        ],
+                        "additionalProperties": {}
                       }
                     },
                     "data_age_seconds": {
