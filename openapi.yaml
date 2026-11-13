@@ -10588,6 +10588,32 @@ components:
             when not declared. Nothing earlier is served: the read bound is
             the later of now minus `history` and this.
           example: "2026-11-06T06:00:00Z"
+        period:
+          type: object
+          description: |
+            An index product's span of each stored value (#23607); absent
+            for an instantaneous index and on every other kind. The value
+            at valid time `t` covers `[start, start + length)`: `start` is
+            `t` for anchor `start` (a season's first month, a week's first
+            day) and `floor(n/2)` units before `t` for anchor `centre` (a
+            pentad dated by its middle day). Calendar `noleap` counts no
+            Feb 29 in a day period: it falls in the period holding Feb 28
+            (NOAA CPC's 73 pentads a year). `/v1/indices` serves each
+            value's end and name as `period_ends` and `period_labels`. A
+            variable's `period` is a different thing: a window ending at
+            the valid time, never set on an index product.
+          required: [length, anchor, calendar]
+          properties:
+            length:
+              type: string
+              description: Whole months or whole days, an ISO 8601 duration.
+              example: P3M
+            anchor:
+              type: string
+              enum: [start, centre]
+            calendar:
+              type: string
+              enum: [standard, noleap]
         max_step:
           type: string
           description: |
@@ -11030,7 +11056,11 @@ components:
                   type: [string, "null"]
         period:
           type: [string, "null"]
-          description: Accumulation or aggregation period, an ISO 8601 duration.
+          description: |
+            Accumulation or aggregation period ending at the valid time, an
+            ISO 8601 duration (a 1 h total); null for an instantaneous
+            value. Never set on an index product: its averaging period is
+            the product's `time.period`.
           example: PT1H
         min:
           type: [number, "null"]
@@ -11216,9 +11246,11 @@ components:
           type: [integer, "null"]
           description: |
             Age of the newest data in seconds: from `latest_run` for a
-            forecast, else from `latest_time`. `null` when unknown or when
-            the time is in the future (a forecast valid time says nothing
-            about age).
+            forecast, else from `latest_time`; for an index product whose
+            values cover a period (the catalog's `time.period`), from the
+            end of the period of the value at `latest_time`. `null` when unknown or when the time is in the future
+            (a forecast valid time says nothing about age; a period not yet
+            ended).
           example: 3600
 
     Lightning:
@@ -13848,8 +13880,8 @@ components:
       x-stability: experimental
       type: object
       description: |
-        An index product's series, column-oriented: every `values` array
-        and `runs` are aligned with `times`.
+        An index product's series, column-oriented: every `values` array,
+        `runs`, `period_ends` and `period_labels` are aligned with `times`.
       required: [product, status, times, values, units, data_age_seconds, freshness_status, meta]
       properties:
         product:
@@ -13860,7 +13892,9 @@ components:
           enum: [ok, partial, unavailable, not_public, entitlement_required]
           description: |
             `ok`; `partial` (a variable's values are missing from the
-            answer: they are null, with a note; retry shortly);
+            answer: they are null, with a note; or a period product's
+            `period_ends` and `period_labels` could not be computed; retry
+            shortly);
             `unavailable` (no values in the window, or none stored yet,
             with a note); `entitlement_required` (a product behind a
             per-key flag the key does not have: no values, no charge,
@@ -13868,10 +13902,40 @@ components:
             `no-store`). `not_public` is reserved.
         times:
           type: array
-          description: Valid times, RFC 3339 UTC, ascending.
+          description: |
+            Valid times, RFC 3339 UTC, ascending. On a product whose values
+            cover a period (the catalog's `time.period`: a 3-month season, a
+            month, a week, a pentad), each time is where its period's
+            `anchor` puts it (its start, or a pentad's middle day);
+            `period_ends` and `period_labels` give its span.
           items:
             type: string
             format: date-time
+        period_ends:
+          type: array
+          description: |
+            Each value's period end, aligned with `times`: RFC 3339 UTC,
+            exclusive (the 3-month season from 2026-08-01, ASO 2026, ends
+            at 2026-11-01T00:00:00Z, so it covers 2026-08-01 through
+            2026-10-31), by the catalog's `time.period` in calendar months
+            or days. Absent for an instantaneous product (no
+            `time.period`), when `times` is empty, and when a time cannot
+            be read (the element is then `partial`, with a note).
+          items:
+            type: string
+            format: date-time
+        period_labels:
+          type: array
+          description: |
+            Each value's period by name, aligned with `times`: several
+            months by their initials and the year of the period's middle
+            (`ASO 2026`, `DJF 2026`, as NOAA CPC names seasons), one month
+            by name (`Oct 2026`), whole days by their inclusive dates
+            (`Nov 1-7, 2026`, `Dec 28, 2026-Jan 3, 2027`). Absent when
+            `period_ends` is.
+          items:
+            type: string
+          example: [ASO 2026]
         values:
           type: object
           description: Values per variable `standard_name`, aligned with `times`; null where a time has no value.
@@ -13923,7 +13987,7 @@ components:
             format: date-time
         data_age_seconds:
           type: [integer, "null"]
-          description: Age of the product's latest data (or of the pinned `run`), null when unknown.
+          description: Age of the product's latest data (or of the pinned `run`), null when unknown; on a product whose values cover a period, from the end of its newest period (as the catalog's `data_age_seconds`).
         freshness_status:
           type: [string, "null"]
           enum: [fresh, stale, missing, null]

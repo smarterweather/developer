@@ -1028,7 +1028,21 @@
                       "type": "string"
                     },
                     "times": {
-                      "description": "UTC ISO 8601, ascending.",
+                      "description": "UTC ISO 8601, ascending; index: on a product whose values cover a period, each time sits where its catalog time.period anchor puts it (the period's start, or a pentad's middle day).",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "period_ends": {
+                      "description": "index: each value's period end (exclusive, UTC), aligned with times; absent for an instantaneous index.",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "period_labels": {
+                      "description": "index: each value's period by name (ASO 2026, Oct 2026, Nov 1-7, 2026), aligned with times.",
                       "type": "array",
                       "items": {
                         "type": "string"
