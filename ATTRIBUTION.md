@@ -188,6 +188,16 @@ Points of interest.
 - Obligation: required, with the data in API and MCP results and on https://smarterweather.com/acknowledgements/
 - Basis: CDLA-Permissive-2.0 §2.1: shared Data carries the agreement text, which the credit links. docs.overturemaps.org/attribution: CDLA-Permissive-2.0 for most sources, AllThePlaces CC0; Foursquare rows (Apache 2.0) are in the data and carry their own entry, `foursquare`.
 
+### Pyspectral atmospheric correction look-up tables
+
+Rayleigh scattering correction in GOES true color.
+
+- License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+- Attribution: Rayleigh correction tables: A. Dybbroe, R. Scheirer and M. Raspaud, Pyspectral atmospheric correction look-up tables (doi:10.5281/zenodo.1288441), CC BY 4.0, interpolated to the GOES ABI bands.
+- Terms: https://creativecommons.org/licenses/by/4.0/
+- Obligation: required, on https://smarterweather.com/acknowledgements/
+- Basis: Zenodo record 1288441 (v1.0.1) is licensed CC-BY-4.0. CC BY 4.0 §3(a)(1): the creators, the licence and an indication of modification, which §3(a)(2) lets a page carry; the tables are interpolated in wavelength, so the credit says so.
+
 ### timezone-boundary-builder
 
 Time zone boundaries.
@@ -197,9 +207,9 @@ Time zone boundaries.
 - Obligation: required, met by the OpenStreetMap credit
 - Basis: Project README, Licenses: the data are ODbL 1.0 (derived from OpenStreetMap), so the OpenStreetMap credit covers them.
 
-### U.S. Geological Survey (GNIS, PAD-US 4.1)
+### U.S. Geological Survey (GNIS, PAD-US 4.1, GMTED2010)
 
-Place codes (GNIS) and park boundaries (PAD-US 4.1).
+Place codes (GNIS), park boundaries (PAD-US 4.1) and the terrain heights behind the GOES true color Rayleigh correction (GMTED2010).
 
 - License: Public domain (U.S. Government work)
 - Terms: https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits
