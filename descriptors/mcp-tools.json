@@ -1766,7 +1766,7 @@
             "description": "map: weather layers over a basemap; sounding: the nearest radiosonde as a skew-T and hodograph chart."
           },
           "select": {
-            "description": "Map layers, bottom to top (at most 6): a product id with a map, a standard_name drawn in the place's domain, a catalog pick <family>:<pick>[:<pick>] over a map layer's axes (satellite:13, satellite:water_vapor, satellite:2:goes_west, composite:reflectivity), a feature product (alerts, storm cells, reports) drawn over the rasters, or one radar site as nexrad_l3:{SITE}:{KEY}, KEY N0B reflectivity, N0S storm-relative velocity (rotation), N0G base velocity, N0C correlation coefficient, N0X differential reflectivity. Default precipitation_hybrid.",
+            "description": "Map layers, bottom to top (at most 6): a product id with a map, a standard_name (the finest-step layer reaching at), a catalog pick <family>:<pick>[:<pick>] over a layer's axes (satellite:13, satellite:water_vapor, satellite:2:goes_west, composite:reflectivity), a feature product (alerts, storm cells, reports) over the rasters, or one radar site as nexrad_l3:{SITE}:{KEY}, KEY N0B reflectivity, N0S storm-relative velocity (rotation), N0G base velocity, N0C correlation coefficient, N0X differential reflectivity. Default precipitation_hybrid.",
             "type": "array",
             "items": {
               "type": "string"
@@ -1988,6 +1988,85 @@
               },
               "required": [
                 "product"
+              ],
+              "additionalProperties": {}
+            }
+          },
+          "resolved": {
+            "description": "Map: per standard_name in select, the layer drawn (finest step that reaches the time), its step (ISO duration) and how far its frames reach, an instant: ahead_to for a forecast (its last frame), back_to for an observed layer (its first frame; its newest is the latest observed), the finer layers passed over (passed: their ahead_to is before the time) and the other layers drawing the name here (others).",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "select": {
+                  "type": "string"
+                },
+                "product": {
+                  "type": "string"
+                },
+                "step": {
+                  "type": "string"
+                },
+                "ahead_to": {
+                  "type": "string"
+                },
+                "back_to": {
+                  "type": "string"
+                },
+                "passed": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "product": {
+                        "type": "string"
+                      },
+                      "step": {
+                        "type": "string"
+                      },
+                      "ahead_to": {
+                        "type": "string"
+                      },
+                      "back_to": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "product"
+                    ],
+                    "additionalProperties": {}
+                  }
+                },
+                "others": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "product": {
+                        "type": "string"
+                      },
+                      "step": {
+                        "type": "string"
+                      },
+                      "ahead_to": {
+                        "type": "string"
+                      },
+                      "back_to": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "product"
+                    ],
+                    "additionalProperties": {}
+                  }
+                }
+              },
+              "required": [
+                "select",
+                "product",
+                "passed",
+                "others"
               ],
               "additionalProperties": {}
             }
