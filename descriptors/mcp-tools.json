@@ -7,7 +7,7 @@
     {
       "name": "describe_data",
       "title": "Describe data",
-      "description": "A dataset's variables or properties (standard names, units, categories, bands, aggregates), horizon, step, cadence, freshness, cost class, verified `examples` and an example_query to read its values; a map layer's axes (source, region, facts) and render call. Free. Call it when a grid or snapshot hit's `call` lacks the variable you need (with no `variable`, it may read only the headline one), or to check units, horizon or cost; not needed when the hit's `call` already names what you need: run that. Example: {\"dataset_id\": \"<from search_data>\"}.",
+      "description": "A dataset's variables or properties (standard names, units, categories, bands, aggregates), horizon, step, cadence, freshness, cost class, verified `examples`, an example_query to read values; a map layer's axes (source, region, facts), render call. Free. Call it when a grid or snapshot hit's `call` lacks the variable you need (with no `variable`, it may read only the headline one), or to check meaning, units, horizon or cost; not needed when the hit's `call` already names what you need: run that. Example: {\"dataset_id\": \"<from search_data>\"}.",
       "inputSchema": {
         "type": "object",
         "properties": {

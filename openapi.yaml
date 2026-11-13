@@ -10852,6 +10852,91 @@ components:
           items:
             type: string
 
+    CatalogCitation:
+      type: object
+      additionalProperties: false
+      description: The provider page a value's reading is taken from.
+      required: [title, url]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        url:
+          type: string
+          pattern: '^https://[^\s]+$'
+
+    CatalogInterpretation:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: |
+        How to read a value, one level of it: a product's block or a
+        variable's. A variable's interpretation is its product's block with
+        the variable's own keys replacing same-named ones (the CF convention
+        for global versus variable attributes). Each level carries only the
+        keys written there, so a key is absent (not written at this level),
+        `null` (the provider states none) or a value. A statistic variable
+        (`stddev`, `percentile`, `probability`) carries none of its own:
+        read its `of` variable's where `of` is present. On every public
+        index base variable the merged block has all eight keys.
+      properties:
+        definition:
+          type: string
+          minLength: 1
+          maxLength: 400
+          description: What is measured (field, region, level); the averaging period is `time.period`.
+        method:
+          type: string
+          minLength: 1
+          maxLength: 600
+          description: How the provider computes it.
+        citation:
+          $ref: '#/components/schemas/CatalogCitation'
+        base_period:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 120
+          description: The anomaly base period; `null` where the provider states none.
+        standardization:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 240
+          description: How values are scaled; `null` where the provider states none.
+        sign:
+          type: string
+          minLength: 1
+          maxLength: 300
+          description: What positive and negative values mean.
+        us_context:
+          description: |
+            The season with the provider's accepted US signal and one cited
+            sentence, never a number; `null` where the provider states none.
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [season, text, citation]
+              properties:
+                season:
+                  type: string
+                  minLength: 1
+                  maxLength: 60
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 300
+                citation:
+                  $ref: '#/components/schemas/CatalogCitation'
+            - type: 'null'
+        caveats:
+          type: array
+          maxItems: 4
+          description: How not to misread it.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 240
+
     CatalogProduct:
       description: |
         A data catalog product with its variables and retrieval fields
@@ -10870,6 +10955,7 @@ components:
             - properties_schema
             - table_store
             - quality
+            - interpretation
             - variables
           properties:
             agent_description:
@@ -10913,6 +10999,14 @@ components:
                 - type: 'null'
             quality:
               $ref: '#/components/schemas/CatalogQuality'
+            interpretation:
+              description: |
+                The product-wide keys of how to read a value, `null` when the
+                product writes none. A variable's interpretation merges it with
+                the variable's own (`CatalogInterpretation`).
+              oneOf:
+                - $ref: '#/components/schemas/CatalogInterpretation'
+                - type: 'null'
             variables:
               type: array
               items:
@@ -11054,6 +11148,40 @@ components:
                   type: [string, "null"]
                 imperial:
                   type: [string, "null"]
+        interpretation:
+          $ref: '#/components/schemas/CatalogInterpretation'
+        observed:
+          type: object
+          additionalProperties: false
+          description: |
+            On a forecast index base variable: the analysis series it is read
+            against, another public index product and that variable's
+            `standard_name` (`GET /v1/indices/{product}?var={variable}`).
+          required: [product, variable]
+          properties:
+            product:
+              type: string
+              example: cpc_nao_cdas
+            variable:
+              type: string
+              example: nao
+        of:
+          type: string
+          description: |
+            On a statistic variable (`stddev`, `percentile`, `probability`)
+            whose base is known: the `standard_name` of the variable in the
+            same product it is a statistic of, whose `interpretation` and
+            `observed` it reads. Always present on an index product's
+            statistics; elsewhere it may be absent, and the variable's own
+            `description` says what it is a statistic of.
+          example: nao
+        quantile:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+          exclusiveMaximum: 1
+          description: On a percentile variable, its quantile (`p10` is 0.1).
+          example: 0.1
         period:
           type: [string, "null"]
           description: |
