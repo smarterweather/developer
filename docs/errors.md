@@ -217,8 +217,10 @@ human does open it.
 | <a id="rate-limit-exceeded"></a>`rate-limit-exceeded` | 429 | Your API key exceeded its per-minute or per-day limit. `RateLimit-*` headers say which; `next_steps` says how to lift it. | Honor `Retry-After` / `RateLimit-Reset`; follow `next_steps.upgrade` to raise the limit. |
 | <a id="trial-mint-rate-limited"></a>`trial-mint-rate-limited` | 429 | Trial key creation: this IP reached its daily cap on new trial keys. `Retry-After` counts down to UTC midnight. | Reuse the trial key you already created, or follow `next_steps.recommended` (`device_flow`) to get a regular key. |
 | <a id="payload-too-large"></a>`payload-too-large` | 413 | The request body exceeded the endpoint's cap (1 MiB on `POST /v1/pois/exposure`). | Split the request. Do not retry as-is. |
-| <a id="conflict"></a>`conflict` | 409 | The write conflicts with current state. | Re-read state and retry once if the conflict is stale. |
+| <a id="conflict"></a>`conflict` | 409 | The write conflicts with current state. On `GET /v1/features/{product_id}`, `reason` `cursor_stale`: the data changed between pages. | Re-read state and retry once if the conflict is stale; for `cursor_stale`, page again from the start (`suggested_call` drops the cursor). |
+| <a id="query-too-slow"></a>`query-too-slow` | 422 | `GET /v1/features/{product_id}`: the read did not finish within its time budget (`reason` `query_too_slow`). | Narrow it: a smaller area or box, fewer `area[feature_ids]`, a `filter`, or a lower `limit`. Do not retry as-is. |
 | <a id="flag-disabled"></a>`flag-disabled` | 403 | The endpoint exists but is not enabled for this key. | Treat as not available for this key. |
+| <a id="client-closed-request"></a>`client-closed-request` | 499 | The client closed the connection before the answer was ready (today on `GET /v1/agriculture/growing-degree-days`). Nobody reads this body; it is in the access log and request metrics, not counted as a server error. | None: it describes a request you already abandoned. Send it again if you still need the answer. |
 | <a id="internal"></a>`internal` | 500  | Unhandled server error. Logged with a request id we can look up.                                         | Retry with exponential backoff (max 3); on persistent failure, open a support ticket.  |
 | <a id="upstream"></a>`upstream` | 502  | A backing data source returned an error or an undecodable response.                                      | Retry with exponential backoff. Usually transient.                                    |
 | <a id="service-unavailable"></a>`service-unavailable` | 503  | A dependency needed to authorize or serve the request is temporarily unreachable.                        | Retry with exponential backoff. Never treat as an auth failure.                        |
@@ -247,8 +249,9 @@ control flow.
 | `trial-challenge-invalid` | Once, with a fresh challenge. |
 | `too-many-requests`, `rate-limit-exceeded`, `trial-mint-rate-limited` | After `Retry-After` (or the `RateLimit-Reset` window). |
 | `trial-mint-unavailable` | After `Retry-After`. |
-| `payload-too-large`, `flag-disabled` | No |
+| `payload-too-large`, `flag-disabled`, `query-too-slow` | No; `query-too-slow` after narrowing the request. |
 | `conflict` | Once, after re-reading state. |
+| `client-closed-request` | Not applicable; you closed the request. |
 | `internal`, `upstream`, `service-unavailable`, `timeout`            | Exponential backoff, max 3 retries. |
 
 Start retries at 250 ms, double the wait each time up to about 2 s, and
@@ -321,9 +324,10 @@ still have settled: check your wallet before paying again.
 
 - Argument errors (a value that fails the tool's input schema, or a
   precondition such as an ambiguous place name) are `bad-request` with the
-  reason in `detail`. A tool the connection does not serve is not a tool
-  result: it is a JSON-RPC error `-32602` whose message names the path that
-  serves it (`connect to /x/...`). An ambiguous place
+  reason in `detail`. A tool the server does not serve is not a tool
+  result: it is a JSON-RPC error `-32602` whose message lists the server's
+  tools and says that `search_data` returns the `get_data` call for a
+  question. An ambiguous place
   name adds `candidates`, an array of `{name}` objects to offer the user
   (names only, no coordinates).
 - A `400` or `404` problem from the API behind a tool reaches you as the
@@ -331,17 +335,16 @@ still have settled: check your wallet before paying again.
 - Every `5xx` carries a fixed, generic `detail`. When the API behind a tool
   answers `503` or `429` with `Retry-After`, the problem carries it as
   `retry_after_seconds`, as `rate-limit-exceeded` does.
-- `get_path_exposure` returns `flag-disabled` (`403`, no `next_steps`)
-  when civic place counts are not enabled for the caller, without calling
-  the API behind it. A second text block tells a model not to retry. The
-  `detail` says "this caller" rather than "this API key", because an MCP
-  caller may have no key. `find_places` does not fail in that case: it
+- `get_data` withholds a dataset behind a per-caller flag (civic places
+  today) when it is not enabled for the caller: that element has `status:
+  entitlement_required` and no features, and a call that reads only
+  withheld datasets returns `flag-disabled` (`403`, no `next_steps`)
+  without calling the API behind it. A second text block tells a model not
+  to retry. The `detail` says "this caller" rather than "this API key",
+  because an MCP caller may have no key. `get_context` does not fail in that case: it
   returns place and ZIP rows without address or POI rows.
-- `get_route_weather` returns the same `flag-disabled` `403` when route
-  weather is not enabled for the caller, without calling the API behind it;
-  its second text block also tells a model not to retry. A tool whose API
-  answers `flag-disabled` itself returns the same `403` and stop, not a
-  retryable `503`.
+- A tool whose API answers `flag-disabled` itself returns the same `403`
+  and stop, not a retryable `503`.
 - `next_steps` appears on `401`, `402` (`trial-ended`, `payment-required`),
   `403` (trial keys), `404` (`outside-coverage`, and `not-found` for a
   place), `429` (`rate-limit-exceeded`) and on the `503` a
