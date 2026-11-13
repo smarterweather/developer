@@ -1114,6 +1114,126 @@
                         }
                       }
                     },
+                    "percentiles": {
+                      "description": "index: each value's percentile (1-99) among the catalog reference period's values at that time of year, per variable that has a reference, aligned with times.",
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "states": {
+                      "description": "index: each value's state id from the variable's cited catalog states, aligned with times.",
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      }
+                    },
+                    "changes": {
+                      "description": "index: at each variable's latest sample (time), per catalog change lag, the value less the value one lag earlier; null when none is stored then.",
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "time": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "time"
+                        ],
+                        "additionalProperties": {}
+                      }
+                    },
+                    "records": {
+                      "description": "index: samples after the reference period beyond the lowest or highest reference value at that time of year, with it and its earliest date; observed and analysis values only, never a forecast or a statistic.",
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "time": {
+                              "type": "string"
+                            },
+                            "record": {
+                              "type": "string",
+                              "enum": [
+                                "low",
+                                "high"
+                              ]
+                            },
+                            "reference_extreme": {
+                              "type": "number"
+                            },
+                            "reference_extreme_date": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "time",
+                            "record",
+                            "reference_extreme",
+                            "reference_extreme_date"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      }
+                    },
+                    "family_state": {
+                      "description": "index: the catalog family_state reading, aligned with times: the coordinate of the variable holding the extreme value, and its magnitude.",
+                      "type": "object",
+                      "properties": {
+                        "coordinate": {
+                          "type": "string"
+                        },
+                        "values": {
+                          "type": "array",
+                          "items": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        },
+                        "amplitudes": {
+                          "type": "array",
+                          "items": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "coordinate",
+                        "values",
+                        "amplitudes"
+                      ],
+                      "additionalProperties": {}
+                    },
                     "windows": {
                       "type": "array",
                       "items": {

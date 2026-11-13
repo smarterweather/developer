@@ -5562,6 +5562,49 @@ paths:
         one without them, and while a variable's normals cannot be read
         it is answered without both fields and a note says so.
 
+        ### Percentiles, records, states, changes and family state
+
+        A variable whose catalog entry carries `reference_distribution`
+        (or a forecast variable whose base's `observed` series carries
+        one, and that base's percentile statistics) answers
+        `percentiles`: each value's rank, 1-99 (clamped), among the
+        values of the reference period (`reference_period`, whole years)
+        at that time of year (`window`: the days centred on the day, or
+        the calendar month). A sample belongs to the year and day of its
+        time (a period product's period start). A sample inside the
+        reference period is ranked in-sample. The reference is built from
+        the stored series this route serves, so it follows a provider's
+        revision of history within 24 h. A forecast value is ranked
+        against observed values: an ensemble mean is smoother than any one
+        observed day, so its percentile sits nearer the middle as lead
+        time grows, and the member spread is what its percentile
+        statistics show. `records` lists each sample after the reference
+        period beyond the lowest or highest reference value at that time
+        of year, with that value and its earliest date: it is against the
+        closed reference period, not a running record, so two later
+        samples past it are both listed. Records apply to observed and
+        analysis values only: a forecast value, or a statistic, beyond
+        the observed extreme answers its clamped percentile and no
+        record. A variable whose catalog entry
+        carries `states` (or a percentile statistic whose base does)
+        answers `states`: each value's state id, the first entry of the
+        cited set that admits it. A variable with `change_lags` answers
+        `changes`: at its latest non-null sample in the answer, the value
+        less the stored value one lag earlier on the product's calendar,
+        null when none is stored at exactly that time. A product with
+        `family_state` answers `family_state` when the read holds every
+        variable carrying its coordinate (the default read does): at each
+        time, the coordinate of the variable holding the extreme value
+        and its magnitude, null where a variable is missing or the
+        extreme is not on its own side of zero. There is no word for
+        them. A reference not built yet is answered without percentiles
+        and records, with a note, and the answer is not cached as
+        complete. A variable whose stored history does not span its
+        reference period is answered without them, with its own note,
+        and cached as usual. A reference read from another product (a
+        forecast ranked on its observed series) credits that product's
+        source in `meta.sources`.
+
         ### Paging
 
         `limit` (1-744, default 168) times per page. A cut page has
@@ -10866,6 +10909,44 @@ components:
           type: string
           pattern: '^https://[^\s]+$'
 
+    CatalogStates:
+      type: object
+      additionalProperties: false
+      description: |
+        An index variable's ordered states, cited to the provider page
+        whose bounds they are: a value's state is the first entry whose
+        bound admits it (`max` inclusive, `below` exclusive; the last entry
+        has neither). `GET /v1/indices` answers each value's entry `id` as
+        `states`.
+      required: [citation, description, entries]
+      properties:
+        citation:
+          $ref: '#/components/schemas/CatalogCitation'
+        description:
+          type: string
+          maxLength: 400
+        entries:
+          type: array
+          minItems: 2
+          maxItems: 12
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, label]
+            properties:
+              id:
+                type: string
+                pattern: '^[a-z][a-z0-9_]*$'
+              label:
+                type: string
+                maxLength: 60
+              max:
+                type: number
+                description: Inclusive upper bound, in the variable's units.
+              below:
+                type: number
+                description: Exclusive upper bound, in the variable's units.
+
     CatalogInterpretation:
       type: object
       additionalProperties: false
@@ -11007,6 +11088,27 @@ components:
               oneOf:
                 - $ref: '#/components/schemas/CatalogInterpretation'
                 - type: 'null'
+            family_state:
+              type: object
+              additionalProperties: false
+              description: |
+                On an index product whose variables share a coordinate (the
+                MJO's longitudes): `GET /v1/indices` answers, at each time,
+                the `coordinate` value of the variable holding the
+                `extreme` (`min` or `max`) value and its magnitude.
+                Absent otherwise.
+              required: [coordinate, extreme, citation, description]
+              properties:
+                coordinate:
+                  type: string
+                  example: longitude
+                extreme:
+                  type: string
+                  enum: [min, max]
+                citation:
+                  $ref: '#/components/schemas/CatalogCitation'
+                description:
+                  type: string
             variables:
               type: array
               items:
@@ -11165,6 +11267,55 @@ components:
             variable:
               type: string
               example: nao
+        reference_distribution:
+          type: object
+          additionalProperties: false
+          description: |
+            On an analysis index variable: the series its values are ranked
+            against for `percentiles` and `records` on `GET /v1/indices`,
+            the variable's own (`product` is this product) or another
+            product's, by `standard_name`. `reference_period` is the first
+            and last whole year pooled; `window` the days centred on each
+            day of year (`P31D`) or the calendar month (`P1M`). A forecast
+            variable carries none: it is ranked through its base's
+            `observed` series.
+          required: [product, variable, reference_period, window]
+          properties:
+            product:
+              type: string
+              example: cpc_nao_cdas
+            variable:
+              type: string
+              example: nao
+            reference_period:
+              type: array
+              minItems: 2
+              maxItems: 2
+              items:
+                type: integer
+              example: [1950, 2025]
+            window:
+              type: string
+              example: P31D
+        states:
+          $ref: '#/components/schemas/CatalogStates'
+        change_lags:
+          type: array
+          description: |
+            On an analysis index variable: the lags (ISO 8601 durations,
+            whole months or whole days) `GET /v1/indices` reports its
+            `changes` over.
+          items:
+            type: string
+          example: [P7D, P30D]
+        coordinates:
+          type: object
+          description: |
+            The variable's place in its product's `family_state`, such as
+            `longitude` in degrees east (-180 to 180).
+          additionalProperties:
+            type: number
+          example: {longitude: 120}
         of:
           type: string
           description: |
@@ -14103,6 +14254,103 @@ components:
             type: array
             items:
               type: [number, "null"]
+        percentiles:
+          type: object
+          description: |
+            Each value's percentile, 1-99 (clamped), among the reference
+            period's values at that time of year (the catalog variable's
+            `reference_distribution`, or its forecast base's `observed`
+            series'), keyed and aligned as `values`; null where the value
+            is missing. Relative to the reference period and the time of
+            year; a sample inside the reference period is ranked
+            in-sample; a forecast value is ranked against observed values.
+            Present only for the selected variables that resolve a
+            reference that is built.
+          additionalProperties:
+            type: array
+            items:
+              type: [integer, "null"]
+          example: {nao: [12, 47, null]}
+        states:
+          type: object
+          description: |
+            Each value's state id, keyed and aligned as `values`: the first
+            entry of the variable's catalog `states` (a percentile
+            statistic's base's) that admits it; null where the value is
+            missing.
+          additionalProperties:
+            type: array
+            items:
+              type: [string, "null"]
+          example: {nao: [negative, positive, null]}
+        changes:
+          type: object
+          description: |
+            Per variable with catalog `change_lags`, at its latest non-null
+            sample in this answer (`time`): per lag, the value less the
+            stored value one lag earlier on the product's calendar, in the
+            variable's units; null when no value is stored at exactly that
+            time.
+          additionalProperties:
+            type: object
+            required: [time]
+            properties:
+              time:
+                type: string
+                format: date-time
+            additionalProperties:
+              type: [number, "null"]
+          example: {nao: {time: '2026-11-11T00:00:00Z', P7D: -0.41, P30D: 1.1}}
+        records:
+          type: object
+          description: |
+            Per variable with a built reference, the samples after the
+            reference period strictly below the lowest (`low`) or above the
+            highest (`high`) reference value at that time of year, with
+            that value and the date of its earliest sample. Against the
+            closed reference period, not a running record. Observed and
+            analysis values only: never on a forecast product or a
+            statistic (percentile, stddev, probability). Absent for a
+            variable with none.
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              required: [time, record, reference_extreme, reference_extreme_date]
+              properties:
+                time:
+                  type: string
+                  format: date-time
+                record:
+                  type: string
+                  enum: [low, high]
+                reference_extreme:
+                  type: number
+                reference_extreme_date:
+                  type: string
+                  format: date
+        family_state:
+          type: object
+          description: |
+            The product's catalog `family_state` reading, aligned with
+            `times`: the `coordinate` value of the variable holding the
+            extreme value, and that value's magnitude; null where a
+            variable is missing or the extreme is not on its own side of
+            zero. Present only when the read holds every variable carrying
+            the coordinate.
+          required: [coordinate, values, amplitudes]
+          properties:
+            coordinate:
+              type: string
+              example: longitude
+            values:
+              type: array
+              items:
+                type: [number, "null"]
+            amplitudes:
+              type: array
+              items:
+                type: [number, "null"]
         run:
           type: string
           format: date-time
