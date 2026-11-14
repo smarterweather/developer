@@ -452,6 +452,15 @@ Place codes (GNIS), park boundaries (PAD-US 4.1) and the terrain heights behind 
 - Obligation: none
 - Basis: 17 U.S.C. §105; the USGS copyrights and credits page asks that proper credit be given and PAD-US recommends a citation (requests).
 
+### U.S. Geological Survey 3D Elevation Program (3DEP) seamless DEMs
+
+Terrain relief (hillshade) in the basemap: the 1/3 and 1 arc-second seamless DEMs, read through USGS_Seamless_DEM_13.vrt and USGS_Seamless_DEM_1.vrt (both dated 2026-10-30) at https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/.
+
+- License: Public domain (U.S. Government work)
+- Terms: https://www.usgs.gov/3d-elevation-program/about-3dep-products-services
+- Obligation: none
+- Basis: 17 U.S.C. §105. The 3DEP products page: "All 3DEP products are available, free of charge and without use restrictions." The 1 arc-second layer also carries cells over Canada and Mexico that reached USGS from NRCan and INEGI ("Most of Canada and Mexico are also covered by the 1 arc-second dataset."); no credit there rests on the same USGS statement, so a later licence review starts from it.
+
 Data has been modified by Smarter Weather. Where we use data available under the Open Database License, we will provide the derived database, or a description of how it was altered, on request: hello@smarterweather.com.
 
 When you build on the Smarter Weather API or MCP server, you remain
