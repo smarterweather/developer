@@ -145,9 +145,245 @@ Address points.
 
 - License: Per source (each source under its own license)
 - Attribution: Addresses: OpenAddresses, Overture Maps Foundation and the U.S. DOT National Address Database, each source under its own license.
+- Attribution: Credited to Carson City. Carson City is not responsible for the accuracy of the information. Modifications were made without the involvement or knowledge of Carson City.
+- Attribution: The City of Las Cruces Enterprise GIS makes no representation of any kind, including, but not limited to, warranties of merchantability or fitness for a particular purpose or use, nor are any such warranties to be implied with respect to the accuracy information/data presented on this map. Transfer, copies and/or use of information in this solution without the presentation of this disclaimer is prohibited.
 - Terms: https://github.com/openaddresses/openaddresses
 - Obligation: required, on https://smarterweather.com/acknowledgements/
 - Basis: OpenAddresses README: "Individual sources will have their own licenses"; each source's license applies.
+- Sources:
+  - AZ statewide
+  - Adams, CO (CC BY 4.0)
+  - Adams, ID
+  - Albany, WY
+  - Albuquerque, NM
+  - Arapahoe, CO
+  - Archuleta, CO
+  - Bannock, ID
+  - Beaverhead, MT
+  - Bernalillo County GIS Technology Section, Planning & Development Services
+  - Big Horn, MT
+  - Big Horn, WY
+  - Bingham, ID
+  - Blaine, ID
+  - Blaine, MT
+  - Bonner, ID
+  - Bonneville County
+  - Boulder, CO (CC BY 4.0)
+  - Boundary, ID
+  - Box Elder, UT
+  - Broadwater, MT
+  - Broomfield, CO
+  - Cache County GIS
+  - Campbell, WY
+  - Canyon, ID
+  - Carbon, MT
+  - Carbon, WY
+  - Caribou, ID
+  - Carter, MT
+  - Cascade, MT
+  - Chaffee, CO
+  - Chaves, NM
+  - Cheyenne, CO
+  - Chouteau, MT
+  - Churchill, NV
+  - City of Boise: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+  - City of Boise, ID
+  - City of Carlsbad, NM
+  - City of Centennial
+  - City of Commerce City
+  - City of Denver Open Data Catalog: [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)
+  - City of Erie, CO
+  - City of Farmington, NM
+  - City of Flagstaff, AZ
+  - City of Fort Collins, CO
+  - City of Frederick, CO
+  - City of Gilbert, AZ
+  - City of Gillette GIS Division
+  - City of Glendale
+  - City of Greeley, CO
+  - City of Littleton, CO
+  - City of Loveland, CO
+  - City of Mesa, AZ
+  - City of Morgan, UT
+  - City of Provo, UT
+  - City of Santa Fe, NM
+  - City of Scottsdale, AZ
+  - City of Sheridan, WY
+  - City of Thornton, CO
+  - City of Twin Falls, ID
+  - City of Vail, CO
+  - City of Westminster, CO
+  - City of Wright, WY
+  - Clark, NV
+  - Clear Creek, CO
+  - Clearwater County
+  - Cochise, AZ
+  - Coconino County GIS
+  - Conejos, CO
+  - Converse, WY
+  - Crook, WY
+  - Custer, CO
+  - Custer, ID
+  - Custer, MT
+  - Daniels, MT
+  - Dawson, MT
+  - De Baca, NM
+  - Deer Lodge, MT
+  - Delta, CO
+  - Dolores, CO
+  - Dona Ana-2, NM
+  - Douglas County, Colorado: [License](https://www.douglasco.gov/documents/open-data-guidelines.pdf/)
+  - Douglas, NV
+  - Doña Ana County GIS Division
+  - Eagle, CO
+  - Eddy, NM
+  - El Paso, CO
+  - Elbert, CO
+  - Elko, NV
+  - Esri Community Maps Contributors; Aurora, CO
+  - Eureka County
+  - Fallon, MT
+  - Fergus, MT
+  - Flathead, MT
+  - Franklin, ID
+  - Fremont, CO
+  - Fremont, ID
+  - Fremont, WY
+  - Gallatin, MT
+  - Garfield, CO
+  - Garfield, MT
+  - Gila, AZ
+  - Gilpin County
+  - Glacier, MT
+  - Golden Valley, MT
+  - Goshen, WY
+  - Governor's Office of Information Technology (Public Domain)
+  - Grand, CO
+  - Granite, MT
+  - Gunnison, CO
+  - Helena, MT
+  - Henderson, NV
+  - Hill, MT
+  - Hot Springs, WY
+  - Humboldt, NV
+  - ID statewide
+  - Idaho, ID
+  - Jefferson County, Colorado
+  - Jefferson, ID
+  - Jefferson, MT
+  - Jerome, ID
+  - Judith Basin, MT
+  - Kootenai, ID
+  - La Plata, CO
+  - Lake County Mapping Department
+  - Lake, MT
+  - Lander, NV
+  - Laramie, WY
+  - Larimer, CO
+  - Las Vegas, NV
+  - Latah, ID
+  - Lea County, New Mexico
+  - Lemhi, ID
+  - Liberty, MT
+  - Lincoln County, Nevada
+  - Lincoln, MT
+  - Lincoln, NM
+  - Lincoln, WY
+  - Logan, CO
+  - Los Alamos County GIS
+  - Luna, NM
+  - Lyon County, NV Assessor's Office
+  - MT statewide
+  - Madison, ID
+  - Madison, MT
+  - Maricopa, AZ
+  - Mccone, MT
+  - Mckinley, NM
+  - Meagher, MT
+  - Mesa County GIS (CC BY)
+  - Mineral, CO
+  - Mineral, MT
+  - Mineral, NV
+  - Missoula, MT
+  - Moffat County Assessor's Office
+  - Mohave, AZ
+  - Montezuma, CO
+  - Montrose, CO
+  - Morgan, CO
+  - Musselshell, MT
+  - NM911 Program
+  - Natrona Regional Geospatial Cooperative (NRGC)
+  - New Mexico 911 (NM911) Program: [License](https://gstore.unm.edu/apps/rgis/datasets/8850b25e-e495-46b5-952d-0fa1fa129ada/metadata/FGDC-STD-001-1998.html)
+  - Nez Perce, ID
+  - Niobrara, WY
+  - Nye, NV
+  - Ouray, CO
+  - Park, CO
+  - Park, MT
+  - Park, WY
+  - Pershing, NV
+  - Petroleum, MT
+  - Phillips, CO
+  - Phillips, MT
+  - Pima, AZ
+  - Pinal, AZ
+  - Pitkin, CO
+  - Pondera, MT
+  - Post Falls, ID
+  - Powder River, MT
+  - Powell, MT
+  - Prairie, MT
+  - Pueblo, CO
+  - Ravalli, MT
+  - Richland, MT
+  - Rio Blanco, CO
+  - Rio Grande, CO
+  - Roosevelt, MT
+  - Rosebud, MT
+  - Routt County GIS
+  - Saguache, CO
+  - San Juan County, New Mexico
+  - Sanders, MT
+  - Sandoval, NM
+  - Sanmiguel, CO
+  - Santa Cruz, AZ
+  - Santa Fe, NM
+  - Sedgwick, CO
+  - Sheridan, MT
+  - Silverbow, MT
+  - Stillwater, MT
+  - Storey, NV
+  - Sublette, WY
+  - Summit County
+  - Sweet Grass, MT
+  - Sweetwater, WY
+  - Teller County GIS
+  - Teton County, Idaho GIS
+  - Teton, MT
+  - Toole, MT
+  - Torrance, NM
+  - Town of Taos GIS
+  - Treasure, MT
+  - Utah Geospatial Reference Center (AGRC): [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/)
+  - Utah UGRC: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+  - Utah, UT
+  - Valencia County Assessor's Office
+  - Valley, ID
+  - Valley, MT
+  - WY statewide
+  - Washington, CO
+  - Washington, UT
+  - Washoe, NV
+  - Weber, UT
+  - Weld, CO
+  - Weston, WY
+  - Wheatland, MT
+  - White Pine, NV
+  - Wibaux, MT
+  - Yavapai, AZ
+  - Yellowstone, MT
+  - Yuma, AZ
+  - Yuma, CO
 
 ### OpenStreetMap
 
