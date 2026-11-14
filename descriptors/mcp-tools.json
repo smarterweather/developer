@@ -1234,6 +1234,78 @@
                       ],
                       "additionalProperties": {}
                     },
+                    "episodes": {
+                      "description": "index: per variable with catalog events, the runs of each cited rule intersecting this read, newest onset first: onset, end (null while open), samples, peak, status (observed, candidate, confirmed, or forecast on a forecast product's rows).",
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "rule": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "observed",
+                                "candidate",
+                                "confirmed",
+                                "forecast"
+                              ]
+                            },
+                            "onset": {
+                              "type": "string"
+                            },
+                            "end": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "samples": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "rule",
+                            "status",
+                            "onset",
+                            "end",
+                            "samples"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      }
+                    },
+                    "official_status": {
+                      "description": "index: the provider's own status line, verbatim, from its latest text product (issued_at); on reads that reach the present only, never inferred from a value.",
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        },
+                        "issued_at": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "value",
+                        "issued_at",
+                        "source"
+                      ],
+                      "additionalProperties": {}
+                    },
                     "windows": {
                       "type": "array",
                       "items": {

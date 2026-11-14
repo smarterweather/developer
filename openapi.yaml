@@ -5605,6 +5605,30 @@ paths:
         forecast ranked on its observed series) credits that product's
         source in `meta.sources`.
 
+        ### Episodes and official status
+
+        A variable whose catalog entry carries `events` (cited run rules
+        beside its `states`) answers `episodes`: each rule's runs of
+        consecutive samples in its states that intersect the answer,
+        newest onset first, at most 32 per variable, with `onset`,
+        `end` (null while open), `samples`, `peak` and `status`
+        (`observed`, `candidate`, `confirmed`, `forecast`). They are our
+        evaluation of the cited rule on the stored values, from the page,
+        up to 744 steps before it and, on a page with a `next_cursor`, up
+        to 744 steps after it, so a run the page cuts keeps its own end; an
+        episode whose onset those rows cannot place (it reaches their first
+        row, or follows a null or a missing step) says `onset_capped`, and
+        one whose length or recovery they cannot tell stays `candidate`. A
+        forecast product's episodes are all `forecast`, evaluated on the
+        whole run; one starting at the run's first row carries the observed
+        series' open episode of the same rule as `observed`, crediting that
+        product's source. A product whose catalog entry carries a
+        `status_source` answers `official_status`: the provider's own
+        status line, verbatim, with its issue time, only on an answer that
+        reaches the present. A lookback or status that cannot be read is
+        answered without the field, with a note, and the answer is not
+        cached as complete. There is no word for them.
+
         ### Paging
 
         `limit` (1-744, default 168) times per page. A cut page has
@@ -10917,7 +10941,10 @@ components:
         whose bounds they are: a value's state is the first entry whose
         bound admits it (`max` inclusive, `below` exclusive; the last entry
         has neither). `GET /v1/indices` answers each value's entry `id` as
-        `states`.
+        `states`. With `decimals`, the value is first rounded to that many
+        decimals, half away from zero (the precision the provider
+        classifies on), so `states` and `episodes` classify the value the
+        provider prints; `values` keep the stored value.
       required: [citation, description, entries]
       properties:
         citation:
@@ -10925,6 +10952,15 @@ components:
         description:
           type: string
           maxLength: 400
+        decimals:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: |
+            The precision the provider classifies on: the value is rounded
+            to this many decimals before it is compared with the bounds.
+            Absent: the stored value is compared.
+          example: 1
         entries:
           type: array
           minItems: 2
@@ -10946,6 +10982,104 @@ components:
               below:
                 type: number
                 description: Exclusive upper bound, in the variable's units.
+
+    CatalogEvent:
+      type: object
+      additionalProperties: false
+      description: |
+        A cited run rule beside an index variable's `states`: a run of
+        consecutive samples (one product step apart, none null) whose state
+        is one of `states`. Counts appear only where the cited page states
+        them, written in `step`: `min_run` (samples to confirm),
+        `onset_months` (months an onset may fall in), `separation`
+        (consecutive out-of-criterion samples that must separate two
+        episodes; a shorter stretch with no gap or null merges a run into
+        an episode whose onset is in `onset_months`, and a run outside
+        them is no episode and holds none back) and `recovery` (`run` consecutive
+        out-of-criterion samples after the episode, the last before the
+        first `before` month-day after the onset, to confirm). `GET
+        /v1/indices` answers each as `episodes`, our evaluation of the
+        cited rule on the stored values.
+      required: [id, label, description, states, citation]
+      properties:
+        id:
+          type: string
+          pattern: '^[a-z][a-z0-9_]*$'
+          example: el_nino
+        label:
+          type: string
+          maxLength: 60
+        description:
+          type: string
+          maxLength: 400
+        states:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          description: The entry ids of the variable's `states` a sample must be in.
+        citation:
+          $ref: '#/components/schemas/CatalogCitation'
+        step:
+          type: string
+          description: The product step the counts are written in (ISO 8601).
+          example: P1M
+        min_run:
+          type: integer
+          minimum: 2
+          example: 5
+        onset_months:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 12
+          example: [11, 12, 1, 2, 3]
+        separation:
+          type: integer
+          minimum: 1
+          example: 20
+        recovery:
+          type: object
+          additionalProperties: false
+          required: [run, before]
+          properties:
+            run:
+              type: integer
+              minimum: 1
+              example: 10
+            before:
+              type: string
+              pattern: '^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'
+              example: '04-30'
+
+    CatalogStatusSource:
+      type: object
+      additionalProperties: false
+      description: |
+        The provider's own status for an index product: `GET /v1/indices`
+        reads the latest text product (`product_type`, `awips_id`) and
+        answers the text after its first body line starting with `line`,
+        verbatim, as `official_status` with the product's issue time.
+        Read, never inferred.
+      required: [product_type, awips_id, line, label, description, citation]
+      properties:
+        product_type:
+          type: string
+          example: PMD
+        awips_id:
+          type: string
+          example: PMDENS
+        line:
+          type: string
+          example: 'ENSO Alert System Status:'
+        label:
+          type: string
+          example: ENSO Alert System Status
+        description:
+          type: string
+        citation:
+          $ref: '#/components/schemas/CatalogCitation'
 
     CatalogInterpretation:
       type: object
@@ -11088,6 +11222,8 @@ components:
               oneOf:
                 - $ref: '#/components/schemas/CatalogInterpretation'
                 - type: 'null'
+            status_source:
+              $ref: '#/components/schemas/CatalogStatusSource'
             family_state:
               type: object
               additionalProperties: false
@@ -11299,6 +11435,14 @@ components:
               example: P31D
         states:
           $ref: '#/components/schemas/CatalogStates'
+        events:
+          type: array
+          description: |
+            On an index variable with `states`: the cited run rules `GET
+            /v1/indices` answers as `episodes`. Empty when the catalog
+            declares none for the set.
+          items:
+            $ref: '#/components/schemas/CatalogEvent'
         change_lags:
           type: array
           description: |
@@ -14155,6 +14299,107 @@ components:
           description: One element, for the product in the path.
           items:
             $ref: '#/components/schemas/IndexElement'
+    IndexEpisode:
+      x-stability: experimental
+      type: object
+      description: |
+        One run of a catalog event rule. `onset` and `end` are the first
+        and last in-criterion sample times (valid times, as in `times`;
+        `end` may be after the page's last time when rows follow it);
+        `end` is null while no later sample has a value (a trailing null
+        is not yet known, so it does not end the run).
+        `samples` counts the in-criterion samples (a seasonal index's
+        overlapping seasons are samples, not a duration). `status`:
+        `observed` (a plain run on observed or analysis values),
+        `candidate` (a rule with a confirmation, its criterion met and the
+        confirmation not yet, or not decidable from the stored rows: an
+        onset they cannot place, or a length or recovery a null or a
+        missing step hides),
+        `confirmed` (every condition met in observed rows), `forecast`
+        (any episode on a forecast product's rows; never another status
+        there). `onset_capped`: the run reaches the first evaluated row,
+        follows a null or a missing step, or a `separation` rule's history
+        before it runs out at one of those, so the true onset may be
+        earlier; such an episode of a rule with `onset_months`
+        or `separation` is never `confirmed`. `peak`: the most extreme
+        stored value (the minimum for a rule in the set's lowest state,
+        the maximum for its highest; absent for neither). `observed`: on a
+        forecast episode starting at the run's first row, the observed
+        series' open episode of the same rule as of that time, a separate
+        fact with its own status.
+      required: [rule, status, onset, end, samples]
+      properties:
+        rule:
+          type: string
+          example: el_nino
+        status:
+          type: string
+          enum: [observed, candidate, confirmed, forecast]
+        onset:
+          type: string
+          format: date-time
+        end:
+          type: [string, "null"]
+          format: date-time
+        samples:
+          type: integer
+          minimum: 1
+        peak:
+          type: object
+          required: [time, value]
+          properties:
+            time:
+              type: string
+              format: date-time
+            value:
+              type: number
+        onset_capped:
+          type: boolean
+        observed:
+          type: object
+          required: [onset, last, samples, status]
+          properties:
+            onset:
+              type: string
+              format: date-time
+            last:
+              type: string
+              format: date-time
+            samples:
+              type: integer
+              minimum: 1
+            status:
+              type: string
+              enum: [observed, candidate, confirmed]
+
+    IndexOfficialStatus:
+      x-stability: experimental
+      type: object
+      description: |
+        The provider's own status, on a product whose catalog entry
+        declares a `status_source`: `value` is the text after the labelled
+        line of the latest text product, verbatim, and `issued_at` that
+        product's issue time; never inferred from an index value. A
+        current status: absent on an answer that does not reach the
+        present (`at`, `run`, `cursor`, a page with a `next_cursor`, or an
+        `end` before `issued_at`),
+        when the text product is older than its issuer's cadence allows,
+        or (with a note) when it could not be read.
+      required: [label, value, issued_at, source]
+      properties:
+        label:
+          type: string
+          example: ENSO Alert System Status
+        value:
+          type: string
+          example: El Nino Advisory
+        issued_at:
+          type: string
+          format: date-time
+        source:
+          type: string
+          example: PMDENS
+
     IndexElement:
       x-stability: experimental
       type: object
@@ -14351,6 +14596,29 @@ components:
               type: array
               items:
                 type: [number, "null"]
+        episodes:
+          type: object
+          description: |
+            Per variable whose catalog entry declares `events`: the runs of
+            each rule that intersect this answer's times, newest onset
+            first, at most 32 (a note says when more exist; narrow `start`
+            and `end`); `[]` when none. Our evaluation of the cited rule
+            on the values stored now (providers revise them), so this is a
+            cut in time, not a vintage: the page plus up to 744 steps
+            before it and, on a page with a `next_cursor`, up to 744 steps
+            after it, so every page of a paged read reports a run with the
+            same onset, end and status, and a null `end` means in
+            criterion at the series' latest value. On a forecast product
+            every episode is `forecast`, evaluated on the whole run.
+            Absent when no selected variable declares events, or (with a
+            note) when those rows could not be read.
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/IndexEpisode'
+          example: {roni: [{rule: el_nino, status: confirmed, onset: '2026-04-01T00:00:00Z', end: null, samples: 5, peak: {time: '2026-08-01T00:00:00Z', value: 1.97}}]}
+        official_status:
+          $ref: '#/components/schemas/IndexOfficialStatus'
         run:
           type: string
           format: date-time
