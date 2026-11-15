@@ -72,16 +72,16 @@
     {
       "name": "get_context",
       "title": "Get context",
-      "description": "Where a place is and what time it is there. `query` (a name, ZIP, venue or address) or `lat`+`lon` to ranked `candidates` with lat/lon, timezone and `type` place|zip|address|poi|county|station; `time`: `utc` and, per distinct zone among the candidates, its local time and a 14-day calendar (join on `timezone`). Sun and moon are get_data reads. Example: {\"lat\": 39.74, \"lon\": -104.99} -> Denver, America/Denver.",
+      "description": "Where a place is and what time it is there. `location` or `lat`+`lon` to ranked `candidates` with lat/lon, timezone and `type` place|zip|address|poi|county|station; `time`: `utc` and, per distinct zone among the candidates, its local time and a 14-day calendar (join on `timezone`). Sun and moon are get_data reads. Example: {\"location\": \"Pella, IA\"} -> Pella, America/Chicago.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "query": {
-            "description": "Place name, ZIP or venue/address (1-200 characters); not with lat/lon.",
+          "location": {
+            "description": "Place name, ZIP, venue/address or \"lat,lon\" (1-200 characters); not with lat/lon.",
             "type": "string"
           },
           "lat": {
-            "description": "Latitude (-90 to 90), with lon; not with query.",
+            "description": "Latitude (-90 to 90), with lon; not with location.",
             "type": "number"
           },
           "lon": {
@@ -89,15 +89,15 @@
             "type": "number"
           },
           "fuzzy": {
-            "description": "Query only: autosuggest for partial or misspelled input. Default false.",
+            "description": "Text only: autosuggest for partial or misspelled input. Default false.",
             "type": "boolean"
           },
           "limit": {
-            "description": "Query only: how many candidates (1-10). Default 5.",
+            "description": "Text only: how many candidates (1-10). Default 5.",
             "type": "integer"
           },
           "near_lat": {
-            "description": "Query only: rank near this point (-90 to 90); with near_lon.",
+            "description": "Text only: rank near this point (-90 to 90); with near_lon.",
             "type": "number"
           },
           "near_lon": {
@@ -285,7 +285,7 @@
       "_meta": {
         "smarterweather.dev/required_one_of": [
           [
-            "query"
+            "location"
           ],
           [
             "lat",
