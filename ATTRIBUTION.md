@@ -155,6 +155,7 @@ Address points.
 - Obligation: required, on https://smarterweather.com/acknowledgements/
 - Basis: OpenAddresses README: "Individual sources will have their own licenses"; each source's license applies.
 - Sources:
+  - Accomack, VA
   - Adair, IA
   - Adams County, Indiana GIS
   - Adams, CO (CC BY 4.0)
@@ -162,56 +163,106 @@ Address points.
   - Adams, IL
   - Adams, NE
   - Adams, OH
+  - Adams, PA
   - Adams, WI
+  - Aiken, SC
   - Aitkin, MN
+  - Alachua County Property Appraiser
+  - Alamance, NC
   - Albany, WY
+  - Albemarle, VA
   - Albuquerque, NM
   - Alcona, MI
+  - Alexander, NC
+  - Allegany, MD
+  - Alleghany County, Virginia
+  - Alleghany, NC
+  - Allegheny, PA
   - Allen County, KS
   - Allen, IN
   - Allen, OH
+  - Amelia, VA
+  - Amherst, VA
   - Anderson County, KS
+  - Anderson, SC
+  - Anne Arundel, MD
   - Anoka, MN
+  - Anson, NC
   - Antelope, NE
   - Antrim, MI
+  - Appling, GA
+  - Appomattox County GIS
   - Arapahoe, CO
   - Archuleta, CO
   - Arenac, MI
+  - Arlington, VA
+  - Armstrong, PA
   - Arthur, NE
+  - Ashe, NC
   - Ashland, OH
   - Ashland, WI
   - Ashtabula, OH
   - Atchison County, KS
+  - Athens-Clarke County GIS: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+  - Athens-Clarke County Unified Government: [License](https://creativecommons.org/licenses/by/4.0/)
   - Athens, OH
+  - Atkinson, GA
   - Auglaize, OH
+  - Augusta, VA
   - Aurora County, SD / Planning and Development District III
+  - Avery County, NC
   - AZ statewide
+  - Bacon, GA
+  - Baker County Property Appraiser's Office
+  - Baldwin, GA
   - Banner, NE
   - Bannock, ID
   - Barber County, KS
+  - Barbour, WV
   - Barron, WI
+  - Barrow County GIS
   - Barry County Emergency Services E 9-1-1: [License](https://data-msdis.opendata.arcgis.com/maps/c22efafeed924bd8afea5ed24a265b13/about)
   - Barry, MI
   - Barton County, KS
+  - Bartow, GA
   - Bates, MO
+  - Bay, FL
   - Bayfield, WI
   - Beadle, SD
+  - Beaufort, NC
+  - Beaufort, SC
+  - Beaver, PA
   - Beaverhead, MT
   - Becker, MN
+  - Bedford, PA
+  - Bedford, VA
   - Belmont County GIS
   - Beltrami, MN
+  - Ben Hill, GA
   - Bennett, SD
   - Benton, MN
   - Benzie County
+  - Bergen, NJ
+  - Berkeley County, WV
+  - Berkeley, SC
+  - Berks County GIS
   - Bernalillo County GIS Technology Section, Planning & Development Services
+  - Berrien, GA
   - Berrien, MI
+  - Bertie, NC
+  - Bibb, GA
+  - Bibb2, GA
   - Big Horn, MT
   - Big Horn, WY
   - Bingham, ID
+  - Bladen, NC
   - Blaine, ID
   - Blaine, MT
   - Blaine, NE
+  - Blair, PA
+  - Bleckley, GA
   - Blount, TN
+  - Blowing Rock, NC
   - Blue Earth, MN
   - Bon Homme, SD
   - Bond, IL
@@ -227,218 +278,390 @@ Address points.
   - Box Butte, NE
   - Box Elder, UT
   - Boyd, KY
+  - Bradford, FL
+  - Bradford, PA
   - Branch, MI
+  - Brantley, GA
+  - Braxton, WV
   - Bremer County GIS Department
+  - Brevard, FL
   - Broadwater, MT
+  - Brooke, WV
+  - Brooks, GA
+  - Broome, NY
   - Broomfield, CO
+  - Broward, FL
   - Brown County, KS
   - Brown, IL
   - Brown, NE
   - Brown, OH
   - Brown, WI
   - Brule, SD
+  - Brunswick, NC
+  - Bryan, GA
   - Buchanan, MO
   - Buffalo, NE
   - Buffalo, SD
   - Buffalo, WI
+  - Bulloch, GA
+  - Buncombe, NC
   - Bureau, IL
+  - Burke, GA
+  - Burke, NC
   - Burleigh, ND
   - Burt, NE
+  - Butler County GIS/Mapping Department: [License](https://www.butlercountypa.gov/353/Mapping)
   - Butler, KS
   - Butler, NE
   - Butler, OH
   - Butte, SD
+  - Cabarrus, NC
+  - Cabell, WV
   - Cache County GIS
+  - Caldwell, NC
+  - Calhoun County Assessor
+  - Calhoun, FL
+  - Calhoun, GA
   - Calhoun, IL
   - Calumet County Wisconsin: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+  - Calvert, MD
+  - Cambria, PA
+  - Camden County Board of Commissioners
+  - Camden, NC
+  - Cameron, PA
+  - Campbell County, VA GIS Office
   - Campbell, KY
   - Campbell, SD
   - Campbell, WY
+  - Candler, GA
   - Canyon, ID
+  - Cape May, NJ
   - Carbon, MT
+  - Carbon, PA
   - Carbon, WY
   - Caribou, ID
   - Carlton, MN
+  - Caroline, MD
+  - Carroll, GA
   - Carroll, IL
   - Carroll, OH
   - Carter, MT
+  - Carteret County GIS
+  - Cary, NC
   - Cascade, MT
   - Cass, MN
   - Cass, ND
   - Cass, NE
+  - Caswell, NC
+  - Catawba, NC
+  - Cayuga County Department of Planning and Economic Development
+  - Cecil, MD
   - Cedar, IA
   - Cedar, NE
+  - Centre, PA
   - Cerro Gordo County, Iowa
   - Chaffee, CO
   - Champaign, IL
   - Champaign, OH
   - Charles Mix, SD
+  - Charleston, SC
+  - Charlotte, FL
+  - Charlton, GA
   - Chase, NE
+  - Chatham, NC
+  - Chattahoochee, GA
+  - Chattooga, GA
   - Chautauqua County, KS
   - Chaves, NM
   - Cheatham County, Tennessee
+  - Cherokee County GIS
   - Cherry, NE
+  - Chester, PA
+  - Chesterfield, SC
   - Cheyenne County, Kansas
   - Cheyenne, CO
   - Cheyenne, NE
   - Chippewa, MN
   - Chippewa, WI
   - Chouteau, MT
+  - Chowan, NC
   - Christian, IL
   - Churchill, NV
+  - Citrus, FL
+  - City of Alexandria, VA
+  - City of Allentown, PA
+  - City of Alma, GA
+  - City of Alpharetta, GA
+  - City of Americus, Sumter County, KCS
   - City of Arena, WI
+  - City of Atlanta, GA
+  - City of Auburn, NH
   - City of Aurora, IL
+  - City of Baltimore, MD
+  - City of Biddeford, ME
   - City of Bismarck, ND
   - City of Bloomington, IN
   - City of Boise: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
   - City of Boise, ID
+  - City of Boone, NC
+  - City of Boston, MA
   - City of Brentwood, TN
+  - City of Bridgeport, CT
+  - City of Brookhaven
+  - City of Brookline, MA
+  - City of Burlington, VT
+  - City of Cape Coral, FL
   - City of Cape Girardeau, MO
   - City of Carlsbad, NM
+  - City of Carolina Beach, NC
   - City of Centennial
   - City of Champaign, IL
+  - City of Charlottesville, VA
   - City of Chattanooga, TN
+  - City of Chesapeake, VA
   - City of Chicago, IL
   - City of Columbia, MO
   - City of Columbus, OH
   - City of Commerce City
   - City of Coopersville, MI
+  - City of Cranston, RI
+  - City of Danville, VA
   - City of Denver Open Data Catalog: [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)
+  - City of Dover, DE
   - City of East Peoria
+  - City of Elizabeth City, NC
+  - City of Emporia, VA
   - City of Erie, CO
   - City of Evanston, IL
   - City of Evansville, IN
+  - City of Falls Church, VA
   - City of Fargo, ND
   - City of Farmington, NM
   - City of Flagstaff, AZ
   - City of Flint, MI
   - City of Fort Collins, CO
+  - City of Fort Lauderdale, FL
   - City of Frederick, CO
+  - City of Frederick, Maryland
+  - City of Frederick, MD
+  - City of Fuquay Varina, NC
+  - City of Gainesville, FL
+  - City of Gaithersburg, MD
   - City of Gilbert, AZ
   - City of Gillette GIS Division
   - City of Glendale
   - City of Grafton, ND
   - City of Grand Forks, ND
   - City of Greeley, CO
+  - City of Greensboro, NC
+  - City of Greenville, SC
+  - City of Hampstead, NH
+  - City of Hartford, CT
   - City of Indianapolis and Marion County - IndyGIS: [License](https://www.arcgis.com/home/item.html?id=8c7b0c217ba0406f9c8e269c40b50632)
   - City of Janesville, WI
+  - City of Johns Creek, GA: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
   - City of Johnson City, TN
   - City of Joplin, MO
   - City of Kansas City, Missouri: [License](https://data.kcmo.org/terms)
+  - City of King, NC
+  - City of Kinston
+  - City of Lakeland, Florida GIS Division
   - City of Lawrence, KS
   - City of Lenexa, KS
+  - City of Lexington, Virginia
   - City of Littleton, CO
   - City of Loveland, CO
+  - City of Lyme, CT
+  - City of Lynchburg, VA
+  - City of Manchester, CT
+  - City of Marietta, GA
   - City of Memphis, TN
   - City of Mesa, AZ
+  - City of Miami, Department of Innovation and Technology, GIS Team: [Creative Commons Attribution 4.0 International](https://datahub-miamigis.opendata.arcgis.com/datasets/f12e4de69f2a474a8c29c8e8664f75c2)
+  - City of Milford, CT
   - City of Milwaukee, WI
   - City of Monroe, MI
   - City of Moorhead, MN
   - City of Morgan, UT
   - City of Murfreesboro, TN
+  - City of Myrtle Beach GIS Division
   - City of Naperville, IL
+  - City of Nashua, NH
   - City of Nashville, TN
+  - City of New Britain, CT
+  - City of New Haven
+  - City of New York, NY
+  - City of Newark, DE
+  - City of Newport News, VA
+  - City of Norfolk, VA
+  - City of Norton, VA
+  - City of Norwalk, CT
   - City of Ofallon, MO
   - City of Olathe, KS
   - City of Owensboro, KY
   - City of Perrysburg, OH
   - City of Perryville, MO
+  - City of Pinellas Park, FL
+  - City of Plainfield, CT
   - City of Provo, UT
+  - City of Radford, VA
+  - City of Richmond, VA
   - City of Rochelle, IL
   - City of Rochester Hills
+  - City of Rochester, New York
+  - City of Rock Hill, SC
+  - City of Rockville, MD
+  - City of Roswell, GA
+  - City of Rural Retreat, VA
+  - City of Salem, VA
   - City of Salina, KS
+  - City of Salisbury, NC
+  - City of Sandy Springs, Georgia: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
   - City of Santa Fe, NM
+  - City of Savannah, GA
   - City of Schaumburg, IL
   - City of Scottsdale, AZ
   - City of Sheridan, WY
   - City of Shorewood, WI
   - City of Sioux Falls, SD
+  - City of Spartanburg, South Carolina
   - City of Spring Hill, TN
   - City of St Louis, MO
+  - City of Stamford, CT
+  - City of Staunton, VA
   - City of Tecumseh, MI
   - City of Thornton, CO
   - City of Twin Falls, ID
   - City of Vail, CO
   - City of Waterloo, IA
+  - City of Watertown, CT
   - City of West Bend, WI
+  - City of West Palm Beach
   - City of West Peoria, IL
   - City of Westminster, CO
   - City of Wichita, KS
+  - City of Williamsburg, Virginia
+  - City of Winchester, Virginia: [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/)
   - City of Wright, WY
   - City-County Planning Commission of Warren County, KY
   - City-of-ofallon, IL
+  - Clarion County GIS
   - Clark County GIS
   - Clark County Planning, Zoning, and Land Information
   - Clark, IL
   - Clark, NV
   - Clark, OH
   - Clay County, MN
+  - Clay, FL
+  - Clay, NC
   - Clay, NE
+  - Clayton, GA
   - Clear Creek, CO
+  - Clearfield County GIS Department
   - Clearwater County
   - Clearwater, MN
+  - Cleveland, NC
+  - Clinch, GA
   - Clinton, OH
+  - Clinton, PA
+  - Cobb, GA
   - Cochise, AZ
   - Coconino County GIS
   - Codington, SD
+  - Coffee, GA
   - Coffey County, KS
   - Cole County and City of Jefferson, Missouri (MidMoGIS)
   - Coles, IL
+  - Colleton, SC
+  - Collier, FL
+  - Colquitt, GA
+  - Columbia County GIS
+  - Columbia, FL
   - Columbia, WI
   - Columbiana, OH
+  - Columbus, NC
   - Conejos, CO
   - Converse, WY
+  - Cook, GA
   - Cook, IL
   - Cook, MN
   - Coshocton County GIS Office
+  - County of Fulton, PA
+  - Coweta County GIS
   - Cowley County, KS
+  - Craven, NC
   - Crawford County
   - Crawford County, KS
   - Crawford, OH
+  - Crawford, PA
+  - Crisp, GA
   - Crook, WY
   - Crow Wing, MN
   - Cumberland, IL
+  - Cumberland, NC
+  - Cumberland, PA
   - Cuming, NE
+  - Currituck, NC
   - Custer, CO
   - Custer, ID
   - Custer, MT
   - Custer, NE
   - Cuyahoga, OH
+  - Dade, GA
   - Dakota, MN
   - Dakota, NE
   - Dallas, IA
   - Dane, WI
   - Daniels, MT
+  - Dare, NC
   - Darke, OH
+  - Darlington, SC
+  - Dauphin County Information Technology, Dauphin County Tax Assessment
+  - Davidson, NC
   - Davidson, SD
   - Davidson, TN
+  - Davie, NC
   - Davison, SD
+  - Dawson, GA
   - Dawson, MT
   - Dawson, NE
   - Day, SD
+  - DC statewide
   - De Baca, NM
+  - DE statewide
+  - Decatur, GA
   - Deer Lodge, MT
   - Defiance, OH
+  - DeKalb County: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
   - Dekalb, IL
+  - Delaware County Emergency Services
   - Delaware, IN
   - Delaware, OH
   - Delta, CO
   - Des Moines, IA
+  - Desoto, FL
   - Deuel, NE
   - Deuel, SD
   - Dewitt, IL
   - Dickinson County, KS
   - Dickinson Engineering Department
+  - Dixie, FL
   - Dixon, NE
+  - Doddridge, WV
   - Dodge, MN
   - Dodge, WI
   - Dolores, CO
   - Doña Ana County GIS Division
   - Dona Ana-2, NM
   - Doniphan County, KS
+  - Dooly, GA
   - Door, WI
+  - Dorchester County GIS Dept
+  - Dorchester, MD
+  - Dougherty, GA
   - Douglas County GIS: [License](https://drive.google.com/file/d/0Bw1ZzvRYzwerakdRa1ludGtmdXc/view)
   - Douglas County, Colorado: [License](https://www.douglasco.gov/documents/open-data-guidelines.pdf/)
+  - Douglas, GA
   - Douglas, IL
   - Douglas, KS
   - Douglas, MN
@@ -448,41 +671,76 @@ Address points.
   - Douglas, WI
   - Dubuque, IA
   - Dupage, IL
+  - Duplin, NC
+  - Durham, NC
+  - Dutchess, NY
+  - Duval, FL
   - Eagle, CO
+  - Early, GA
   - Eaton, MI
   - Eau Claire, WI
+  - Ebci, NC
+  - Echols, GA
   - Eddy, NM
   - Edgar, IL
+  - Edgecombe, NC
   - Edmunds, SD
   - Edwards County, KS
   - Edwards, IL
+  - Effingham, GA
   - Effingham, IL
   - El Paso, CO
   - Elbert, CO
   - Elk County, KS
+  - Elk, PA
   - Elko, NV
+  - Emanuel, GA
   - Emmet, MI
+  - Erie County Office of Geographic Information Services (OGIS)
+  - Erie County, Pennsylvania GIS
   - Erie, OH
+  - Escambia County Property Appraiser
   - Esri Community Maps Contributors; Aurora, CO
   - Esri Community Maps Contributors; Riley County, KS: [Creative Commons Attribution 4.0 (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)
+  - Essex County, Virginia GIS Office
   - Eureka County
+  - Evans, GA
+  - Fairfax, VA
   - Fairfield, OH
   - Fall River, SD
   - Fallon, MT
+  - Fannin, GA
   - Faribault, MN
   - Faulk, SD
+  - Fauquier County GIS & Town of Warrenton
+  - Fauquier, VA
+  - Fayette County, Pennsylvania
+  - Fayette, GA
   - Fayette, OH
+  - Fayette, WV
   - Fergus, MT
   - Fillmore, NE
+  - FL statewide
+  - Flagler, FL
   - Flathead, MT
+  - Florence, SC
+  - Floyd, GA
+  - Fluvanna, VA
   - Fond Du Lac, WI
+  - Forest, PA
   - Forest, WI
+  - Forsyth, GA
+  - Forsyth, NC
   - Franklin County, KS
   - Franklin County, KY GIS
+  - Franklin, FL
   - Franklin, ID
+  - Franklin, NC
   - Franklin, NE
   - Franklin, OH
+  - Franklin, PA
   - Franklin, TN
+  - Franklin, VA
   - Freeborn, MN
   - Fremont, CO
   - Fremont, ID
@@ -490,6 +748,7 @@ Address points.
   - Frontier, NE
   - Fulton, IL
   - Fulton, OH
+  - Gadsden, FL
   - Gage, NE
   - Gallatin, MT
   - Gallia, OH
@@ -497,20 +756,33 @@ Address points.
   - Garfield, CO
   - Garfield, MT
   - Garfield, NE
+  - Garrett, MD
+  - Gaston, NC
+  - Gates, NC
   - Geary County, KS
   - Geauga County Auditor
   - Genesee, MI
+  - Georgetown, SC
   - Gila, AZ
+  - Gilchrist, FL
+  - Giles, VA
+  - Gilmer, WV
   - Gilpin County
   - GIS Services Division, Boone County Planning Commission
   - Glacier, MT
+  - Glades, FL
+  - Glascock, GA
+  - Glynn, GA
   - Golden Valley County, ND
   - Golden Valley, MT
   - Golden Valley, ND
   - Goodhue, MN
+  - Gordon, GA
   - Goshen, WY
   - Gosper, NE
   - Governor's Office of Information Technology (Public Domain)
+  - Grady, GA
+  - Graham, NC
   - Grand Forks, ND
   - Grand Traverse County GIS Department
   - Grand, CO
@@ -519,88 +791,149 @@ Address points.
   - Grant, MN
   - Grant, NE
   - Grant, SD
+  - Grant, WV
+  - Granville, NC
+  - Grayson, VA
   - Greeley, NE
   - Green Lake, WI
   - Green, WI
+  - Greenbrier, WV
   - Greene County GIS
   - Greene, IL
   - Greene, MO
+  - Greene, NC
+  - Greene, PA
+  - Greene, VA
+  - Greenville, SC
+  - Greenwood County GIS
   - Greenwood County, KS
   - Gregory, SD
   - Guernsey, OH
+  - Guilford County GIS
+  - Gulf, FL
   - Gunnison, CO
+  - Gwinnett, GA
+  - Habersham, GA
+  - Halifax, NC
+  - Halifax, VA
+  - Hall, GA
   - Hamilton County, Indiana GIS Office
+  - Hamilton, FL
   - Hamilton, NE
   - Hamilton, OH
   - Hamilton, TN
   - Hamlin, SD
+  - Hampshire, WV
+  - Hampton County GIS
   - Hancock, OH
+  - Hancock, WV
   - Hand, SD
   - Hanson, SD
+  - Hardee, FL
   - Hardin County, Kentucky
   - Hardin, OH
+  - Hardy, WV
+  - Harford, MD
   - Harlan, NE
+  - Harnett, NC
   - Harper County, KS
+  - Harris, GA
   - Harrison, OH
+  - Harrison, WV
   - Harvey County, KS
   - Hayes, NE
+  - Haywood, NC
+  - Heard, GA
   - Helena, MT
   - Henderson County, Kentucky
+  - Henderson, NC
   - Henderson, NV
+  - Hendry, FL
   - Hennepin, MN
+  - Henrico County GIS Office: [License](https://henrico.gov/transparency/terms-of-use/)
+  - Henry, GA
   - Henry, IL
   - Henry, OH
+  - Hertford, NC
   - Highland, OH
+  - Highland, VA
+  - Highlands, FL
   - Hill, MT
+  - Hillsborough County: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
   - Hillsdale, MI
   - Hitchcock, NE
   - Hocking, OH
+  - Hoke, NC
+  - Holmes, FL
   - Holmes, OH
   - Holt, NE
   - Hooker, NE
+  - Horry, SC
   - Hot Springs, WY
+  - Houston, GA
   - Howard, NE
   - Hubbard, MN
   - Hughes County, SD / Planning and Development District III
   - Humboldt, NV
+  - Huntingdon, PA
   - Huron, OH
   - Hutchinson, SD
+  - Hyde, NC
   - IA statewide
   - ID statewide
   - Idaho, ID
   - IN statewide
+  - Indian River, FL
+  - Indiana County, Pennsylvania
   - Ingham, MI
+  - Iredell, NC
   - Iron County 911 / SEMO Regional Planning Commission
   - Iron County, Wisconsin
+  - Irwin, GA
   - Isanti, MN
+  - Isle of Wight County GIS Office
   - Itasca, MN
   - Jackson County GIS
   - Jackson County, KS
   - Jackson County, SD / Planning and Development District III
+  - Jackson, FL
+  - Jackson, GA
   - Jackson, IL
   - Jackson, MI
   - Jackson, MN
+  - Jackson, NC
   - Jackson, OH
   - Jackson, WI
+  - James City, VA
   - Jasper, MO
+  - Jasper, SC
   - Jefferson County, Colorado
   - Jefferson County, Kansas GIS Department
+  - Jefferson, FL
+  - Jefferson, GA
   - Jefferson, ID
   - Jefferson, MT
   - Jefferson, OH
   - Jefferson, TN
   - Jefferson, WI
+  - Jefferson, WV
   - Jerauld, SD
   - Jerome, ID
   - Jersey, IL
   - Johnson County AIMS
+  - Johnson, GA
   - Johnson, IA
   - Johnson, NE
+  - Johnston, NC
+  - Jones, GA
+  - Jones, NC
   - Jones, SD
   - Judith Basin, MT
   - Juneau, WI
+  - Juniata, PA
   - Kalamazoo, MI
   - Kanabec, MN
+  - Kanawha, WV
   - Kandiyohi, MN
   - Kane, IL
   - Kankakee, IL
@@ -609,10 +942,15 @@ Address points.
   - Keith, NE
   - Kendall County GIS
   - Kenosha, WI
+  - Kent, DE
+  - Kent, MD
   - Kenton, KY
+  - Kershaw, SC
   - Kewaunee, WI
   - Keya Paha, NE
   - Kimball, NE
+  - King and Queen County GIS
+  - King George, VA
   - Kingman County, KS
   - Kingsbury, SD
   - Kittson, MN
@@ -625,6 +963,7 @@ Address points.
   - KY statewide
   - La Crosse County
   - La Plata, CO
+  - Lafayette, FL
   - Lafayette, WI
   - Lake County Mapping Department
   - Lake of the Woods, MN
@@ -634,46 +973,79 @@ Address points.
   - Lake, MT
   - Lake, OH
   - Lake, SD
+  - Lamar, GA
   - Lancaster, NE
+  - Lancaster, PA
+  - Lancaster, SC
   - Lander, NV
   - Lane County, KS
+  - Lanier, GA
   - Laramie, WY
   - Larimer, CO
   - Las Vegas, NV
   - Lasalle, IL
   - Latah, ID
+  - Laurens, GA
+  - Laurens, SC
   - Lawrence, IL
   - Lawrence, OH
+  - Lawrence, PA
   - Lawrence, SD
   - Le Sueur County GIS Department
   - Lea County, New Mexico
+  - Lebanon, PA
   - Lee County GIS
+  - Lee, GA
+  - Lee, NC
+  - Lehigh, PA
   - Lemhi, ID
+  - Leon, FL
+  - Levy, FL
+  - Lewis, WV
+  - Lewiston, Maine
+  - Lexington, SC
+  - Liberty, FL
+  - Liberty, GA
   - Liberty, MT
   - Licking County GIS
   - Licking2, OH
   - Lincoln County, Nevada
   - Lincoln, MT
+  - Lincoln, NC
   - Lincoln, NE
   - Lincoln, NM
   - Lincoln, WI
+  - Lincoln, WV
   - Lincoln, WY
   - Linn County, KS
   - Logan, CO
   - Logan, IL
   - Logan, NE
   - Logan, OH
+  - Logan, WV
   - LOJIC (Louisville/Jefferson County Information Consortium): [License](https://www.lojic.org/data/liability-statement)
+  - Long, GA
   - Lorain, OH
   - Los Alamos County GIS
+  - Loudoun, VA
+  - Louisa County, Virginia GIS
+  - Loveland feed, FL
+  - Lowndes, GA
   - Lucas County Auditor's Office, GIS Department
+  - Lumpkin, GA
   - Luna, NM
+  - Luzerne, PA
+  - Lycoming, PA
   - Lyman, SD
   - Lyon County, NV Assessor's Office
   - Macomb County GIS
+  - Macon, GA
   - Macon, IL
+  - Macon, NC
   - Macoupin, IL
   - Madison County Assessor / SEMO Regional Planning Commission
+  - Madison County GIS
+  - Madison, FL
   - Madison, ID
   - Madison, IL
   - Madison, IN
@@ -681,8 +1053,11 @@ Address points.
   - Madison, MT
   - Madison, NE
   - Madison, OH
+  - Madison, VA
   - Mahnomen, MN
   - Mahoning, OH
+  - Maine Emergency Services Communication Bureau: [License](https://maine.hub.arcgis.com/datasets/27e5daf37f1f4e5c8231d6e3989835c4_0/about)
+  - Manatee County: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
   - Manitowoc, WI
   - MAP~GIS (McCracken County / City of Paducah GIS Consortium) (City of Paducah, KY)
   - MAP~GIS (McCracken County / City of Paducah GIS Consortium) (Mccracken, KY)
@@ -690,89 +1065,156 @@ Address points.
   - Maricopa, AZ
   - Marion County, IN
   - Marion County, KS
+  - Marion, FL
+  - Marion, GA
   - Marion, OH
+  - Marion, WV
+  - Marlboro, SC
   - Marquette, MI
   - Marquette, WI
   - Marshall County, Minnesota
   - Marshall, SD
+  - Marshall, WV
+  - Martin, FL
+  - Martin, NC
+  - Maryland State Department of Assessments and Taxation, Maryland Department of Planning, and Charles County Maryland Department of Planning and Growth Management Planning Division
   - Mason, IL
   - Mason, MI
   - Massac, IL
   - Maury, TN
   - Mccone, MT
   - Mcdonough, IL
+  - Mcdowell, NC
+  - Mcdowell, WV
+  - Mcduffie, GA
   - Mchenry, IL
+  - Mcintosh, GA
+  - McKean County GIS: [License](https://www.mckeancountypa.gov/Document%20Center/Departments/GIS/GIS%20Forms/McKean%20County%20GIS%20Disclaimer.pdf)
   - McKenzie County GIS
   - Mckinley, NM
   - McLean County GIS Consortium: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
   - Mcleod, MN
   - Mcpherson, SD
+  - MD statewide
   - Meade County, KS
   - Meade, KY
   - Meagher, MT
+  - Mecklenburg County GIS
   - Medina, OH
   - Meigs, OH
   - Mellette, SD
   - Menard, IL
   - Mercer, OH
+  - Mercer, PA
+  - Meriwether, GA
   - Merrick, NE
   - Mesa County GIS (CC BY)
   - MI statewide
   - Miami County Auditor, Ohio
+  - Miami2, FL
+  - Middlesex County, Virginia
   - Midland, MI
+  - Mifflin County GIS
+  - Milford, NH
   - Mille Lacs, MN
+  - Miller, GA
   - Mills, IA
   - Milwaukee County Land Information Office
   - Miner, SD
   - Mineral, CO
   - Mineral, MT
   - Mineral, NV
+  - Mineral, WV
   - Minnehaha, SD
   - Missoula, MT
+  - Mitchell, GA
+  - Mitchell, NC
   - MN statewide
   - MO statewide
   - Moffat County Assessor's Office
   - Mohave, AZ
+  - Monmouth, NJ
+  - Monongalia, WV
   - Monroe County, Wisconsin
+  - Monroe, FL
+  - Monroe, GA
   - Monroe, MI
   - Monroe, OH
+  - Monroe, PA
   - Montezuma, CO
   - Montgomery County Auditor's Office
+  - Montgomery County, Maryland: [License](https://data.montgomerycountymd.gov/terms-of-use)
   - Montgomery County, TN
+  - Montgomery, GA
+  - Montgomery, PA
+  - Montgomery, VA
+  - Montour County
   - Montrose, CO
+  - Moore, NC
   - Morgan, CO
+  - Morgan, GA
   - Morgan, IL
   - Morgan, OH
+  - Morgan, WV
   - Morrill, NE
+  - Morris, NJ
   - Morrow, OH
   - Morton, ND
   - Moultrie, IL
   - MT statewide
+  - Muscogee, GA
   - Muskingum, OH
   - Musselshell, MT
   - Nance, NE
+  - Nash, NC
+  - Nassau, FL
   - Natrona Regional Geospatial Cooperative (NRGC)
+  - NC statewide
   - ND statewide
   - NE statewide
+  - Nelson, VA
   - Nemaha County, KS
   - Nemaha, NE
+  - New Castle, DE
+  - New Hanover, NC
+  - New Kent, VA
   - New Mexico 911 (NM911) Program: [License](https://gstore.unm.edu/apps/rgis/datasets/8850b25e-e495-46b5-952d-0fa1fa129ada/metadata/FGDC-STD-001-1998.html)
   - Newaygo County
+  - Newberry, SC
+  - Newton, GA
   - Nez Perce, ID
+  - NH statewide
   - Niobrara, WY
+  - NJ statewide
   - NM911 Program
   - Noble, OH
   - Norman, MN
+  - Northampton, NC
+  - Northampton, PA
+  - Northumberland, PA
+  - Nottoway, VA
   - Nuckolls, NE
+  - NY statewide
   - Nye, NV
   - Oakland County
+  - Oconee, GA
+  - Oconee, SC
   - Oconto, WI
+  - Office of Geographic Information (MassGIS), Commonwealth of Massachusetts, MassIT (Public Domain)
+  - Oglethrope, GA
   - OH statewide
+  - Ohio County, WV
+  - Okaloosa, FL
+  - Okeechobee, FL
   - Oldham County Planning and Development Services
   - Olmsted County, MN GIS Division
   - Oneida County, Wisconsin
+  - Onslow, NC
+  - Orange County, FL
+  - Orangeburg, SC
   - Osage County, KS
   - Osage, MO
+  - Osceola, FL
   - Otoe, NE
   - Ottawa County GIS
   - Ottawa, OH
@@ -780,35 +1222,55 @@ Address points.
   - Ouray, CO
   - Outagamie, WI
   - Ozaukee, WI
+  - Palm Beach County, FL
+  - Pamlico, NC
   - Park, CO
   - Park, MT
   - Park, WY
+  - Pasco, FL
+  - Pasquotank, NC
+  - Paulding, GA
   - Paulding, OH
   - Pawnee County, KS
   - Pawnee, NE
+  - Peach, GA
+  - Pender, NC
   - Pendleton, KY
+  - Pendleton, WV
   - Pennington, MN
   - Pepin, WI
   - Perkins, NE
+  - Perquimans, NC
+  - Perry County GIS
   - Perry, KY
   - Perry, OH
   - Pershing, NV
+  - Person, NC
   - Petroleum, MT
   - Phelps, NE
+  - Philadelphia, PA
   - Phillips, CO
   - Phillips, MT
   - Piatt, IL
   - Pickaway, OH
+  - Pickens, SC
+  - Pierce, GA
   - Pierce, NE
   - Pierce, WI
   - Pike, IL
   - Pike, OH
+  - Pike, PA
   - Pima, AZ
   - Pinal, AZ
   - Pitkin, CO
+  - Pitt, NC
   - Platte, NE
+  - Pocahontas County Homeland Security and Emergency Management
+  - Polk, FL
+  - Polk, GA
   - Polk, IA
   - Polk, MN
+  - Polk, NC
   - Polk, NE
   - Polk, WI
   - Pondera, MT
@@ -818,22 +1280,36 @@ Address points.
   - Porter County GIS
   - Post Falls, ID
   - Pottawatomie County, KS
+  - Potter County GIS/Planning Department
   - Potter, SD
   - Powder River, MT
   - Powell, MT
   - Prairie, MT
   - Preble, OH
+  - Preston, WV
+  - Prince George's County Planning Department: [License](https://creativecommons.org/licenses/by/4.0/)
+  - Prince William County GIS: [License](https://www.pwcva.gov/disclaimer)
   - Pueblo, CO
+  - Putnam, FL
   - Putnam, IL
+  - Putnam, NY
   - Putnam, OH
   - Putnam, TN
+  - Putnam, WV
+  - Queen Annes, MD
+  - Quitman, GA
   - Racine, WI
+  - Raleigh, WV
+  - Randolph, GA
   - Randolph, IL
+  - Randolph, NC
+  - Randolph, WV
   - Ravalli, MT
   - Red Lake, MN
   - Red Willow, NE
   - Reno County, KS
   - Renville, MN
+  - Rhode Island Geographic Information System (RIGIS) / RI E 9-1-1 and AK Associates: [License](https://www.arcgis.com/home/item.html?id=26c8df834cbb4aa49ed571ad35c5647f)
   - Rice County GIS
   - Richardson, NE
   - Richland, IL
@@ -841,22 +1317,37 @@ Address points.
   - Richland, ND
   - Richland, OH
   - Richland, WI
+  - Richmond, GA
+  - Richmond, NC
   - Rio Blanco, CO
   - Rio Grande, CO
+  - Roane, WV
+  - Roanoke County (Creative Common License (CC BY))
   - Roberts, SD
+  - Robeson, NC
   - Rock Island, IL
   - Rock, NE
   - Rock, WI
+  - Rockbridge, VA
+  - Rockdale, GA
+  - Rockingham, NC
+  - Rockland, NY
   - Rolette, ND
   - Roosevelt, MT
   - Roseau, MN
   - Rosebud, MT
   - Ross, OH
   - Routt County GIS
+  - Rowan, NC
   - Rush County, KS
+  - Rutherford, NC
+  - SAGIS
   - Saguache, CO
   - Saline, NE
+  - Saluda, SC
+  - Sampson, NC
   - San Juan County, New Mexico
+  - Sanborn and Carroll County Dept of Planning & Land Mgmt
   - Sanborn, SD
   - Sanders, MT
   - Sandoval, NM
@@ -865,17 +1356,23 @@ Address points.
   - Sanmiguel, CO
   - Santa Cruz, AZ
   - Santa Fe, NM
+  - Santa Rosa, FL
   - Sarpy, NE
   - Sauk, WI
+  - SC statewide
+  - Schley, GA
   - Schuyler, IL
   - Scioto, OH
+  - Scotland, NC
   - Scott County Assessor / SEMO Regional Planning Commission
   - Scott County, KS
   - Scott, IA
   - Scott, KY
   - Scott, MN
+  - Screven, GA
   - SD statewide
   - Sedgwick, CO
+  - Seminole, GA
   - SEMO GIS (Southeast Missouri Regional Planning Commission) / Perry County, Missouri: [License](https://semogis.com/maps/perry-county/)
   - Seneca County Auditor's Office
   - Sevier, TN
@@ -887,6 +1384,7 @@ Address points.
   - Shelby County, Kentucky
   - Shelby, IL
   - Shelby, OH
+  - Shenandoah County GIS
   - Sherburne, MN
   - Sheridan, MT
   - Sheridan, NE
@@ -895,59 +1393,126 @@ Address points.
   - Silverbow, MT
   - Sioux, ND
   - Sioux, NE
+  - Smyth, VA
+  - Snyder County, Pennsylvania (via PASDA)
+  - Somerset, MD
+  - Spotsylvania, VA
   - St Clair, IL
   - St Croix, WI
   - St Joseph, IN
+  - St-johns, FL
+  - St-lucie, FL
   - St. Charles County Government
   - St. Clair County GIS
   - St. Francois County Assessor / SEMO Regional Planning Commission
   - St. Louis County GIS Service Center
   - St. Louis County Sheriff's Office 9-1-1 Communications Department; Pro-West & Associates; Spatial Focus, Inc; cities and townships of St. Louis County, MN
+  - St. Mary's County Government
+  - Stafford, VA
   - Stanley, SD
+  - Stanly, NC
   - Stanton, NE
   - Stark County, ND
   - Stark, IL
   - Stark, OH
+  - Statewide2, FL
   - Stearns, MN
   - Steele Rural, MN
   - Steele Urban, MN
   - Stephenson, IL
   - Stevens, MN
+  - Stewart, GA
   - Stillwater, MT
+  - Stokes, NC
   - Storey, NV
   - Stutsman, ND
   - Sublette, WY
+  - Suffolk County GIS: [CC BY](https://creativecommons.org/licenses/by/3.0/)
+  - Sullivan County GIS
+  - Sullivan, PA
   - Sully, SD
+  - Summers, WV
   - Summit County
   - Summit County (Ohio) GIS
   - Sumner County, KS
+  - Sumter, FL
+  - Sumter, SC
+  - Surry, NC
+  - Susquehanna, PA
+  - Sussex, DE
+  - Sussex, NJ
+  - Suwannee, FL
+  - Swain, NC
   - Sweet Grass, MT
   - Sweetwater, WY
   - Swift, MN
+  - Talbot County Government
+  - Talbot, GA
   - Taney, MO
+  - Tattnall, GA
+  - Taylor, FL
+  - Taylor, WV
   - Tazewell, IL
+  - Telfair County
   - Teller County GIS
   - Teton County, Idaho GIS
   - Teton, MT
   - Thayer, NE
   - Thomas County, KS
+  - Thomas, GA
   - Thomas, NE
   - Thurston, NE
+  - Tift, GA
+  - Timmons Group; Lunenburg County, VA
+  - Tioga, PA
   - TN statewide
   - Todd, MN
   - Toledo, OH
+  - Tompkins, NY
   - Toole, MT
+  - Toombs, GA
   - Torrance, NM
+  - Town of Avon, CT
+  - Town of Blacksburg, VA
+  - Town of Chapel Hill, NC
+  - Town of Dedham, MA GIS Division: [License](https://www.dedhamma.gov/town-departments/engineering/gis/gis-data-disclaimer)
+  - Town of Easton, MA
+  - Town of Fairfield, CT
+  - Town of Groton, CT
+  - Town of Hamden
+  - Town of Hilton Head Island, SC
+  - Town of Jaffrey, NH
+  - Town of New Milford, CT
+  - Town of Newton, MA
+  - Town of Stonington, CT
+  - Town of Stratford, CT
+  - Town of Summerville, SC
   - Town of Taos GIS
+  - Town of Trumbull, CT
+  - Towns of Easton and Monroe, CT (via MetroCOG)
+  - Transylvania, NC
   - Traverse, MN
   - Treasure, MT
   - Trempealeau, WI
   - Tripp and Todd, SD
+  - Troup, GA
   - Troy, MI
   - Trumbull, OH
+  - Tucker, WV
+  - Turner, GA
   - Turner, SD
   - Tuscarawas, OH
+  - Twiggs, GA
+  - Tyler, WV
+  - Tyrrell, NC
+  - Ulster, NY
+  - Union County Geospatial Information & Technology Department
+  - Union County, GA
+  - Union, FL
+  - Union, NC
   - Union, OH
+  - Union, SC
+  - Upshur, WV
   - Utah Geospatial Reference Center (AGRC): [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/)
   - Utah UGRC: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
   - Utah, UT
@@ -957,51 +1522,85 @@ Address points.
   - Valley, NE
   - Van Wert, OH
   - Vanburen, MI
+  - Vance, NC
+  - Venango County
   - Vermilion, IL
   - Vernon County, Wisconsin
   - Vernon, MO
   - Vilas, WI
+  - Village of Key Biscayne
   - Vinton, OH
+  - Virginia Beach, VA
+  - VT statewide
   - Wabaunsee County, KS
   - Wadena County
+  - Wake, NC
+  - Wakulla, FL
   - Walworth, WI
   - Ward, ND
+  - Ware, GA
   - Warren, IL
+  - Warren, NC
   - Warren, OH
+  - Warren, PA
+  - Warren, VA
   - Waseca County GIS: [License](https://www.wasecacounty.gov/164/GIS-Information)
   - Washburn, WI
   - Washington County 911 / SEMO Regional Planning Commission
+  - Washington County GIS
+  - Washington County, NY GIS / Real Property Tax Service
   - Washington, CO
+  - Washington, FL
+  - Washington, GA
+  - Washington, MD
   - Washington, MN
+  - Washington, NC
   - Washington, OH
   - Washington, UT
   - Washington, WI
   - Washoe, NV
   - Washtenaw, MI
+  - Watauga, NC
   - Waukesha County, Wisconsin
   - Waupaca County, Wisconsin: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
   - Waushara, WI
   - Wayne, IL
   - Wayne, IN
   - Wayne, MI
+  - Wayne, NC
+  - Wayne, NY
   - Wayne, OH
+  - Wayne, PA
+  - Wayne, WV
   - Weber, UT
   - Webster, NE
+  - Webster, WV
   - Weld, CO
+  - Westchester County GIS
+  - Westmoreland County GIS
   - Weston, WY
+  - Wetzel, WV
   - Wheatland, MT
+  - Wheeler, GA
   - White Pine, NV
   - White, IL
   - Whiteside, IL
+  - Whitfield, GA
   - Wibaux, MT
+  - Wicomico, MD
+  - Wilcox, GA
+  - Wilkes, NC
   - Wilkin, MN
+  - Wilkinson, GA
   - Will, IL
   - Williams, ND
   - Williams, OH
   - Williamson, IL
   - Williamson, TN
+  - Wilson, NC
   - Winnebago, IL
   - Winnebago, WI
+  - Wirt, WV
   - Wisconsin Department of Administration (Burnett, WI)
   - Wisconsin Department of Administration (Dunn, WI)
   - Wisconsin Department of Administration (Florence, WI)
@@ -1013,16 +1612,27 @@ Address points.
   - Wisconsin Department of Administration (Rusk, WI)
   - Wisconsin Department of Administration (Sawyer, WI)
   - Wisconsin Department of Administration (Taylor, WI)
+  - Wise County GIS/E911
   - Wood County, Wisconsin: [CC BY 3.0](https://creativecommons.org/licenses/by/3.0)
   - Wood, OH
+  - Wood, WV
   - Woodford, IL
+  - Worcester County GIS
+  - Worth, GA
+  - WV statewide
   - WY statewide
   - Wyandot, OH
+  - Wyoming, PA
+  - Wyoming, WV
+  - Yadkin County, NC
+  - Yancey County GIS
   - Yankton, SD
   - Yavapai, AZ
   - Yellow Medicine, MN
   - Yellowstone, MT
   - York, NE
+  - York, PA
+  - York, SC
   - Yuma, AZ
   - Yuma, CO
   - Ziebach, SD
