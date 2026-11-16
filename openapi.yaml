@@ -5152,6 +5152,27 @@ paths:
           Keys are `<property>:sum` (an `area_weighted` sum is an integer,
           rounded once), `count` and `count_by:<property>` (an object of
           value to count).
+        - `count_by:cell:<deg>`, deg `0.1`, `0.25`, `0.5`, `1` or `2`, on a
+          point product whose `query.count_by_cell` is true: the matched
+          features counted per longitude-latitude cell. The key is the
+          token; its value is `{deg, cells, top}`: `top` the 50 cells with
+          the most features, by `count` descending, ties by centre `lon`
+          then `lat`, each `{lon, lat, count}`; `cells` the total cell
+          count (more than `top` holds when the list is cut; with nothing
+          matched, `0` and `[]`). A centre is a multiple of `deg`, and its
+          cell is half-open, from the centre - `deg`/2 up to (not
+          including) the centre + `deg`/2: a feature on an edge is in the
+          cell east (north) of it; a feature at longitude 180 is in the
+          cell at -180. Cells are not equal-area: they narrow toward
+          the poles. Features are binned by their own point after the
+          space words select them, so a cell that straddles a `bbox`, an
+          `area` or the product's footprint counts only the selected
+          features, and its centre may lie outside the area. With no space
+          word the density covers the product's whole `coverage` (for a
+          satellite product, offshore and nearby areas too); narrow it with
+          `bbox` or `area`. Another size, or the token on a product that does not
+          declare it, is a `400` `unsupported_word` (the size's
+          `did_you_mean` is the nearest one).
 
         ### Envelope
 
@@ -6575,7 +6596,7 @@ components:
       name: stats
       in: query
       required: false
-      description: '`sum`, `count` and `count_by:<property>`, repeated or comma-joined, as the product''s `query.reducers` lists them.'
+      description: '`sum`, `count`, `count_by:<property>` and (on a product declaring `query.count_by_cell`) `count_by:cell:<deg>` with deg `0.1`, `0.25`, `0.5`, `1` or `2`, repeated or comma-joined, as the product''s `query.reducers` lists them.'
       style: form
       explode: true
       schema:
@@ -10741,6 +10762,17 @@ components:
         area_as_reference:
           type: boolean
           description: Whether the product's features can be referenced as an area.
+        count_by_cell:
+          type: boolean
+          description: |
+            Present (true) only when declared, on point feature products:
+            the `stats` token `count_by:cell:<deg>` (deg `0.1`, `0.25`,
+            `0.5`, `1` or `2`; its own word, not listed in `reducers`)
+            counts features per longitude-latitude cell; cells are not
+            equal-area (they narrow toward the poles); a centre is a
+            multiple of deg and its cell is half-open, [centre - deg/2,
+            centre + deg/2): a feature on an edge is in the cell east
+            (north) of it.
         swath:
           type: object
           description: |
@@ -15157,7 +15189,10 @@ components:
           description: |
             Over every matched feature: `<property>:sum` (a number),
             `count` (an integer), `count_by:<property>` (an object of value
-            to count).
+            to count), `count_by:cell:<deg>` (`{deg, cells, top}`: the top
+            50 longitude-latitude cells by count, ties by centre lon then
+            lat, each `{lon, lat, count}`, and the total cell count; cells
+            are not equal-area).
           additionalProperties: true
         matched:
           type: integer
@@ -15354,6 +15389,7 @@ components:
         stats:
           type: array
           maxItems: 16
+          description: As the GET `stats` parameter, `count_by:cell:<deg>` included.
           items:
             type: string
         properties:
