@@ -4756,8 +4756,9 @@ paths:
         without one named in `notes`; a bbox or an area ranks inside it.
         A sorted bbox or area over `max_cells` is ranked from overview
         blocks with its edge blocks read at full resolution (its `mean` and
-        `sum` from each block's mean, `exact: false`), and is a `400`
-        `area_too_large` only when the top `limit` cannot be settled within
+        `sum` from each block's mean, `exact: false`; so is a `mean` or `sum`
+        over a smaller area whose full-resolution read would be too large),
+        and is a `400` `area_too_large` only when the top `limit` cannot be settled within
         the read's limits. The selection is the key's variable alone. Elements are at most 6.
         `sort` beside a point, `locations`, `path`, `stats`, `where`,
         `windows`, `step`, `run` or `cursor` is a `400`
