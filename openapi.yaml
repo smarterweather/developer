@@ -11629,6 +11629,16 @@ components:
           exclusiveMaximum: 1
           description: On a percentile variable, its quantile (`p10` is 0.1).
           example: 0.1
+        method_version:
+          type: integer
+          minimum: 1
+          description: |
+            On a composite score (a variable the pipeline computes from other
+            variables under a cited method, read through its
+            `interpretation`): the version of its definition. A change to
+            the method's inputs, weights or ratings bumps it; absent on every
+            other variable.
+          example: 1
         period:
           type: [string, "null"]
           description: |
