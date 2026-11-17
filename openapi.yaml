@@ -4677,7 +4677,9 @@ paths:
           `outside_coverage`. At
           most `max_cells` cells per product (the catalog `query.max_cells`,
           100,000): with `stats` a larger box is a `400` `area_too_large`
-          naming coarser products (a sorted one is ranked, see Sort). An
+          naming coarser products and, for one `max` or `min` of a key the
+          product's domain ranks, a `suggested_call` that ranks the box
+          (a sorted one is ranked, see Sort). An
           inline polygon is sent in the batch body.
         - `area[product]` with one of `area[feature_id]`,
           `area[feature_ids]` (at most 25, repeated or comma-joined) or
@@ -4759,8 +4761,11 @@ paths:
         the read's limits. The selection is the key's variable alone. Elements are at most 6.
         `sort` beside a point, `locations`, `path`, `stats`, `where`,
         `windows`, `step`, `run` or `cursor` is a `400`
-        `operator_conflict`, and a key the product does not list a `400`
-        `unsupported_word`. Each element carries `ranking`
+        `operator_conflict` whose `suggested_call` keeps one `max`, `min`,
+        `mean` or `sum` the key's variable takes as the key's reducer, and
+        a key the product does not list a `400` `unsupported_word` whose
+        `suggested_call` selects the domain's product that ranks it, when
+        one does. Each element carries `ranking`
         (`SeriesRanking`) and no frames: one row per overview block, so no
         two rows come from one block; `exact` is true for an instant and a
         `max` or `min` with every frame ranked, and `mean` and `sum` are
