@@ -6506,7 +6506,17 @@ components:
         `count_above:<v>`, `count_below:<v>`, `percentile:<p>`,
         `degree_days:<base>[,<upper>][,simple|modified]`, and
         `cumulative:` before `sum` or `degree_days`. Thresholds in the
-        request units.
+        request units. A reducer a selected variable does not take (its
+        catalog `reducers`, else its product's `query.reducers`: a
+        probability, percentile or spread takes no `sum`, `cumulative` or
+        `degree_days`) is a `400` `unsupported_word` naming the variable,
+        with its reducers as `valid_values` and a `suggested_call` that
+        drops the token, or, for a whole product, keeps it and selects the
+        product's variables that take it. A total since the model run
+        started takes no `sum`, `mean`, `min` or `cumulative` (a `400`
+        `invalid_operator` suggesting `max`). A probability's reduced
+        value says what its percent is a percent of in
+        `reference_classes`.
       style: form
       explode: true
       schema:
@@ -6632,7 +6642,10 @@ components:
         Rank the product's cells by one key its catalog `query.sort`
         lists: `-<key>` descending, `<key>` ascending; `:max`, `:min`,
         `:mean` or `:sum` with `hours` or `start` and `end`. Returns the
-        top `limit` (1-50, default 50) per element; see Sort.
+        top `limit` (1-50, default 50) per element; see Sort. A window
+        reducer the key's variable does not take (`:sum` on a probability)
+        is a `400` `unsupported_word` whose `suggested_call` ranks `:max`
+        (descending) or `:min` (ascending).
       schema:
         type: string
         pattern: '^-?[A-Za-z_][A-Za-z0-9_]*(:(max|min|mean|sum))?$'
@@ -11654,10 +11667,21 @@ components:
           type: [string, "null"]
           description: |
             Accumulation or aggregation period ending at the valid time, an
-            ISO 8601 duration (a 1 h total); null for an instantaneous
-            value. Never set on an index product: its averaging period is
-            the product's `time.period`.
+            ISO 8601 duration (a 1 h total, a 6 h percentile); null for an
+            instantaneous value or a window that changes with lead. It may
+            differ from the product's `step`. Never set on an index
+            product: its averaging period is the product's `time.period`.
           example: PT1H
+        reducers:
+          type: array
+          items:
+            type: string
+          description: |
+            The reducers this variable takes, present only
+            where its kind restricts its product's `query.reducers`: a
+            probability, percentile or spread takes no `sum`, `cumulative`
+            or `degree_days`. A variable without it takes its product's.
+          example: [max, min, mean, count_above, count_below, percentile]
         min:
           type: [number, "null"]
           format: double
@@ -14326,6 +14350,8 @@ components:
           description: Unit per variable `standard_name`; null for a raw value with no stored unit.
           additionalProperties:
             type: [string, "null"]
+        reference_classes:
+          $ref: '#/components/schemas/ReferenceClasses'
         stats:
           $ref: '#/components/schemas/SeriesStats'
         windows:
@@ -14480,6 +14506,17 @@ components:
           type: [string, "null"]
           description: The unit of every row's `value`, in the request `units`.
           example: F
+        reference_class:
+          type: string
+          enum: [probability, share_of_hours, share_of_area]
+          description: |
+            On a probability key only: `probability` for an instant,
+            `max` or `min` key; for a `mean` key, `share_of_hours` when each row is
+            one cell's own window mean, `share_of_area` when each row is
+            an overview block's mean, which pools the block's cells and
+            frames (a ranking over the whole coverage, or over an area too
+            large for native cells). Absent on any other key, and on a
+            `mean` whose path is not stated.
         rows:
           type: array
           items:
@@ -14719,6 +14756,8 @@ components:
           description: Each variable's stored unit per `standard_name` (`1` for a dimensionless index); null when the variable has none.
           additionalProperties:
             type: [string, "null"]
+        reference_classes:
+          $ref: '#/components/schemas/ReferenceClasses'
         normals:
           type: object
           description: |
@@ -14907,6 +14946,24 @@ components:
               type: string
               enum: [UTC]
               description: Always `UTC`; an index has no location.
+    ReferenceClasses:
+      type: object
+      description: |
+        What a probability's percent is a percent of, keyed exactly like
+        `units`. `probability`: the chance of the event at a place and
+        time (the value as served, or its `max`, `min` or `percentile`).
+        `share_of_hours`: a `mean` over frames at one place, the expected
+        share of the frames with the event, not the chance of the event in
+        the window. `share_of_area`: a `mean` that pools the cells and
+        frames of an area (a bbox or area's mean pools every cell and
+        frame of a bucket), the expected share of those cell-frames with
+        the event, cells unweighted. Absent on a key with no class (a
+        value that is not a probability, a count); absent when no key has
+        one. It describes `values` as served: a ranked element's own class
+        is its `ranking.reference_class`.
+      additionalProperties:
+        type: string
+        enum: [probability, share_of_hours, share_of_area]
     SeriesStats:
       type: object
       description: |
@@ -14937,6 +14994,8 @@ components:
           type: object
           additionalProperties:
             type: [string, "null"]
+        reference_classes:
+          $ref: '#/components/schemas/ReferenceClasses'
     SeriesWindow:
       type: object
       required: [start, end, hours]

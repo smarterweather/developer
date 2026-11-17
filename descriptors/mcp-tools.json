@@ -1084,6 +1084,14 @@
                         ]
                       }
                     },
+                    "reference_classes": {
+                      "description": "What a probability's percent is a percent of (keyed as units; absent: no key has one): probability, the chance of the event at that place and time (as served, or its max, min or percentile); share_of_hours, a mean over frames at one place: the expected share of the frames with the event, not the chance of the event in the window; share_of_area, a mean pooling the cells and frames of an area (a bbox or area pools every cell and frame of a bucket): the expected share of those cell-frames with the event.",
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
                     "unread_variables": {
                       "description": "index: the product's variables this select did not read; select product:* for all of them.",
                       "type": "array",
@@ -1384,6 +1392,10 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "reference_class": {
+                          "description": "A probability key only: probability for an instant, max or min key; for a mean key, share_of_hours when each row is one cell's own window mean, share_of_area when each row is an overview block's mean (its cells and frames pooled); absent when the path is not stated.",
+                          "type": "string"
                         },
                         "rows": {
                           "type": "array",
