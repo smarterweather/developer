@@ -5179,8 +5179,14 @@ paths:
         features. Storm reports and record events, dated by the bulletin
         that carried them, serve each report's newest version from the
         last day of bulletins (`PT24H`), so a report repeated by later
-        bulletins is one feature; `hours` reads every bulletin's features
-        in its window.
+        bulletins is one feature.
+
+        With `hours` or `start`+`end`, a product whose catalog
+        `time.latest_by_records` is true (storm reports, record events)
+        serves each report's newest version among the bulletins in the
+        window, so rows, `count` and `count_by` are reports, not
+        bulletin lines; another `time.latest_by` product reads every
+        feature in the window (a station's or a radar site's history).
 
         A `day_of_year` product (`time.axis`, such as station normals)
         reads local days in each feature's own timezone: `start` and `end`
