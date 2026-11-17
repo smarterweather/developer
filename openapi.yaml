@@ -4676,8 +4676,9 @@ paths:
           area center's US domain (CONUS, Alaska or Hawaii), else a `400`
           `outside_coverage`. At
           most `max_cells` cells per product (the catalog `query.max_cells`,
-          100,000): a larger box is a `400` `area_too_large` naming coarser
-          products. An inline polygon is sent in the batch body.
+          100,000): with `stats` a larger box is a `400` `area_too_large`
+          naming coarser products (a sorted one is ranked, see Sort). An
+          inline polygon is sent in the batch body.
         - `area[product]` with one of `area[feature_id]`,
           `area[feature_ids]` (at most 25, repeated or comma-joined) or
           `area[filter]` (repeatable), in place of `lat` and `lon`: an area
@@ -4751,7 +4752,11 @@ paths:
         role token resolves once per US region (CONUS, Alaska, Hawaii), one
         element per region whose product of record lists the key, a region
         without one named in `notes`; a bbox or an area ranks inside it.
-        The selection is the key's variable alone. Elements are at most 6.
+        A sorted bbox or area over `max_cells` is ranked from overview
+        blocks with its edge blocks read at full resolution (its `mean` and
+        `sum` from each block's mean, `exact: false`), and is a `400`
+        `area_too_large` only when the top `limit` cannot be settled within
+        the read's limits. The selection is the key's variable alone. Elements are at most 6.
         `sort` beside a point, `locations`, `path`, `stats`, `where`,
         `windows`, `step`, `run` or `cursor` is a `400`
         `operator_conflict`, and a key the product does not list a `400`
