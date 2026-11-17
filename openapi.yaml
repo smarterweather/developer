@@ -5083,7 +5083,16 @@ paths:
           shares sum to `stats`. `area[feature_ids]` answers one element
           per id. An inline polygon is sent to
           `POST /v1/features/{product_id}/query`.
-        - None: every feature (`items`), paged.
+        - None: every feature (`items`), paged. A product whose catalog
+          `query.default_area` names an area (the surface observations and
+          soundings, whose stations reach beyond the US, name `us_states`)
+          answers only the features inside it, and each element echoes
+          `area` with that `product` alone; a point, a bbox or an area is
+          never narrowed by it. `us_states` is the 50 states and DC, so
+          stations in US territories (Puerto Rico, Guam, the US Virgin
+          Islands) are outside it too. A `filter` with no space word is
+          narrowed too, so a station outside the area matches nothing
+          there: pass a bbox or an area to read it.
 
         ### Time
 
@@ -5101,8 +5110,11 @@ paths:
         With no time word (and with `at`), a product whose catalog
         `time.latest_by` names its sources serves each source's newest
         data no older than `time.latest_by_window` before the newest
-        (and nothing when the newest is older than that window):
-        each station's newest report, or with `time.latest_by_keep:
+        (and nothing when the newest is older than that window, except
+        surface observations, whose hourly files land late in it: they
+        serve their newest frame whatever its age, `as_of` dating it):
+        each station's newest report (surface observations, observed
+        soundings, climate reports), or with `time.latest_by_keep:
         frame` every feature of each radar site's newest scan (the NEXRAD
         storm tracks and detections), not only the one site that scanned
         last; a radar scan that found nothing ends its site's earlier
@@ -15211,7 +15223,8 @@ components:
             stands now (a window that starts now). It dates the product
             read, not an `area` reference product. A product that serves
             each source's newest report or scan (catalog `time.latest_by`:
-            observed soundings and climate reports per station, the NEXRAD
+            surface observations, observed soundings and climate reports
+            per station, the NEXRAD
             storm tracks and detections per radar site, storm reports and
             record events per report) carries it too, though each feature
             carries its own time: it is the newest data at or before now, so
@@ -15238,7 +15251,12 @@ components:
               type: [string, "null"]
     FeaturesAreaEcho:
       type: object
-      description: The area an element answers.
+      description: |
+        The area an element answers. `product` alone (no `feature_id`,
+        `filter`, `inline` or `bbox`) is the product's catalog
+        `query.default_area`, applied because the request named no space
+        word; a requested area always names a feature, a filter, an inline
+        geometry or a box.
       properties:
         product:
           type: string
