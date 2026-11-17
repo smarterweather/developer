@@ -730,6 +730,10 @@
               "detailed"
             ]
           },
+          "sort": {
+            "description": "Order the rows by one key from the product's query.sort (describe_data): -key descending, key ascending, nulls last; limit: rows, max 50.",
+            "type": "string"
+          },
           "limit": {
             "type": "integer",
             "description": "Frames per series element (default and max 168), or features per element (max 50); next_cursor continues (>= 1)."
@@ -874,9 +878,10 @@
                         "features",
                         "text",
                         "crossings",
-                        "index"
+                        "index",
+                        "ranking"
                       ],
-                      "description": "series: values per frame (along a path: per sample, at its ETA); stats: reducers per step bucket; windows: runs where every `where` held; features: a feature product's matching features; text: a text product's newest matching products; crossings: the stretches of a path inside a feature product's features; index: an index product's values per valid time, location-free, in each variable's stored units (`units` per element; the call's `units` word does not convert them; a `step` no longer than the product's `time.step` spacing, and identity `stats` beside it, change no index value and are named in its notes)."
+                      "description": "series: values per frame (along a path: per sample, at its ETA); stats: reducers per step bucket; windows: runs where every `where` held; features: a feature product's matching features; text: a text product's newest matching products; crossings: the stretches of a path inside a feature product's features; ranking: a product's cells ranked by `sort`; index: an index product's values per valid time, location-free, in each variable's stored units (`units` per element; the call's `units` word does not convert them; a `step` no longer than the product's `time.step` spacing, and identity `stats` beside it, change no index value and are named in its notes)."
                     },
                     "product": {
                       "type": "string"
@@ -902,7 +907,7 @@
                       "additionalProperties": {}
                     },
                     "area": {
-                      "description": "The area an element answers: a reference ({product, feature_id | filter}) or an inline one.",
+                      "description": "The area an element answers: a reference ({product, feature_id | filter}), an inline one, or a product's default area.",
                       "type": "object",
                       "properties": {},
                       "additionalProperties": {}
@@ -1343,6 +1348,99 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
+                    },
+                    "ranking": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "order": {
+                          "type": "string",
+                          "enum": [
+                            "desc",
+                            "asc"
+                          ]
+                        },
+                        "exact": {
+                          "type": "boolean",
+                          "description": "False when not every frame in bounds was ranked, or mean and sum (ranked on block means); notes say why."
+                        },
+                        "resolution_km": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "block_km": {
+                          "description": "No two rows come from one block.",
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "unit": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "rank": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "lat": {
+                                "type": "number"
+                              },
+                              "lon": {
+                                "type": "number"
+                              },
+                              "value": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "valid_time": {
+                                "description": "Absent for mean and sum.",
+                                "type": "string"
+                              },
+                              "valid_time_local": {
+                                "type": "string"
+                              },
+                              "county": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "rank",
+                              "lat",
+                              "lon",
+                              "value"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "order",
+                        "exact",
+                        "resolution_km",
+                        "block_km",
+                        "unit",
+                        "rows"
+                      ],
+                      "additionalProperties": {}
                     },
                     "type": {
                       "type": "string",

@@ -4670,7 +4670,8 @@ paths:
           without it.
         - `min_lon`, `min_lat`, `max_lon` and `max_lat` (all four, in place
           of `lat` and `lon`): statistics over every grid cell whose center
-          is in the box and every sample of the window; needs `stats`.
+          is in the box and every sample of the window (needs `stats`), or a
+          ranking of those cells (`sort`).
           Every corner (every vertex of an inline area) must lie in the
           area center's US domain (CONUS, Alaska or Hawaii), else a `400`
           `outside_coverage`. At
@@ -4683,7 +4684,8 @@ paths:
           by reference to a feature product whose catalog
           `query.area_as_reference` is true (`us_counties`, `us_states`,
           `nws_zones`, `nws_alerts`, ...), by its portable feature id (the
-          referenced product's `table_store.id_property`); needs `stats`.
+          referenced product's `table_store.id_property`); needs `stats` or
+          `sort`.
           The referenced geometry, simplified to the finest selected grid's
           resolution, is read as an inline polygon: one area for
           `feature_id`, one per id (each its own elements) for
@@ -4723,6 +4725,45 @@ paths:
         are in the request units: a `degree_days` or a `sum` of a
         temperature is a difference (`delta_C`, `delta_F`, `K`) and the
         counts are labelled `count`.
+
+        ### Sort
+
+        `sort` ranks a product's cells by one key its catalog `query.sort`
+        lists (`GET /v1/catalog/{product_id}`): `-<key>` descending (the
+        highest first) and `<key>` ascending, with `limit` rows (1-50,
+        default 50) per element, under the US land mask (the 50 states and
+        DC, without open water). Bare, the key ranks one instant: with no
+        time word a forecast's frame at now (floored to its `step`; a daily
+        product's current day, never an earlier one: when it files local
+        days, the local day in the area's centre's zone, or over a whole
+        region the zone at the region's placeholder (CONUS ranks Central
+        time's day, `America/Chicago`), else the UTC day; a zone that
+        cannot be looked up answers `no-store`) and an analysis's newest
+        frame, or `at`'s frame (a date is that UTC day). A forecast with no
+        frame there yet ranks its next step, said in `notes`. Over `hours`
+        or `start` and `end` it names its window reducer: `<key>:max`, `<key>:min`,
+        `<key>:mean` or `<key>:sum` (at most 256 frames; a date is a UTC
+        day, or over a bbox or area its centre's local day, at most 16
+        days; `hours` over a product that files local days covers whole
+        local days, today's included); `-<key>:min` and `<key>:max` (a window extreme in the
+        opposite order) are a `400` `operator_conflict`. Without `lat` and
+        `lon` the read ranks the whole coverage: a bare `standard_name` or
+        role token resolves once per US region (CONUS, Alaska, Hawaii), one
+        element per region whose product of record lists the key, a region
+        without one named in `notes`; a bbox or an area ranks inside it.
+        The selection is the key's variable alone. Elements are at most 6.
+        `sort` beside a point, `locations`, `path`, `stats`, `where`,
+        `windows`, `step`, `run` or `cursor` is a `400`
+        `operator_conflict`, and a key the product does not list a `400`
+        `unsupported_word`. Each element carries `ranking`
+        (`SeriesRanking`) and no frames: one row per overview block, so no
+        two rows come from one block; `exact` is true for an instant and a
+        `max` or `min` with every frame ranked, and `mean` and `sum` are
+        computed at `block_km`. A ranking that could not rank every frame
+        in its bounds (an overview still being written, or an instant
+        ranked in place of a newer frame) is `exact: false` with a note,
+        and the response is `Cache-Control: no-store`; one that cannot rank
+        yet is a retryable `503`.
 
         ### Units and raw values
 
@@ -4834,9 +4875,10 @@ paths:
 
         Standard sw-api Bearer auth and rate limits apply. Weight 1
         (`data`) per element, or 2 (`compute`) per element when the request
-        has an operator word (`stats`, `where`, `windows`, or an area,
-        inline or by reference);
-        variables, hours, `step`, `view` and `limit` never change it.
+        has an operator word (`stats`, `where`, `windows`, `sort`, or an
+        area, inline or by reference; each region element of a sorted read
+        counts); variables, hours, `step`, `view` and `limit` never change
+        it. A `503` is not billed.
       tags: [Products]
       security:
         - bearerAuth: []
@@ -4848,7 +4890,8 @@ paths:
           in: query
           required: false
           description: |
-            Latitude, required unless the request is a bbox. A finite value
+            Latitude, required unless the request is a bbox, an area or
+            sorted (`sort`). A finite value
             outside [-90, 90] is an `out_of_domain` element; a non-numeric
             or non-finite value is a `400`.
           schema:
@@ -4859,7 +4902,8 @@ paths:
           in: query
           required: false
           description: |
-            Longitude, required unless the request is a bbox. A finite value
+            Longitude, required unless the request is a bbox, an area or
+            sorted (`sort`). A finite value
             outside [-180, 180] is an `out_of_domain` element; a
             non-numeric or non-finite value is a `400`.
           schema:
@@ -4881,6 +4925,7 @@ paths:
         - $ref: '#/components/parameters/SeriesMaxLonQuery'
         - $ref: '#/components/parameters/SeriesMaxLatQuery'
         - $ref: '#/components/parameters/AreaReferenceQuery'
+        - $ref: '#/components/parameters/SeriesSortQuery'
         - $ref: '#/components/parameters/SeriesViewQuery'
         - $ref: '#/components/parameters/SeriesLimitQuery'
         - $ref: '#/components/parameters/SeriesCursorQuery'
@@ -4959,8 +5004,9 @@ paths:
 
         Standard sw-api Bearer auth and rate limits apply. Weight 1
         (`data`) per element, or 2 (`compute`) per element with an operator
-        word (`path` is one), whatever each element's status; variables,
-        hours, `step`, `view` and `limit` never change it.
+        word (`stats`, `where`, `windows`, `sort`, an area or a `path`),
+        whatever each element's status; variables, hours, `step`, `view`
+        and `limit` never change it. A `503` is not billed.
       tags: [Products]
       security:
         - bearerAuth: []
@@ -4981,6 +5027,13 @@ paths:
                     - {lat: 41.88, lon: -87.63, label: chicago}
                     - {lat: 39.74, lon: -104.99, label: denver}
                     - {lat: 61.22, lon: -149.90, label: anchorage}
+              warmestNow:
+                summary: The five warmest cells of each US region now
+                value:
+                  select: [temperature_2m]
+                  sort: -temperature_2m
+                  limit: 5
+                  units: imperial
       responses:
         '200':
           description: One series element per (location, product).
@@ -5155,12 +5208,18 @@ paths:
           the page. `sum` reduces each property under its declared rule:
           every summable one (`centroid_in`, `area_weighted`,
           `precomputed`), or those `properties` names. A property whose
-          `aggregate` is `none` is a `400` `aggregate_not_declared`; one
-          with `partition_by` (partitions that overlap, such as zone
-          types) needs a single-value filter on the partition
-          (`<partition> == <value>`, or `in` with one value), else a `400`
-          `partition_required` whose `suggested_call` puts one in place of
-          any other filter on it.
+          `aggregate` is `none` is a `400` `aggregate_not_declared`.
+          A property with `partition_by` (values that compare only within
+          one partition: overlapping zone types, a report's magnitude unit
+          by its type, a county name within its state) needs a single-value
+          filter on the partition (`<partition> == <value>`, or `in` with
+          one value) for every use that compares its values: `sum`, a
+          `sort` on it, an ordered `filter` on it (`>`, `>=`, `<`, `<=`)
+          and `count_by:<property>`; `==`, `!=` and `in` on it need none.
+          Without one it is a `400` `partition_required` listing the
+          partition's values in `valid_values`; when the call already names
+          one (the first of a multi-value `in`), its `suggested_call` puts
+          that value's `==` in place of the other filter on the partition.
           Keys are `<property>:sum` (an `area_weighted` sum is an integer,
           rounded once), `count` and `count_by:<property>` (an object of
           value to count).
@@ -5185,6 +5244,20 @@ paths:
           `bbox` or `area`. Another size, or the token on a product that does not
           declare it, is a `400` `unsupported_word` (the size's
           `did_you_mean` is the nearest one).
+
+        ### Sort
+
+        `sort`: one key of the product's catalog `query.sort` (properties
+        marked `sortable`), `-key` descending, `key` ascending; features
+        with no value come last either way, ties in feature id order.
+        Pair it with `limit` for the top N ("the five largest snowfall
+        reports": `filter=type == S&sort=-magf&limit=5`); `next_cursor`
+        pages the rest in the same order. It ranks an items, box or area
+        read; with `lat` and `lon` (their own order) it is a `400`
+        `operator_conflict` whose `suggested_call` drops it. A key the
+        product does not list is a `400` `unsupported_word` with
+        `query.sort` in `valid_values` (and `did_you_mean` for a near
+        miss). The sort never changes `matched` or `stats`.
 
         ### Envelope
 
@@ -5245,8 +5318,8 @@ paths:
         ### Auth and cost
 
         Standard sw-api Bearer auth and rate limits apply. Weight 1
-        (`data`) per element, or 2 (`compute`) per element with `stats` or
-        an area.
+        (`data`) per element, or 2 (`compute`) per element with `stats`,
+        `sort` or an area.
       tags: [Products]
       security:
         - bearerAuth: []
@@ -5346,6 +5419,7 @@ paths:
         - $ref: '#/components/parameters/FeaturesFilterQuery'
         - $ref: '#/components/parameters/FeaturesStatsQuery'
         - $ref: '#/components/parameters/FeaturesPropertiesQuery'
+        - $ref: '#/components/parameters/FeaturesSortQuery'
         - name: view
           in: query
           required: false
@@ -5439,7 +5513,7 @@ paths:
         ### Auth and cost
 
         As the GET route: weight 1 (`data`) per element, 2 (`compute`) per
-        element with `stats` or an area.
+        element with `stats`, `sort` or an area.
       tags: [Products]
       security:
         - bearerAuth: []
@@ -6539,6 +6613,19 @@ components:
         maximum: 744
         default: 168
       example: 168
+    SeriesSortQuery:
+      name: sort
+      in: query
+      required: false
+      description: |
+        Rank the product's cells by one key its catalog `query.sort`
+        lists: `-<key>` descending, `<key>` ascending; `:max`, `:min`,
+        `:mean` or `:sum` with `hours` or `start` and `end`. Returns the
+        top `limit` (1-50, default 50) per element; see Sort.
+      schema:
+        type: string
+        pattern: '^-?[A-Za-z_][A-Za-z0-9_]*(:(max|min|mean|sum))?$'
+      example: -temperature_2m
     SeriesCursorQuery:
       name: cursor
       in: query
@@ -6635,6 +6722,16 @@ components:
           minLength: 1
           maxLength: 128
       example: [population]
+    FeaturesSortQuery:
+      name: sort
+      in: query
+      required: false
+      description: One key of the product's `query.sort`, `-key` descending, `key` ascending; nulls last, ties by feature id. Ranks an items, box or area read; pair with `limit`.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 129
+      example: -magf
     LatQuery:
       name: lat
       in: query
@@ -7270,8 +7367,9 @@ components:
             `too_many_elements`, `outside_time_range`, `outside_coverage`,
             `daylight_unavailable`, `aggregate_not_declared` (a statistic
             over a property whose declared `aggregate` does not allow it),
-            `partition_required` (a sum over a partitioned property without
-            its single-value filter), `not_area_reference`, `area_not_found`
+            `partition_required` (a sum, sort, ordered filter or `count_by`
+            over a partitioned property without its partition's
+            single-value filter), `not_area_reference`, `area_not_found`
             or `invalid_cursor`. On a `409`, `cursor_stale`; on a `422`,
             `query_too_slow`. On a `503`, `timezone_unavailable`: the
             location's timezone, which `stats` and `windows` are computed
@@ -10824,6 +10922,16 @@ components:
                   type: [integer, "null"]
                   example: 30000
             - type: 'null'
+        sort:
+          type: array
+          items:
+            type: string
+          description: |
+            Present only when declared: the keys the `sort` word ranks by.
+            On a feature product, its `sortable` properties; on a grid or
+            snapshot product, the variables (by `standard_name`) its
+            overview companions hold, and `shapes` lists `items`.
+          example: [temperature_2m, dewpoint_2m]
         max_cells:
           type: [integer, "null"]
           description: Zonal-statistics cell cap per element; `null` for non-gridded products.
@@ -14306,6 +14414,8 @@ components:
             The product's freshness, as on the catalog; with `run`, the
             pinned run's age against the product's freshness budget (the
             strictest of its stores). Null when unknown.
+        ranking:
+          $ref: '#/components/schemas/SeriesRanking'
         meta:
           type: object
           required: [timezone]
@@ -14314,6 +14424,76 @@ components:
               type: [string, "null"]
               description: IANA timezone of the location, null when it cannot be resolved.
               example: America/Chicago
+    SeriesRanking:
+      x-stability: experimental
+      type: object
+      description: |
+        A sorted element's ranking (`sort`): the top `limit` cells, one per
+        overview block. The element's `lat` and `lon` are its area's
+        center, or with no space word its first row's cell (0 without
+        rows); its `times` and `values` are empty.
+      required: [key, order, exact, resolution_km, block_km, unit, rows]
+      properties:
+        key:
+          type: string
+          description: The key ranked, without its order sign.
+          example: temperature_2m
+        order:
+          type: string
+          enum: [desc, asc]
+        exact:
+          type: boolean
+          description: |
+            The rows are the true top cells: an instant, or a `max` or
+            `min` window, with every frame in bounds ranked. `mean` and
+            `sum` are computed on block means (`block_km`).
+        resolution_km:
+          type: [number, "null"]
+          description: The product's grid spacing.
+        block_km:
+          type: [number, "null"]
+          description: The overview block's size; no two rows come from one block.
+        unit:
+          type: [string, "null"]
+          description: The unit of every row's `value`, in the request `units`.
+          example: F
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeriesRankRow'
+    SeriesRankRow:
+      x-stability: experimental
+      type: object
+      required: [rank, lat, lon, value]
+      properties:
+        rank:
+          type: integer
+          minimum: 1
+        lat:
+          type: number
+          format: double
+          description: The ranked cell's center.
+        lon:
+          type: number
+          format: double
+        value:
+          type: [number, "null"]
+        valid_time:
+          type: string
+          format: date-time
+          description: The ranked frame's valid time (UTC); absent for `mean` and `sum`.
+        valid_time_local:
+          type: string
+          format: date-time
+          description: The same instant with the cell's own UTC offset (rows span zones); absent when the cell's zone is unknown.
+        county:
+          type: string
+          description: The cell's county (or the nearest within one block); absent when labels are unavailable.
+          example: Maricopa
+        state:
+          type: string
+          description: The cell's state; absent when labels are unavailable.
+          example: AZ
     IndicesResponse:
       x-stability: experimental
       type: object
@@ -14774,7 +14954,7 @@ components:
         of `lat` and `lon`, an area (the bbox, `area.geometry`, or an
         area by reference: `area.product` with `area.feature_id`,
         `area.feature_ids` or `area.filter`), or a `path`, in place of
-        both.
+        both. A sorted read (`sort`) takes no `locations`.
       properties:
         locations:
           type: array
@@ -14904,6 +15084,11 @@ components:
                           type: number
         path:
           $ref: '#/components/schemas/SeriesPath'
+        sort:
+          type: string
+          pattern: '^-?[A-Za-z_][A-Za-z0-9_]*(:(max|min|mean|sum))?$'
+          description: As the `sort` parameter of `GET /v1/series`.
+          example: -temperature_2m
         filter:
           type: array
           maxItems: 16
@@ -15415,6 +15600,11 @@ components:
           maxItems: 32
           items:
             type: string
+        sort:
+          type: string
+          description: As the GET `sort` parameter.
+          minLength: 1
+          maxLength: 129
         view:
           type: string
           enum: [concise, detailed]
