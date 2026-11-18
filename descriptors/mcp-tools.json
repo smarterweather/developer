@@ -38,6 +38,12 @@
             "properties": {},
             "additionalProperties": {}
           },
+          "ranking_query": {
+            "description": "get_data arguments that rank places by this variable (on its ranker), by one query.sort key; it takes no location.",
+            "type": "object",
+            "properties": {},
+            "additionalProperties": {}
+          },
           "data_status": {
             "description": "Present only when the data service could not answer: a cached copy, or catalog facts without freshness.",
             "type": "object",
@@ -2742,6 +2748,25 @@
                 },
                 "map": {
                   "description": "The render call that draws this dataset's map beside a call that reads it.",
+                  "type": "object",
+                  "properties": {
+                    "tool": {
+                      "type": "string"
+                    },
+                    "arguments": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "tool",
+                    "arguments"
+                  ],
+                  "additionalProperties": {}
+                },
+                "rank": {
+                  "description": "The get_data call that ranks places by this variable (on its ranker), highest first; it takes no location, `area` narrows it, and an empty word is for the caller to fill.",
                   "type": "object",
                   "properties": {
                     "tool": {
