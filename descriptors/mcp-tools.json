@@ -1117,7 +1117,7 @@
                         },
                         "mask": {
                           "type": "string",
-                          "description": "us_land: only land cells inside the 50 states and DC count. none: every cell counts."
+                          "description": "us_land: only land cells in the product's own US region count. none: every cell counts."
                         },
                         "weighting": {
                           "description": "Area stats: how a mean weights cells. cell_area (true cell area) or none; other sources may appear.",
@@ -1496,7 +1496,7 @@
                             },
                             "mask": {
                               "type": "string",
-                              "description": "us_land: only land cells inside the 50 states and DC count. none: every cell counts."
+                              "description": "us_land: only land cells in the product's own US region count. none: every cell counts."
                             },
                             "weighting": {
                               "description": "Area stats: how a mean weights cells. cell_area (true cell area) or none; other sources may appear.",

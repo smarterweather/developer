@@ -15096,7 +15096,10 @@ components:
         mask:
           type: string
           description: |
-            `us_land`: only land cells inside the 50 states and DC count.
+            `us_land`: only land cells inside the product's own US region
+            count: Alaska, Hawaii, or every other state (today the 48 states
+            and DC); all 50 states and DC for a product that covers more
+            than one region.
             `none`: every cell counts. Those are today's values; others may
             appear.
         weighting:
