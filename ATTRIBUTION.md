@@ -123,7 +123,7 @@ Address points.
 
 ### Natural Earth
 
-Ocean polygons and place labels (10m), and the land/water mask behind the GOES true color night layer (10m land and lakes).
+Ocean polygons and place labels (10m), the land/water mask behind the GOES true color night layer (10m land and lakes), and a low-zoom world backdrop for web maps (50m land and country borders, z0-5).
 
 - License: Public domain (dedicated by its publisher)
 - Terms: https://www.naturalearthdata.com/about/terms-of-use/
