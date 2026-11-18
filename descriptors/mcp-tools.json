@@ -1127,6 +1127,20 @@
                         }
                       }
                     },
+                    "standardized_anomalies": {
+                      "description": "index: each anomaly over the day-of-year standard deviation, keyed and aligned as normals: dimensionless, in standard deviations of that calendar day; per variable whose climatology has one.",
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        }
+                      }
+                    },
                     "percentiles": {
                       "description": "index: each value's percentile (1-99) among the catalog reference period's values at that time of year, per variable that has a reference, aligned with times.",
                       "type": "object",

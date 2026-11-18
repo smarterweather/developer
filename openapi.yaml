@@ -11540,7 +11540,10 @@ components:
             one: `GET /v1/indices` answers it as `normals` and the value less
             it as `anomalies`. `product` and `variable` are provenance, where
             the normal is stored: that product is on no door and is not
-            directly readable. `description` says what the normal is
+            directly readable. `stddev`, when present, is where the
+            day-of-year standard deviation is stored beside it, in the same
+            units: `GET /v1/indices` then also answers
+            `standardized_anomalies`. `description` says what the normal is
             (source, base period, method) and how it is read.
           required: [product, variable, description, anomaly_display_units]
           properties:
@@ -11550,6 +11553,13 @@ components:
             variable:
               type: string
               example: u_10hpa_60n
+            stddev:
+              type: string
+              description: |
+                The stored name of the day-of-year standard deviation in
+                `product` (provenance, like `variable`). Absent when the
+                climatology carries none.
+              example: u_10hpa_60n_stddev
             description:
               type: [string, "null"]
             anomaly_display_units:
@@ -11592,9 +11602,12 @@ components:
             On an analysis index variable: the series its values are ranked
             against for `percentiles` and `records` on `GET /v1/indices`,
             the variable's own (`product` is this product) or another
-            product's, by `standard_name`. `reference_period` is the first
-            and last whole year pooled; `window` the days centred on each
-            day of year (`P31D`) or the calendar month (`P1M`). A forecast
+            product's, by `standard_name`. That product may be on no door
+            (a reference series only the ranking reads, not directly
+            readable); its source is still credited in `meta.sources`.
+            `reference_period` is the first and last whole year pooled;
+            `window` an odd number of days centred on each day of year
+            (`P5D`, `P31D`) or the calendar month (`P1M`). A forecast
             variable carries none: it is ranked through its base's
             `observed` series.
           required: [product, variable, reference_period, window]
@@ -14787,6 +14800,22 @@ components:
             the stored unit: convert it by scale only, never with an offset
             (the catalog link's `anomaly_display_units`, conversion
             `delta`).
+          additionalProperties:
+            type: array
+            items:
+              type: [number, "null"]
+        standardized_anomalies:
+          type: object
+          description: |
+            Each anomaly divided by the climatology's day-of-year standard
+            deviation for the time's UTC month and day, keyed and aligned
+            as `normals`: dimensionless, in standard deviations of that
+            calendar day. Null where the value is missing or the standard
+            deviation is not positive. Present only for the selected
+            variables whose catalog `climatology` names a `stddev` and
+            whose standard deviations are loaded; until they are stored the
+            field is left out, with no note, and `normals` and `anomalies`
+            are still served.
           additionalProperties:
             type: array
             items:
