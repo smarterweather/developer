@@ -4679,7 +4679,9 @@ paths:
           100,000): with `stats` a larger box is a `400` `area_too_large`
           naming coarser products and, for one `max` or `min` of a key the
           product's domain ranks, a `suggested_call` that ranks the box
-          (a sorted one is ranked, see Sort). An
+          (a sorted one is ranked, see Sort). Area `stats` state `exact`,
+          `method`, `basis` and `bounds` when the read does, and an area
+          whose block summary is still being written is a retryable `503`. An
           inline polygon is sent in the batch body.
         - `area[product]` with one of `area[feature_id]`,
           `area[feature_ids]` (at most 25, repeated or comma-joined) or
@@ -4770,8 +4772,10 @@ paths:
         (`SeriesRanking`) and no frames: one row per overview block, so no
         two rows come from one block; `exact` is true for an instant and a
         `max` or `min` with every frame ranked, and `mean` and `sum` are
-        computed at `block_km`. A ranking that could not rank every frame
-        in its bounds (an overview still being written, or an instant
+        computed at `block_km`; a `mean` or `sum` row carries `upper` (or
+        `lower`, ascending) and the ranking its `method` and `basis`. A
+        ranking that could not rank every frame in its bounds (an overview
+        still being written, or an instant
         ranked in place of a newer frame) is `exact: false` with a note,
         and the response is `Cache-Control: no-store`; one that cannot rank
         yet is a retryable `503`.
@@ -14306,7 +14310,7 @@ components:
             type: number
         cells:
           type: integer
-          description: An area element's grid cells (centers inside the area).
+          description: An area element's grid cells (centers inside the area), equal to `basis.cells` where both are present.
         timezone:
           type: [string, "null"]
           description: IANA timezone of the location (an area's center), null when it cannot be resolved.
@@ -14514,7 +14518,8 @@ components:
           description: |
             The rows are the true top cells: an instant, or a `max` or
             `min` window, with every frame in bounds ranked. `mean` and
-            `sum` are computed on block means (`block_km`).
+            `sum` are computed on block means (`block_km`). `method` says
+            which; a `mean` or `sum` row carries its bound.
         resolution_km:
           type: [number, "null"]
           description: The product's grid spacing.
@@ -14536,6 +14541,15 @@ components:
             frames (a ranking over the whole coverage, or over an area too
             large for native cells). Absent on any other key, and on a
             `mean` whose path is not stated.
+        method:
+          type: string
+          description: |
+            `cells`: each row is one grid cell (an instant, `max` or
+            `min`). `blocks`: each row is a block's mean (`mean` and
+            `sum`), with `upper` or `lower`. Those are today's values;
+            others may appear. Absent when the read does not state it.
+        basis:
+          $ref: '#/components/schemas/SeriesBasis'
         rows:
           type: array
           items:
@@ -14557,6 +14571,18 @@ components:
           format: double
         value:
           type: [number, "null"]
+        upper:
+          type: number
+          description: |
+            A descending `mean` or `sum` row: an upper bound on every cell
+            in the row's block over the window, in the row's unit. `value`
+            is the block's mean; a local amount is at most this.
+        lower:
+          type: number
+          description: |
+            An ascending `mean` or `sum` row: a lower bound on every cell
+            in the row's block over the window, in the row's unit (0 is a
+            bound).
         valid_time:
           type: string
           format: date-time
@@ -15031,6 +15057,71 @@ components:
             type: [string, "null"]
         reference_classes:
           $ref: '#/components/schemas/ReferenceClasses'
+        exact:
+          type: boolean
+          description: |
+            Over an area only. True when every value is the exact statistic
+            over `basis`; false when a value is a block-resolution estimate
+            (see `bounds`), a binned percentile, or a `mean` over a long
+            window read in parts and weighted by sample count (`notes` says
+            so). Absent: not stated.
+        method:
+          type: string
+          description: |
+            Over an area only. `cells`: every cell in the area was read.
+            `blocks`: overview block statistics (`max` and `min` are still
+            exact). Those are today's values; others may appear. Absent:
+            not stated.
+        basis:
+          $ref: '#/components/schemas/SeriesBasis'
+        bounds:
+          type: object
+          description: |
+            Over an area only, keyed as `values` and aligned with `times`:
+            the true value lies between `lower` and `upper`. Only on a
+            block-resolution value.
+          additionalProperties:
+            $ref: '#/components/schemas/SeriesStatsBounds'
+    SeriesBasis:
+      x-stability: experimental
+      type: object
+      description: What an areal answer's values stand on.
+      required: [mask]
+      properties:
+        cells:
+          type: integer
+          description: |
+            The cells behind the answer: in the area, and in the mask when
+            there is one. Absent for a whole-coverage ranking.
+        mask:
+          type: string
+          description: |
+            `us_land`: only land cells inside the 50 states and DC count.
+            `none`: every cell counts. Those are today's values; others may
+            appear.
+        weighting:
+          type: string
+          description: |
+            Area stats: how a mean weights cells. `cell_area` (true cell
+            area) and `none` today; other values may appear.
+        scale_km:
+          type: number
+          description: |
+            The scale the values are computed at: the grid spacing for
+            `method` `cells`, the block size for `blocks`.
+    SeriesStatsBounds:
+      x-stability: experimental
+      type: object
+      description: One bounded value's bucket bounds, aligned with `times` (null where a bucket has none).
+      properties:
+        lower:
+          type: array
+          items:
+            type: [number, "null"]
+        upper:
+          type: array
+          items:
+            type: [number, "null"]
     SeriesWindow:
       type: object
       required: [start, end, hours]

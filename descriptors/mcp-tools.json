@@ -1092,6 +1092,70 @@
                         "type": "string"
                       }
                     },
+                    "exact": {
+                      "description": "Area stats: true when every value is the exact statistic over basis; false when a value is a block-resolution estimate (see bounds), a binned percentile, or a mean over a long window read in parts and weighted by sample count (notes say so). Absent: not stated.",
+                      "type": "boolean"
+                    },
+                    "method": {
+                      "description": "Area stats: cells (every cell in the area was read) or blocks (overview block statistics; max and min are still exact).",
+                      "type": "string"
+                    },
+                    "basis": {
+                      "type": "object",
+                      "properties": {
+                        "cells": {
+                          "description": "The cells behind the answer: in the area, and in the mask when there is one. Absent for a whole-coverage ranking.",
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "mask": {
+                          "type": "string",
+                          "description": "us_land: only land cells inside the 50 states and DC count. none: every cell counts."
+                        },
+                        "weighting": {
+                          "description": "Area stats: how a mean weights cells. cell_area (true cell area) or none; other sources may appear.",
+                          "type": "string"
+                        },
+                        "scale_km": {
+                          "description": "The scale the values are computed at: the grid spacing for method cells, the block size for blocks.",
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "mask"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "bounds": {
+                      "description": "Area stats, keyed as values and aligned with times: the true value lies between lower and upper. Only on a block-resolution value.",
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "lower": {
+                            "type": "array",
+                            "items": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "upper": {
+                            "type": "array",
+                            "items": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          }
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
                     "unread_variables": {
                       "description": "index: the product's variables this select did not read; select product:* for all of them.",
                       "type": "array",
@@ -1386,7 +1450,7 @@
                         },
                         "exact": {
                           "type": "boolean",
-                          "description": "False when not every frame in bounds was ranked, or mean and sum (ranked on block means); notes say why."
+                          "description": "False when not every frame in bounds was ranked (notes say why), or for mean and sum, whose rows are block means (method blocks)."
                         },
                         "resolution_km": {
                           "type": [
@@ -1411,6 +1475,37 @@
                           "description": "A probability key only: probability for an instant, max or min key; for a mean key, share_of_hours when each row is one cell's own window mean, share_of_area when each row is an overview block's mean (its cells and frames pooled); absent when the path is not stated.",
                           "type": "string"
                         },
+                        "method": {
+                          "description": "cells: each row is one grid cell (an instant, max or min). blocks: each row is a block's mean (mean and sum), with upper or lower.",
+                          "type": "string"
+                        },
+                        "basis": {
+                          "type": "object",
+                          "properties": {
+                            "cells": {
+                              "description": "The cells behind the answer: in the area, and in the mask when there is one. Absent for a whole-coverage ranking.",
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "mask": {
+                              "type": "string",
+                              "description": "us_land: only land cells inside the 50 states and DC count. none: every cell counts."
+                            },
+                            "weighting": {
+                              "description": "Area stats: how a mean weights cells. cell_area (true cell area) or none; other sources may appear.",
+                              "type": "string"
+                            },
+                            "scale_km": {
+                              "description": "The scale the values are computed at: the grid spacing for method cells, the block size for blocks.",
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "mask"
+                          ],
+                          "additionalProperties": {}
+                        },
                         "rows": {
                           "type": "array",
                           "items": {
@@ -1432,6 +1527,14 @@
                                   "number",
                                   "null"
                                 ]
+                              },
+                              "upper": {
+                                "description": "A descending mean or sum row: an upper bound on every cell in the row's block over the window. value is the block's mean; a local amount is at most this.",
+                                "type": "number"
+                              },
+                              "lower": {
+                                "description": "An ascending mean or sum row: a lower bound on every cell in the row's block over the window.",
+                                "type": "number"
                               },
                               "valid_time": {
                                 "description": "Absent for mean and sum.",
