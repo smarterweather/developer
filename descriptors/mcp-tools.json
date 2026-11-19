@@ -499,7 +499,7 @@
             "type": "string"
           },
           "stats": {
-            "description": "Reducers per `step` bucket, over the whole window, or over the area's cells and features. `cumulative:` prefixes sum and degree_days only (a running total).",
+            "description": "Reducers per `step` bucket, over the whole window, or over the area's cells and features. `cumulative:` prefixes sum and degree_days only (a running total). `per_cell:<sum|max|min|mean>:` before `percentile:<p>`, `fraction_above:<v>` or `fraction_below:<v>` (bbox or area only) reduces each cell over the bucket first, then over the area weighted by cell area: the area's percentile of that per-cell value, or the percent of the area above or below v.",
             "type": "array",
             "minItems": 1,
             "items": {
@@ -1102,7 +1102,7 @@
                       }
                     },
                     "reference_classes": {
-                      "description": "What a probability's percent is a percent of (keyed as units; absent: no key has one): probability, the chance of the event at that place and time (as served, or its max, min or percentile); share_of_hours, a mean over frames at one place: the expected share of the frames with the event, not the chance of the event in the window; share_of_area, a mean pooling the cells and frames of an area (a bbox or area pools every cell and frame of a bucket): the expected share of those cell-frames with the event.",
+                      "description": "What a probability's percent is a percent of (keyed as units; absent: no key has one): probability, the chance of the event at that place and time (as served, or its max, min or percentile); share_of_hours, a mean over frames at one place: the expected share of the frames with the event, not the chance of the event in the window; share_of_area, a mean pooling the cells and frames of an area (a bbox or area pools every cell and frame of a bucket): the expected share of those cell-frames with the event; also a per_cell share (fraction_above, fraction_below) on any variable: the percent of the area, weighted as basis.weighting says, whose cells pass the threshold.",
                       "type": "object",
                       "properties": {},
                       "additionalProperties": {

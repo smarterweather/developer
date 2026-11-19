@@ -4651,6 +4651,21 @@ paths:
           and a daily extreme without one is a `400`. `sum` and `mean` over a total since
           the model run started are a `400` naming the product's period
           totals and the domain's accumulation products.
+          `per_cell:<sum|max|min|mean>:` before `percentile:<p>`,
+          `fraction_above:<v>` or `fraction_below:<v>` (a bbox or area
+          only; a `400` `invalid_operator` otherwise) reduces each cell
+          over the bucket first, then the cells over the area, each
+          weighted as `basis.weighting` says: `percentile:<p>` is the
+          smallest cell value at which the cells at or below it hold at
+          least `p` percent of the area (no interpolation, unlike the
+          pooled `percentile`), in the unit its time reducer's value has
+          (a `sum` of a temperature is a difference); `fraction_above:<v>`
+          and `fraction_below:<v>` are the percent of the area whose cell
+          value is strictly above or below `v` (unit `percent`, reference
+          class `share_of_area`). A cell with no sample in the bucket (or
+          none passing `where`) is left out. It is legal where its parts
+          are: its time reducer, and `percentile` or `count_above` /
+          `count_below`.
         - `step`: `PT15M`, `PT1H`, `PT3H`, `PT6H` or `P1D`, never finer than
           the product's frames; needs `stats`. `P1D` buckets are the
           location's local days.
@@ -4687,9 +4702,10 @@ paths:
           the words are `max`, `min`, `mean`, `sum`, `count`,
           `count_above` or `count_below` (`method: "blocks"`; `max`,
           `min` and `count` exact; `mean` and `sum` with `bounds`;
-          `count_above`/`count_below` exact or with `bounds`); otherwise
-          it is the `400`
-          `area_too_large` naming coarser products, whose rank
+          `count_above`/`count_below` exact or with `bounds`). A larger
+          box with a `per_cell` token is the `400` `area_too_large`, with no
+          rank `suggested_call`: send a smaller area. Otherwise a larger box
+          is the `400` `area_too_large` naming coarser products, whose rank
           `suggested_call` is offered only for an explicit product with no
           block summary (a sorted one is ranked, see Sort). Area `stats` state `exact`,
           `method`, `basis` and `bounds` when the read does, and an area
@@ -4726,11 +4742,14 @@ paths:
           answers `entitlement_required` elements. Areas read in parallel;
           a failure is answered for the lowest failing area.
 
-        Thresholds (`where` values, `count_above`, `count_below` and
-        `degree_days` arguments) are in the request `units`. `stats` and
+        Thresholds (`where` values, `count_above`, `count_below`,
+        `fraction_above`, `fraction_below` and `degree_days` arguments) are
+        in the request `units` (a `per_cell:sum:` share's threshold is a
+        difference of a temperature). `stats` and
         `windows` reduce the whole window, read in 16-day parts split at
-        a local midnight and merged; a `percentile` without `step` over a
-        longer window covers its first 16 days, with a note. They are
+        a local midnight and merged; a `percentile` or `per_cell` token
+        without `step` over a longer window covers its first 16 days, with
+        a note. They are
         computed in the location's timezone: when it cannot be resolved
         the request is a retryable `503` (`timezone_unavailable`). A light
         filter where sunrise and sunset are unavailable is a `400`
@@ -6610,8 +6629,12 @@ components:
         comma arguments): `sum`, `max`, `min`, `mean`, `count`,
         `count_above:<v>`, `count_below:<v>`, `percentile:<p>`,
         `degree_days:<base>[,<upper>][,simple|modified]`, and
-        `cumulative:` before `sum` or `degree_days`. Thresholds in the
-        request units. A reducer a selected variable does not take (its
+        `cumulative:` before `sum` or `degree_days`; over a bbox or area,
+        `per_cell:<sum|max|min|mean>:` before `percentile:<p>`,
+        `fraction_above:<v>` or `fraction_below:<v>` (each cell reduced
+        over the bucket, then the area's weighted percentile of those
+        values, or the percent of the area above or below `v`). Thresholds
+        in the request units. A reducer a selected variable does not take (its
         catalog `reducers`, else its product's `query.reducers`: a
         probability, percentile or spread takes no `sum`, `cumulative` or
         `degree_days`) is a `400` `unsupported_word` naming the variable,
@@ -15255,9 +15278,14 @@ components:
         frames of an area (a bbox or area's mean pools every cell and
         frame of a bucket), the expected share of those cell-frames with
         the event, each cell weighted as `basis.weighting` says
-        (`cell_area`: by its true area; `none` or absent: equally). Absent on a key with no class (a
-        value that is not a probability, a count); absent when no key has
-        one. It describes `values` as served: a ranked element's own class
+        (`cell_area`: by its true area; `none` or absent: equally); also a
+        `per_cell` share (`fraction_above`, `fraction_below`) on any
+        variable: the percent of the area, weighted as `basis.weighting`
+        says, whose cells pass the threshold. A `per_cell` percentile
+        takes its time reducer's class at one place (`max`, `min`:
+        `probability`; `mean`: `share_of_hours`). Absent on a key with no class
+        (a value that is neither a probability nor a `per_cell` share, a
+        count); absent when no key has one. It describes `values` as served: a ranked element's own class
         is its `ranking.reference_class`.
       additionalProperties:
         type: string
