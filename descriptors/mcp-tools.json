@@ -2919,7 +2919,6 @@
         "openai/widgetAccessible": true,
         "openai/toolInvocation/invoking": "Visualizing the weather…",
         "openai/toolInvocation/invoked": "Ready to view",
-        "openai/outputTemplate": "ui://weather-widget/v2/map.html",
         "smarterweather.dev/strict": false,
         "smarterweather.dev/apps_only_inputs": [
           "card",
