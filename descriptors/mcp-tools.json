@@ -804,6 +804,10 @@
                   "additionalProperties": false
                 }
               },
+              "caption": {
+                "description": "One sentence under the view, up to 120 characters. Write data values as `{max}`, `{min}`, `{latest}` (add `.time` for when): the card fills them from the data in the viewer's units.",
+                "type": "string"
+              },
               "show": {
                 "description": "The series the chart draws, lead first: up to two of this call's results, each a select token as you wrote it or a value key (`<variable>:<reducer>` for a reduced one). The rest stay in the result for you to read. Leave it out and the shape of the read picks.",
                 "type": "array",
@@ -2501,6 +2505,10 @@
                   ],
                   "additionalProperties": false
                 }
+              },
+              "caption": {
+                "description": "One sentence under the map, up to 120 characters. Write the frame's time as `{time}`: the card fills it with the frame on screen.",
+                "type": "string"
               }
             },
             "additionalProperties": false,
