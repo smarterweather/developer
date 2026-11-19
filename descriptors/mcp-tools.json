@@ -2525,6 +2525,213 @@
             },
             "additionalProperties": false,
             "description": "Shape the card (guide://smarterweather/views): intent only; the server fills the rest from the data."
+          },
+          "scene": {
+            "type": "object",
+            "properties": {
+              "map": {
+                "type": "object",
+                "properties": {
+                  "marks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "pin",
+                            "label",
+                            "callout",
+                            "circle",
+                            "area",
+                            "path",
+                            "arrow",
+                            "spotlight"
+                          ],
+                          "description": "Which mark; marks says the fields each kind takes."
+                        },
+                        "at": {
+                          "type": "object",
+                          "properties": {
+                            "site": {
+                              "type": "string",
+                              "description": "A radar site id, e.g. KTLX."
+                            },
+                            "lat": {
+                              "type": "number",
+                              "description": "Degrees north."
+                            },
+                            "lon": {
+                              "type": "number",
+                              "description": "Degrees east."
+                            },
+                            "label": {
+                              "type": "string",
+                              "description": "Up to 40 characters."
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "A point {lat, lon} or a radar {site}."
+                        },
+                        "radius_km": {
+                          "type": "number",
+                          "description": "Kilometres, 1-500."
+                        },
+                        "ring": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "lat": {
+                                "type": "number",
+                                "description": "Degrees north."
+                              },
+                              "lon": {
+                                "type": "number",
+                                "description": "Degrees east."
+                              }
+                            },
+                            "required": [
+                              "lat",
+                              "lon"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "An outline of 3-64 points."
+                        },
+                        "bbox": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          },
+                          "description": "[west, south, east, north] in degrees."
+                        },
+                        "points": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "lat": {
+                                "type": "number",
+                                "description": "Degrees north."
+                              },
+                              "lon": {
+                                "type": "number",
+                                "description": "Degrees east."
+                              }
+                            },
+                            "required": [
+                              "lat",
+                              "lon"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "A line of 2-64 points in travel order."
+                        },
+                        "times": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "One RFC 3339 time per point, ascending."
+                        },
+                        "from": {
+                          "type": "object",
+                          "properties": {
+                            "site": {
+                              "type": "string",
+                              "description": "A radar site id, e.g. KTLX."
+                            },
+                            "lat": {
+                              "type": "number",
+                              "description": "Degrees north."
+                            },
+                            "lon": {
+                              "type": "number",
+                              "description": "Degrees east."
+                            },
+                            "label": {
+                              "type": "string",
+                              "description": "Up to 40 characters."
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "Where the arrow starts: {lat, lon} or {site}."
+                        },
+                        "to": {
+                          "type": "object",
+                          "properties": {
+                            "site": {
+                              "type": "string",
+                              "description": "A radar site id, e.g. KTLX."
+                            },
+                            "lat": {
+                              "type": "number",
+                              "description": "Degrees north."
+                            },
+                            "lon": {
+                              "type": "number",
+                              "description": "Degrees east."
+                            },
+                            "label": {
+                              "type": "string",
+                              "description": "Up to 40 characters."
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "Where the arrow points: {lat, lon} or {site}."
+                        },
+                        "id": {
+                          "type": "string",
+                          "description": "A name up to 24 characters, unique in the list."
+                        },
+                        "label": {
+                          "type": "string",
+                          "description": "Up to 40 characters."
+                        },
+                        "when": {
+                          "type": "object",
+                          "properties": {
+                            "start": {
+                              "type": "string",
+                              "description": "RFC 3339 with an offset."
+                            },
+                            "end": {
+                              "type": "string",
+                              "description": "RFC 3339 with an offset, after start."
+                            }
+                          },
+                          "required": [
+                            "start",
+                            "end"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Drawn only while the frame on screen is inside it."
+                        },
+                        "tone": {
+                          "type": "string",
+                          "enum": [
+                            "strong",
+                            "quiet"
+                          ],
+                          "description": "strong or quiet; none is normal."
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Up to 24 marks drawn on the map in list order: pin {at}; label {at, label}; callout {at, label}, numbered; circle {at, radius_km}; area {ring or bbox}; path {points, times?: a head at the frame's time}; arrow {from, to}; spotlight {at with radius_km, ring or bbox}: dims the rest, one per list. Any mark takes label, id, tone and when, which scopes it to a time range; a label writes the frame's time as `{time}`."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "The map card."
+              }
+            },
+            "additionalProperties": false,
+            "description": "What the map card draws beyond the call's words (guide://smarterweather/views)."
           }
         },
         "required": [
@@ -2713,8 +2920,10 @@
         "openai/toolInvocation/invoking": "Visualizing the weather…",
         "openai/toolInvocation/invoked": "Ready to view",
         "openai/outputTemplate": "ui://weather-widget/v2/map.html",
+        "smarterweather.dev/strict": false,
         "smarterweather.dev/apps_only_inputs": [
-          "card"
+          "card",
+          "scene"
         ]
       }
     },
