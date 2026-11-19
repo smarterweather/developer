@@ -73,6 +73,10 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
+      },
+      "_meta": {
+        "openai/toolInvocation/invoking": "Checking what's available…",
+        "openai/toolInvocation/invoked": "Got the details"
       }
     },
     {
@@ -298,7 +302,9 @@
             "lon"
           ]
         ],
-        "openai/widgetAccessible": true
+        "openai/widgetAccessible": true,
+        "openai/toolInvocation/invoking": "Finding the location…",
+        "openai/toolInvocation/invoked": "Found the location"
       }
     },
     {
@@ -2191,6 +2197,8 @@
         },
         "ui/resourceUri": "ui://weather-widget/v2/index.html",
         "openai/widgetAccessible": true,
+        "openai/toolInvocation/invoking": "Checking the weather…",
+        "openai/toolInvocation/invoked": "Got the weather",
         "smarterweather.dev/apps_only_inputs": [
           "card"
         ]
@@ -2321,6 +2329,10 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
+      },
+      "_meta": {
+        "openai/toolInvocation/invoking": "Checking for the latest updates…",
+        "openai/toolInvocation/invoked": "Checked for updates"
       }
     },
     {
@@ -3054,7 +3066,9 @@
             "lon": -83.92,
             "limit": 3
           }
-        ]
+        ],
+        "openai/toolInvocation/invoking": "Looking that up…",
+        "openai/toolInvocation/invoked": "Found it"
       }
     }
   ]
