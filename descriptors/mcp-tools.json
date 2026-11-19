@@ -1232,7 +1232,7 @@
                       }
                     },
                     "states": {
-                      "description": "index: each value's state id from the variable's cited catalog states, aligned with times.",
+                      "description": "index: each value's state id from the variable's cited catalog states, aligned with times. Classified on the value rounded to the state set's decimals where the set declares them (describe_data lists them): the served state is that classification, not the raw value against a bound.",
                       "type": "object",
                       "properties": {},
                       "additionalProperties": {
@@ -1332,7 +1332,7 @@
                       "additionalProperties": {}
                     },
                     "episodes": {
-                      "description": "index: per variable with catalog events, the runs of each cited rule intersecting this read, newest onset first: onset, end (null while open), samples, peak, status (observed, candidate, confirmed, or forecast on a forecast product's rows).",
+                      "description": "index: per variable with catalog events, the runs of each cited rule intersecting this read, newest onset first.",
                       "type": "object",
                       "properties": {},
                       "additionalProperties": {
@@ -1341,7 +1341,8 @@
                           "type": "object",
                           "properties": {
                             "rule": {
-                              "type": "string"
+                              "type": "string",
+                              "description": "The catalog event rule's id (describe_data lists the variable's events)."
                             },
                             "status": {
                               "type": "string",
@@ -1350,12 +1351,15 @@
                                 "candidate",
                                 "confirmed",
                                 "forecast"
-                              ]
+                              ],
+                              "description": "observed: a plain run on observed or analysis values; candidate: a rule with a confirmation, its criterion met and the confirmation not yet, or not decidable from the stored rows (an onset they cannot place, or a length or recovery a null or a missing step hides); confirmed: every condition met in observed rows; forecast: any episode on a forecast product's rows, never another status there."
                             },
                             "onset": {
-                              "type": "string"
+                              "type": "string",
+                              "description": "The first in-criterion sample time (a valid time, as in times)."
                             },
                             "end": {
+                              "description": "The last in-criterion sample time, possibly after this page's last time; null while no later sample has a value.",
                               "type": [
                                 "string",
                                 "null"
@@ -1363,8 +1367,62 @@
                             },
                             "samples": {
                               "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
+                              "minimum": 1,
+                              "maximum": 9007199254740991,
+                              "description": "In-criterion samples (a seasonal index's overlapping seasons are samples, not a duration)."
+                            },
+                            "peak": {
+                              "description": "The run's most extreme stored value: the minimum for a rule in the state set's lowest state, the maximum for its highest; absent for a rule in neither.",
+                              "type": "object",
+                              "properties": {
+                                "time": {
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "time",
+                                "value"
+                              ],
+                              "additionalProperties": {}
+                            },
+                            "onset_capped": {
+                              "description": "true: the run reaches the first evaluated row or follows a null or a missing step (or a separation rule's history runs out at one), so the true onset may be earlier; such an episode of a rule with onset_months or separation is never confirmed.",
+                              "type": "boolean"
+                            },
+                            "observed": {
+                              "description": "On a forecast episode starting at the run's first row: the observed series' open episode of the same rule as of that time, a separate fact with its own status.",
+                              "type": "object",
+                              "properties": {
+                                "onset": {
+                                  "type": "string"
+                                },
+                                "last": {
+                                  "type": "string"
+                                },
+                                "samples": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 9007199254740991
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "observed",
+                                    "candidate",
+                                    "confirmed"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "onset",
+                                "last",
+                                "samples",
+                                "status"
+                              ],
+                              "additionalProperties": {}
                             }
                           },
                           "required": [
