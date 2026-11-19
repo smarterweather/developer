@@ -225,6 +225,27 @@
               "type": "string"
             }
           },
+          "area": {
+            "description": "The state `location` names: pass as `area` to get_data or render.",
+            "type": "object",
+            "properties": {
+              "product": {
+                "type": "string"
+              },
+              "feature_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "product",
+              "feature_id"
+            ],
+            "additionalProperties": {}
+          },
+          "area_name": {
+            "description": "The `area` state's name.",
+            "type": "string"
+          },
           "time": {
             "type": "object",
             "properties": {
