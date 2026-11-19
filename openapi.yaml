@@ -5326,7 +5326,16 @@ paths:
         With no `at`, a forecast is a `400` (`invalid_operator`, naming
         `at`); any other product reads its newest frame. An `at` with no
         frame of the product is a `422` `where_no_frame` (type
-        `where-no-frame`).
+        `where-no-frame`). Each expression's variable reads its own frame
+        in that time, and all must be the same frame: a variable holding
+        none there is a `422` `where_no_frame` naming it; variables holding
+        different frames (variables stamped at different hours of one day)
+        are a `400` `invalid_operator` naming each one's frame (where on
+        variables that share a frame); a variable holding more than one is
+        a `400` `invalid_operator`, naming `at` when its frames are a
+        product step or more apart (else, as two stamps a day on a daily
+        product, no `at` names one and the detail says so). With no `at`,
+        the newest frame every variable holds.
 
         A cell passes only when every expression's variable has a value
         that meets it: a null cell, a point outside the grid or a feature
