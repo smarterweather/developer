@@ -6,7 +6,7 @@
   "tools": [
     {
       "name": "describe_data",
-      "title": "Describe data",
+      "title": "Details",
       "description": "A dataset's variables or properties (standard names, units, categories, bands, aggregates), horizon, step, cadence, freshness, cost class, verified `examples`, an example_query to read values; a map layer's axes (source, region, facts), render call. Free. Call it when a grid or snapshot hit's `call` lacks the variable you need (with no `variable`, it may read only the headline one), or to check meaning, units, horizon or cost; not needed when the hit's `call` already names what you need: run that. Example: {\"dataset_id\": \"<from search_data>\"}.",
       "inputSchema": {
         "type": "object",
@@ -68,7 +68,7 @@
         "additionalProperties": {}
       },
       "annotations": {
-        "title": "Describe data",
+        "title": "Details",
         "readOnlyHint": true,
         "destructiveHint": false,
         "idempotentHint": true,
@@ -81,7 +81,7 @@
     },
     {
       "name": "get_context",
-      "title": "Get context",
+      "title": "Place & time",
       "description": "Where a place is and what time it is there. `location` or `lat`+`lon` to ranked `candidates` with lat/lon, timezone and `type` place|zip|address|poi|county|station; `time`: `utc` and, per distinct zone among the candidates, its local time and a 14-day calendar (join on `timezone`). Sun and moon are get_data reads. Example: {\"location\": \"Pella, IA\"} -> Pella, America/Chicago.",
       "inputSchema": {
         "type": "object",
@@ -286,7 +286,7 @@
         "additionalProperties": {}
       },
       "annotations": {
-        "title": "Get context",
+        "title": "Place & time",
         "readOnlyHint": true,
         "destructiveHint": false,
         "idempotentHint": true,
@@ -309,7 +309,7 @@
     },
     {
       "name": "get_data",
-      "title": "Get data",
+      "title": "Weather",
       "description": "Values, totals, comparisons, best times for a purpose (`criteria`), people/POI counts, station observations, upper-air profiles, climate records, normals, degree days, teleconnection indices and forecaster text from any dataset (models, radar, alerts, outlooks, tropical cyclones, aircraft recon, reference layers) at places, over a bbox or area, along a path, or as items. `select` takes `product:variable` or `product:property`, a standard name or a concept (`population`), from describe_data or search_data; one space word, at most one time word (hours, start+end, at; run pins a cycle); `stats` reduces per `step` or area-wide. Example: {\"select\": [\"temperature_2m\"], \"locations\": [\"Savannah, GA\", \"Macon, GA\"], \"hours\": 36}.",
       "inputSchema": {
         "type": "object",
@@ -2086,7 +2086,7 @@
         "additionalProperties": {}
       },
       "annotations": {
-        "title": "Get data",
+        "title": "Weather",
         "readOnlyHint": true,
         "destructiveHint": false,
         "idempotentHint": true,
@@ -2206,7 +2206,7 @@
     },
     {
       "name": "get_status",
-      "title": "Get status",
+      "title": "Status",
       "description": "Data freshness of the weather platform (no inputs needed; refreshed about every 5 minutes): overall state, per-source states (ok / degraded / outage / no_signal), open incidents with their cause (provider outage vs internal processing delay) and active provider advisories. Use it when asked whether data is current, or when other tools return stale-looking data. If a source is degraded or in outage, say the data may be stale rather than presenting it as live. Example: {}.",
       "inputSchema": {
         "type": "object",
@@ -2324,7 +2324,7 @@
         "additionalProperties": {}
       },
       "annotations": {
-        "title": "Get status",
+        "title": "Status",
         "readOnlyHint": true,
         "destructiveHint": false,
         "idempotentHint": true,
@@ -2337,7 +2337,7 @@
     },
     {
       "name": "render",
-      "title": "Render",
+      "title": "Visuals",
       "description": "Render a weather map or chart image for visual analysis: `kind: map` draws `select` layers (radar, satellite, outlooks, alerts and storm features overlaid) at `location` or `bbox`, and `kind: sounding` draws the nearest radiosonde as a skew-T and hodograph chart. With no `select` the map draws `precipitation_hybrid` (observed radar precipitation in the place's domain); `at` picks the closest frame, `filter` narrows feature overlays, `area` draws an outline, and search_data finds products. Example: {\"kind\": \"map\", \"location\": \"Tulsa, OK\", \"select\": [\"nexrad_l3:TLX:N0S\", \"weather_alert\"], \"filter\": [\"event == Tornado Warning\"], \"zoom\": 8}.",
       "inputSchema": {
         "type": "object",
@@ -2676,7 +2676,7 @@
         "additionalProperties": {}
       },
       "annotations": {
-        "title": "Render",
+        "title": "Visuals",
         "readOnlyHint": true,
         "destructiveHint": false,
         "idempotentHint": true,
@@ -2710,8 +2710,9 @@
         },
         "ui/resourceUri": "ui://weather-widget/v2/map.html",
         "openai/widgetAccessible": true,
-        "openai/toolInvocation/invoking": "Drawing the image…",
-        "openai/toolInvocation/invoked": "Image ready",
+        "openai/toolInvocation/invoking": "Visualizing the weather…",
+        "openai/toolInvocation/invoked": "Ready to view",
+        "openai/outputTemplate": "ui://weather-widget/v2/map.html",
         "smarterweather.dev/apps_only_inputs": [
           "card"
         ]
@@ -2719,7 +2720,7 @@
     },
     {
       "name": "search_data",
-      "title": "Search data",
+      "title": "Search",
       "description": "Search the data catalog: which dataset's values answer a question about weather and the people and places it affects, or what data exists at a point. With `query` it ranks datasets and map layers and returns hits with the next `call` (a named place fills its `area`; add a place if `note` asks) and any verified `example`; without it, it lists datasets at the place with freshness, or all. A place or `domain` keeps datasets covering it; `kind` and `family` filter a listing, rank a query; describe_data lists other variables for get_data. Example: {\"query\": \"snow depth\", \"location\": \"Erie, PA\"}.",
       "inputSchema": {
         "type": "object",
@@ -3052,7 +3053,7 @@
         "additionalProperties": {}
       },
       "annotations": {
-        "title": "Search data",
+        "title": "Search",
         "readOnlyHint": true,
         "destructiveHint": false,
         "idempotentHint": true,
