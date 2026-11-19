@@ -5280,6 +5280,72 @@ paths:
         `query.sort` in `valid_values` (and `did_you_mean` for a near
         miss). The sort never changes `matched` or `stats`.
 
+        ### Where
+
+        `where` (repeatable, at most 25, all must pass) keeps the matched
+        features whose representative point (`centroid`) lies in a native
+        cell of one grid or snapshot product that passes every expression
+        at one frame, and answers `stats` over them, on a product whose
+        catalog `query.where` is true. An expression is
+        `<name> <op> <value>`, op one of `== != > >= < <= in` (`in` takes a
+        comma list), value in the request `units` (`si`, `metric` or
+        `imperial`, required with `where`). The name is a standard name
+        (`temperature_2m_max > 90`), resolved to the product of record in
+        the read's region (the box's centre, the area's interior point;
+        with no space word, every US region the product covers), or
+        `<product>:<variable>` (`nbm_daily_temps:temperature_2m_max > 90`),
+        which names the product and needs no resolution. Every expression
+        reads the same product: names that resolve to different products
+        (an area spanning regions whose products differ, or no space word)
+        are a `400` `ambiguous_select` listing each `<product>:<name>`, as
+        is an area spanning a region where no product serves the name (its
+        features would test nothing there), and two named products a `400`
+        `operator_conflict`. A bbox or inline area with a corner or vertex
+        outside its centre's US domain is a `400` `outside_coverage`. An
+        `area` reference that matches no geometry is the door's empty area
+        (`matched` 0, no `where` echo), whatever the weather. An empty
+        `where` is a `400` `invalid_operator`, never a list read.
+
+        One frame: `at` names it (accepted with `where` even on a product
+        that lists no `at`; a product that lists it reads the same
+        instant). A date on a product whose step is a day or more is that
+        UTC day, whatever hour the product stamps it; otherwise the frame
+        in effect at `at`: the latest at or before it, within the product's
+        coarsest frame spacing (catalog `time.max_step`, else `step`), so
+        an `at` between a later lead's coarser frames reads the one before
+        it. On a `day_of_year` product (a climatology,
+        its frames calendar days), a date or an RFC 3339 `at` reads the
+        normal for its UTC day, and no `at` today's UTC day; the echo's
+        `valid_time` is that day's UTC midnight, with no `reference_time`.
+        With no `at`, a forecast is a `400` (`invalid_operator`, naming
+        `at`); any other product reads its newest frame. An `at` with no
+        frame of the product is a `422` `where_no_frame` (type
+        `where-no-frame`).
+
+        A cell passes only when every expression's variable has a value
+        that meets it: a null cell, a point outside the grid or a feature
+        with no point fails and is counted in `where.no_data`, so an
+        unknown cell never adds to a count. A where read takes `stats`
+        (`sum` and `count` only; `sum` reduces only properties whose
+        `aggregate` is `area_weighted` or `centroid_in`, others a `400`
+        `aggregate_not_declared` listing those); it lists no features, so `lat`/`lon`,
+        `sort`, `cursor`, `limit`, `view` and `count_by` are a `400`
+        `operator_conflict` whose `suggested_call` drops the word, and
+        `hours` or `start`/`end` one naming `at`. Each element carries
+        `features: []`, `matched` (the features that passed) and `where`:
+        the product read, `method` (`point_in_cell` today; a later rule is
+        a new value), `valid_time` and `reference_time` (its run), and the
+        counts `tested`, `passed` and `no_data`.
+
+        Known limit: a feature larger than a grid cell is in or out whole
+        by its point, so a count over a small area the threshold crosses
+        is approximate; the count's edge follows the data grid, while a
+        map's shading follows the map tier; and at the coast the cell is
+        the one under the point, without the land snap a point forecast
+        applies. A read over more grid cells than one read takes is a `400`
+        `area_too_large` (a smaller area or a bbox); over more features, a
+        `422` `too_many_features`.
+
         ### Envelope
 
         `elements[]` holds one GeoJSON `FeatureCollection` per element (one
@@ -5323,13 +5389,17 @@ paths:
         `suggested_call`), as on `GET /v1/series`. A read that does not
         finish within its time budget is a `422` `query_too_slow`: narrow
         it (a smaller area or box, fewer ids, a filter, a lower `limit`).
+        A where read's `422`s are `where_no_frame` and `too_many_features`
+        besides; a where product's grid that could not be read is a `503`
+        with `Retry-After`, never cached.
 
         ### Caching
 
         `Cache-Control: max-age=N` with N the product's cadence clamped to
         60-3600 s, 3600 for a time-free layer and 60 for a timed product
         without a cadence (alerts); with an area by reference, the smaller
-        of the product's and the referenced product's. When an element is
+        of the product's and the referenced product's (and on a where read,
+        the where product's). When an element is
         `awaiting_issuance`, `max-age=60, stale-while-revalidate=0`, unless
         the read is past: an `at`, or a `start`/`end` window whose `end`,
         more than one product cadence (60 s without one) before now keeps
@@ -5340,7 +5410,7 @@ paths:
 
         Standard sw-api Bearer auth and rate limits apply. Weight 1
         (`data`) per element, or 2 (`compute`) per element with `stats`,
-        `sort` or an area.
+        `sort`, `where` or an area.
       tags: [Products]
       security:
         - bearerAuth: []
@@ -5434,13 +5504,15 @@ paths:
         - name: at
           in: query
           required: false
-          description: An instant (RFC 3339, or a date for its UTC midnight; on a `day_of_year` product, a date is that local day).
+          description: An instant (RFC 3339, or a date for its UTC midnight; on a `day_of_year` product, a date is that local day). With `where`, the where product's frame (a date on a product whose step is a day or more is that UTC day; on a `day_of_year` where product any `at` is its UTC day's normal; otherwise the frame step ending at it), taken on any product.
           schema:
             type: string
         - $ref: '#/components/parameters/FeaturesFilterQuery'
         - $ref: '#/components/parameters/FeaturesStatsQuery'
         - $ref: '#/components/parameters/FeaturesPropertiesQuery'
         - $ref: '#/components/parameters/FeaturesSortQuery'
+        - $ref: '#/components/parameters/FeaturesWhereQuery'
+        - $ref: '#/components/parameters/FeaturesUnitsQuery'
         - name: view
           in: query
           required: false
@@ -5534,7 +5606,7 @@ paths:
         ### Auth and cost
 
         As the GET route: weight 1 (`data`) per element, 2 (`compute`) per
-        element with `stats`, `sort` or an area.
+        element with `stats`, `sort`, `where` or an area.
       tags: [Products]
       security:
         - bearerAuth: []
@@ -6756,6 +6828,36 @@ components:
           minLength: 1
           maxLength: 128
       example: [population]
+    FeaturesWhereQuery:
+      name: where
+      in: query
+      required: false
+      description: |
+        `<name> <op> <value>`, name a standard name or
+        `<product>:<variable>` of one grid or snapshot product, op one of
+        `== != > >= < <= in` (`in` takes a comma list), value in `units`;
+        repeatable, every expression must pass. Keeps the features whose
+        representative point lies in a passing cell (see Where); needs
+        `units` and `stats`.
+      style: form
+      explode: true
+      schema:
+        type: array
+        maxItems: 25
+        items:
+          type: string
+          minLength: 3
+          maxLength: 256
+      example: ['temperature_2m_max > 90']
+    FeaturesUnitsQuery:
+      name: units
+      in: query
+      required: false
+      description: The units system of the `where` values, required with `where` and taken only with it (feature properties are served as stored).
+      schema:
+        type: string
+        enum: [si, metric, imperial]
+      example: imperial
     FeaturesSortQuery:
       name: sort
       in: query
@@ -7405,7 +7507,8 @@ components:
             over a partitioned property without its partition's
             single-value filter), `not_area_reference`, `area_not_found`
             or `invalid_cursor`. On a `409`, `cursor_stale`; on a `422`,
-            `query_too_slow`. On a `503`, `timezone_unavailable`: the
+            `query_too_slow`, `too_many_features` or `where_no_frame` (a
+            where read's product has no frame at its `at`). On a `503`, `timezone_unavailable`: the
             location's timezone, which `stats` and `windows` are computed
             in, could not be resolved.
         valid_values:
@@ -15645,6 +15748,39 @@ components:
               type: string
             plan:
               type: [string, "null"]
+        where:
+          $ref: '#/components/schemas/FeaturesWhereEcho'
+    FeaturesWhereEcho:
+      type: object
+      description: |
+        A where read's echo: the grid or snapshot product read, the region
+        rule, the frame, and the counts. `passed` is the features in a
+        passing cell (`matched`, and the features `stats` are over);
+        `no_data` those that failed for want of a value (a null cell, a
+        point outside the grid, no point), within `tested` - `passed`.
+      required: [product, method, valid_time, tested, passed, no_data]
+      properties:
+        product:
+          type: string
+          example: nbm_daily_temps
+        method:
+          type: string
+          description: The region rule. `point_in_cell` (the native cell holding each feature's representative point) today; a later rule is a new value.
+          example: point_in_cell
+        valid_time:
+          type: string
+          format: date-time
+          description: The frame read; on a `day_of_year` product, the UTC midnight of the day whose normal was read.
+        reference_time:
+          type: string
+          format: date-time
+          description: The frame's run; absent when the frame has none (a `day_of_year` product).
+        tested:
+          type: integer
+        passed:
+          type: integer
+        no_data:
+          type: integer
     FeaturesAreaEcho:
       type: object
       description: |
@@ -15816,6 +15952,18 @@ components:
           description: As the GET `sort` parameter.
           minLength: 1
           maxLength: 129
+        where:
+          type: array
+          maxItems: 25
+          description: As the GET `where` parameter.
+          items:
+            type: string
+            minLength: 3
+            maxLength: 256
+        units:
+          type: string
+          enum: [si, metric, imperial]
+          description: As the GET `units` parameter.
         view:
           type: string
           enum: [concise, detailed]
@@ -15968,9 +16116,13 @@ components:
         The read did not finish within its time budget (type
         `query-too-slow`, `reason` `query_too_slow`): narrow it, with a
         smaller area or box, fewer ids, a filter or a lower `limit`. A
-        path that crosses more than 500 of a product's features is type
-        `too-many-features`, `reason` `too_many_features`: send a shorter
-        path (or, where the route takes one, a filter).
+        path that crosses more than 500 of a product's features, or a
+        feature-door `where` read over more features than one read takes,
+        is type `too-many-features`, `reason` `too_many_features`: send a
+        shorter path, a smaller area or a filter. A `where` read whose
+        product has no frame at its `at` is type `where-no-frame`, `reason`
+        `where_no_frame`: send an `at` inside the product's served range
+        (`GET /v1/catalog/{id}`: its horizon and history).
       content:
         application/problem+json:
           schema:

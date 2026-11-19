@@ -218,7 +218,9 @@ human does open it.
 | <a id="trial-mint-rate-limited"></a>`trial-mint-rate-limited` | 429 | Trial key creation: this IP reached its daily cap on new trial keys. `Retry-After` counts down to UTC midnight. | Reuse the trial key you already created, or follow `next_steps.recommended` (`device_flow`) to get a regular key. |
 | <a id="payload-too-large"></a>`payload-too-large` | 413 | The request body exceeded the endpoint's cap (1 MiB on `POST /v1/pois/exposure`). | Split the request. Do not retry as-is. |
 | <a id="conflict"></a>`conflict` | 409 | The write conflicts with current state. On `GET /v1/features/{product_id}`, `reason` `cursor_stale`: the data changed between pages. | Re-read state and retry once if the conflict is stale; for `cursor_stale`, page again from the start (`suggested_call` drops the cursor). |
-| <a id="query-too-slow"></a>`query-too-slow` | 422 | `GET /v1/features/{product_id}`: the read did not finish within its time budget (`reason` `query_too_slow`). | Narrow it: a smaller area or box, fewer `area[feature_ids]`, a `filter`, or a lower `limit`. Do not retry as-is. |
+| <a id="query-too-slow"></a>`query-too-slow` | 422 | `GET /v1/features/{product_id}`: the read, a `where` read included, did not finish within its time budget (`reason` `query_too_slow`). | Narrow it: a smaller area or box, fewer `area[feature_ids]`, a `filter`, or a lower `limit` (a `where` read lists no features, so `limit` does not narrow it). Do not retry as-is. |
+| <a id="too-many-features"></a>`too-many-features` | 422 | `reason` `too_many_features`: a path crosses more of a product's features than the route reads, or a `GET /v1/features/{product_id}` `where` read matches more features than one read takes. | Send a shorter path, a smaller area or bbox, or a `filter`. Do not retry as-is. |
+| <a id="where-no-frame"></a>`where-no-frame` | 422 | `GET /v1/features/{product_id}`: the `where` product has no frame at the read's `at` (`reason` `where_no_frame`). | Send an `at` inside the product's served range (`GET /v1/catalog/{id}`: its horizon and history). Do not retry as-is. |
 | <a id="flag-disabled"></a>`flag-disabled` | 403 | The endpoint exists but is not enabled for this key. | Treat as not available for this key. |
 | <a id="client-closed-request"></a>`client-closed-request` | 499 | The client closed the connection before the answer was ready (today on `GET /v1/agriculture/growing-degree-days`). Nobody reads this body; it is in the access log and request metrics, not counted as a server error. | None: it describes a request you already abandoned. Send it again if you still need the answer. |
 | <a id="internal"></a>`internal` | 500  | Unhandled server error. Logged with a request id we can look up.                                         | Retry with exponential backoff (max 3); on persistent failure, open a support ticket.  |
@@ -249,7 +251,7 @@ control flow.
 | `trial-challenge-invalid` | Once, with a fresh challenge. |
 | `too-many-requests`, `rate-limit-exceeded`, `trial-mint-rate-limited` | After `Retry-After` (or the `RateLimit-Reset` window). |
 | `trial-mint-unavailable` | After `Retry-After`. |
-| `payload-too-large`, `flag-disabled`, `query-too-slow` | No; `query-too-slow` after narrowing the request. |
+| `payload-too-large`, `flag-disabled`, `query-too-slow`, `too-many-features`, `where-no-frame` | No; `query-too-slow` and `too-many-features` after narrowing the request (a `where` read too), `where-no-frame` with another `at`. |
 | `conflict` | Once, after re-reading state. |
 | `client-closed-request` | Not applicable; you closed the request. |
 | `internal`, `upstream`, `service-unavailable`, `timeout`            | Exponential backoff, max 3 retries. |
