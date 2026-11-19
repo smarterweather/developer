@@ -4676,10 +4676,16 @@ paths:
           area center's US domain (CONUS, Alaska or Hawaii), else a `400`
           `outside_coverage`. At
           most `max_cells` cells per product (the catalog `query.max_cells`,
-          100,000): with `stats` a larger box is a `400` `area_too_large`
-          naming coarser products and, for one `max` or `min` of a key the
-          product's domain ranks, a `suggested_call` that ranks the box
-          (a sorted one is ranked, see Sort). Area `stats` state `exact`,
+          100,000): with `stats` a larger box is answered from the
+          product's block summary when every selected variable has one and
+          the words are `max`, `min`, `mean`, `sum`, `count`,
+          `count_above` or `count_below` (`method: "blocks"`; `max`,
+          `min` and `count` exact; `mean` and `sum` with `bounds`;
+          `count_above`/`count_below` exact or with `bounds`); otherwise
+          it is the `400`
+          `area_too_large` naming coarser products, whose rank
+          `suggested_call` is offered only for an explicit product with no
+          block summary (a sorted one is ranked, see Sort). Area `stats` state `exact`,
           `method`, `basis` and `bounds` when the read does, and an area
           whose block summary is still being written is a retryable `503`. An
           inline polygon is sent in the batch body.
@@ -15121,7 +15127,8 @@ components:
         the window. `share_of_area`: a `mean` that pools the cells and
         frames of an area (a bbox or area's mean pools every cell and
         frame of a bucket), the expected share of those cell-frames with
-        the event, cells unweighted. Absent on a key with no class (a
+        the event, each cell weighted as `basis.weighting` says
+        (`cell_area`: by its true area; `none` or absent: equally). Absent on a key with no class (a
         value that is not a probability, a count); absent when no key has
         one. It describes `values` as served: a ranked element's own class
         is its `ranking.reference_class`.
