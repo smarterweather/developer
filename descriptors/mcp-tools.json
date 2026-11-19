@@ -2928,6 +2928,62 @@
                   ],
                   "additionalProperties": {}
                 },
+                "member": {
+                  "description": "The one member of this dataset the call reads (its filter pins it).",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title"
+                  ],
+                  "additionalProperties": {}
+                },
+                "alternatives": {
+                  "description": "Other members to read instead, each with its call, when the question does not pick one.",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "call": {
+                        "type": "object",
+                        "properties": {
+                          "tool": {
+                            "type": "string"
+                          },
+                          "arguments": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": {}
+                          }
+                        },
+                        "required": [
+                          "tool",
+                          "arguments"
+                        ],
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "call"
+                    ],
+                    "additionalProperties": {}
+                  }
+                },
                 "latest_time": {
                   "type": "string"
                 },

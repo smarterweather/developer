@@ -2593,8 +2593,14 @@ paths:
           characters are its product type (`QPFERD` is a `QPF`), so its
           ids name the types read. A filter on `wfo` wins over a point. A
           read that names no type is a `400` with `reason`
-          `unknown_property`, `unknown_property` `product_type` and a
-          `hint`. A property or operator the catalog does not declare is
+          `unknown_property`, `unknown_property` `product_type`, the
+          declared types as `valid_values` and a `hint`; its
+          `suggested_call` is the read pinned to the catalog product's
+          default member (`members.default`, with the caller's own place,
+          office, filters and window), and `alternatives` names up to
+          three further members, each with its own `suggested_call`
+          (`GET /v1/catalog/nws_text_product` lists every member and the
+          filter that pins it). A property or operator the catalog does not declare is
           a `400` with `reason` (`unknown_property`, `invalid_operator`),
           `valid_values`, `did_you_mean` and `suggested_call`, as on
           `GET /v1/features`.
@@ -7572,6 +7578,28 @@ components:
             names both fixes.
           items:
             $ref: '#/components/schemas/SeriesUnresolved'
+        alternatives:
+          type: array
+          description: |
+            Further corrected requests beside `suggested_call`, ranked. On
+            `GET /v1/text-products`, a read that names no product type
+            lists up to three of the catalog product's other members
+            (catalog order), each the read pinned to that member.
+          items:
+            $ref: '#/components/schemas/ProblemAlternative'
+
+    ProblemAlternative:
+      type: object
+      description: One ranked alternative to a problem's `suggested_call`, what it reads and the request.
+      required: [id, title, suggested_call]
+      properties:
+        id:
+          type: string
+          description: What the call reads (a catalog member id).
+        title:
+          type: string
+        suggested_call:
+          $ref: '#/components/schemas/SuggestedCall'
 
     SuggestedCall:
       type: object
@@ -11387,6 +11415,61 @@ components:
         citation:
           $ref: '#/components/schemas/CatalogCitation'
 
+    CatalogMembers:
+      type: object
+      additionalProperties: false
+      description: |
+        On a container product (the NWS text products): the provider's own
+        products inside it, each pinned by `filter` expressions in the
+        product's door grammar (provider codes). Every member's first
+        expression is `<key> == <code>`, and `properties_schema[key].enum`
+        lists the codes. With `required`, a read that pins no member is a
+        `400` whose `suggested_call` reads `default` and whose
+        `alternatives` name further members. `items` keep catalog order;
+        `aliases` are search words only, never call tokens. Absent on other
+        products.
+      required: [required, key, default, items]
+      properties:
+        required:
+          type: boolean
+        key:
+          type: string
+          example: product_type
+        key_prefix:
+          type: array
+          description: |
+            Properties whose values begin with the key's code, so a filter
+            on one names the key too (an `awips_id`'s first three
+            characters are its `product_type`).
+          items:
+            type: string
+          example: [awips_id]
+        default:
+          type: string
+          example: area_forecast_discussion
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, title, filter, aliases]
+            properties:
+              id:
+                type: string
+                example: enso_diagnostic_discussion
+              title:
+                type: string
+                example: El Nino/Southern Oscillation (ENSO) Diagnostic Discussion
+              filter:
+                type: array
+                items:
+                  type: string
+                example: ["product_type == PMD", "awips_id == PMDENS"]
+              aliases:
+                type: array
+                items:
+                  type: string
+
     CatalogInterpretation:
       type: object
       additionalProperties: false
@@ -11530,6 +11613,8 @@ components:
                 - type: 'null'
             status_source:
               $ref: '#/components/schemas/CatalogStatusSource'
+            members:
+              $ref: '#/components/schemas/CatalogMembers'
             family_state:
               type: object
               additionalProperties: false
