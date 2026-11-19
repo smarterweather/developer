@@ -756,7 +756,7 @@
                 "type": "string"
               },
               "focus": {
-                "description": "ISO 8601 time inside the result's window to preselect.",
+                "description": "ISO 8601 time inside the result's window to preselect, or `max`, `min` or `latest` of the lead series.",
                 "type": "string"
               },
               "threshold": {
@@ -802,6 +802,13 @@
                     "prompt"
                   ],
                   "additionalProperties": false
+                }
+              },
+              "show": {
+                "description": "The series the chart draws, lead first: up to two of this call's results, each a select token as you wrote it or a value key (`<variable>:<reducer>` for a reduced one). The rest stay in the result for you to read. Leave it out and the shape of the read picks.",
+                "type": "array",
+                "items": {
+                  "type": "string"
                 }
               }
             },
@@ -2447,7 +2454,7 @@
                 "type": "string"
               },
               "focus": {
-                "description": "ISO 8601 time inside the result's window to preselect.",
+                "description": "ISO 8601 time inside the result's window to preselect, or `max`, `min` or `latest` of the lead series.",
                 "type": "string"
               },
               "threshold": {
