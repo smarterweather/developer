@@ -5831,7 +5831,9 @@ paths:
         product's source. A product whose catalog entry carries a
         `status_source` answers `official_status`: the provider's own
         status line, verbatim, with its issue time, only on an answer that
-        reaches the present. A lookback or status that cannot be read is
+        reaches the present. It carries the provider's page for the status
+        as `citation` and, as `statement`, the request that returns the
+        text product it was read from. A lookback or status that cannot be read is
         answered without the field, with a note, and the answer is not
         cached as complete. There is no word for them.
 
@@ -7564,7 +7566,7 @@ components:
 
     SuggestedCall:
       type: object
-      description: The corrected request on the same route; a GET also as its `query` parameters (one value as a string, several as an array).
+      description: A request ready to send as is. `url` is the path and query string, relative to the API root; a GET also as its `query` parameters (one value as a string, several as an array), a POST with its JSON `body`. On a problem it is the corrected request on the same route.
       required: [method, url]
       properties:
         method:
@@ -14822,7 +14824,8 @@ components:
         present (`at`, `run`, `cursor`, a page with a `next_cursor`, or an
         `end` before `issued_at`),
         when the text product is older than its issuer's cadence allows,
-        or (with a note) when it could not be read.
+        or (with a note) when it could not be read. `source` is that text
+        product's AWIPS id, and `statement` the request that returns it.
       required: [label, value, issued_at, source]
       properties:
         label:
@@ -14837,6 +14840,33 @@ components:
         source:
           type: string
           example: PMDENS
+        citation:
+          allOf:
+            - $ref: '#/components/schemas/CatalogCitation'
+          description: The provider's page for the status.
+        statement:
+          allOf:
+            - $ref: '#/components/schemas/SuggestedCall'
+          description: |
+            The request that returns the text product the status was read
+            from, the cited issuance exactly, ready to send as is. Absent
+            when the text door does not serve it.
+      example:
+        label: ENSO Alert System Status
+        value: El Nino Advisory
+        issued_at: '2026-11-12T14:00:00Z'
+        source: PMDENS
+        citation:
+          title: 'CPC: ENSO Diagnostic Discussion'
+          url: https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_advisory/ensodisc.shtml
+        statement:
+          method: GET
+          url: /v1/text-products?filter=awips_id+%3D%3D+PMDENS&filter=issued_at+%3E%3D+2026-11-12T14%3A00%3A00Z&filter=issued_at+%3C%3D+2026-11-12T14%3A00%3A00Z
+          query:
+            filter:
+              - awips_id == PMDENS
+              - issued_at >= 2026-11-12T14:00:00Z
+              - issued_at <= 2026-11-12T14:00:00Z
 
     IndexElement:
       x-stability: experimental
@@ -14978,7 +15008,10 @@ components:
             Each value's state id, keyed and aligned as `values`: the first
             entry of the variable's catalog `states` (a percentile
             statistic's base's) that admits it; null where the value is
-            missing.
+            missing. Where the state set declares `decimals`, the value is
+            first rounded to that many decimals, half away from zero (the
+            precision the provider classifies on); `values` keep the stored
+            value.
           additionalProperties:
             type: array
             items:

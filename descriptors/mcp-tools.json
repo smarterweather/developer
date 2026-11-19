@@ -1450,7 +1450,44 @@
                           "type": "string"
                         },
                         "source": {
-                          "type": "string"
+                          "type": "string",
+                          "description": "The AWIPS id of the text product the line was read from."
+                        },
+                        "citation": {
+                          "description": "The provider's page for the status.",
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string"
+                            },
+                            "url": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "title",
+                            "url"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        "statement": {
+                          "description": "When present: the call that returns that text product in full, the cited issuance exactly; ready to run as is.",
+                          "type": "object",
+                          "properties": {
+                            "tool": {
+                              "type": "string"
+                            },
+                            "arguments": {
+                              "type": "object",
+                              "properties": {},
+                              "additionalProperties": {}
+                            }
+                          },
+                          "required": [
+                            "tool",
+                            "arguments"
+                          ],
+                          "additionalProperties": {}
                         }
                       },
                       "required": [
