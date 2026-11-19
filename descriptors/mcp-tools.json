@@ -2455,7 +2455,7 @@
           },
           "units": {
             "default": "imperial",
-            "description": "Sounding axis and indices: imperial (default, °F) or metric (°C); keys end in their unit.",
+            "description": "Map legend and sounding: imperial (default, °F) or metric (°C); keys end in their unit.",
             "type": "string",
             "enum": [
               "imperial",
