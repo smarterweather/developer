@@ -14778,10 +14778,104 @@ components:
             others may appear. Absent when the read does not state it.
         basis:
           $ref: '#/components/schemas/SeriesBasis'
+        summary:
+          type: string
+          x-stability: experimental
+          description: |
+            One sentence written from this ranking's own members: the
+            first row's value and place; on a `mean` or `sum`, its bound,
+            the first hotspot's mean and counties when it holds that row,
+            and the window (not stated when frames are missing); on an
+            instant, `max` or `min`, the row's local time, or its date on a
+            daily product. Numbers, places and times only; no advice.
+            Absent with no row, or when the first row has neither a place
+            nor a county.
+          example: About 2 in across Del Norte and Humboldt counties, CA, locally up to 3.4 in 5 mi S of Gasquet, CA, through Thu 4 PM PST.
+        hotspot_threshold:
+          type: number
+          x-stability: experimental
+          description: |
+            Every block of every hotspot is at or beyond this value (the
+            least extreme hot block's), in `unit`. Absent with no hotspot.
+        hotspots:
+          type: array
+          x-stability: experimental
+          description: |
+            Connected objects of the ranking's hottest overview blocks, at
+            most 5: those holding a returned row first (the top row's
+            object leads), then the others by their best block. Absent
+            when no block is hot or the read did not compute them.
+          items:
+            $ref: '#/components/schemas/SeriesRankHotspot'
         rows:
           type: array
           items:
             $ref: '#/components/schemas/SeriesRankRow'
+    SeriesRankHotspot:
+      x-stability: experimental
+      type: object
+      required: [rank, blocks, area_km2, bbox]
+      properties:
+        rank:
+          type: integer
+          minimum: 1
+        blocks:
+          type: integer
+          description: The object's 8-connected hot blocks (`block_km` each, at most).
+        area_km2:
+          type: number
+          description: The blocks' counted cells' area.
+        bbox:
+          type: array
+          items:
+            type: number
+          minItems: 4
+          maxItems: 4
+          description: '[west, south, east, north] of the blocks'' cells (west > east across 180 degrees).'
+        mean:
+          type: number
+          description: A `mean` or `sum` ranking only, the area-weighted mean of the object's block values, in `unit`.
+        p90:
+          type: number
+          description: A descending ranking, the area-weighted 90th percentile of the object's block values, in `unit`.
+        p10:
+          type: number
+          description: An ascending ranking, the area-weighted 10th percentile of the object's block values, in `unit`.
+        peak:
+          type: integer
+          minimum: 1
+          description: The rank of the object's best returned row; absent when it holds none.
+        rows:
+          type: array
+          items:
+            type: integer
+          description: The ranks of the object's returned rows; absent when it holds none.
+    SeriesRankPlace:
+      x-stability: experimental
+      type: object
+      required: [name, distance_km, direction, label]
+      properties:
+        name:
+          type: string
+          example: Gasquet
+        state:
+          type: string
+          example: CA
+        distance_km:
+          type: number
+          description: From the place's point to the cell's centre (great circle).
+        direction:
+          type: string
+          description: The 16-point compass direction from the place's point to the cell.
+          example: S
+        label:
+          type: string
+          description: |
+            The storm-report form in the request `units` (miles for
+            imperial, km otherwise), "<n> <mi|km> <direction> of <name>,
+            <state>", or "<name>, <state>" when the cell is inside the
+            place or under half a unit from its point.
+          example: 5 mi S of Gasquet, CA
     SeriesRankRow:
       x-stability: experimental
       type: object
@@ -14827,6 +14921,14 @@ components:
           type: string
           description: The cell's state; absent when labels are unavailable.
           example: AZ
+        place:
+          x-stability: experimental
+          description: |
+            The place the cell is in, else the nearest one (a populated
+            place); absent when labels are unavailable or the read names
+            none.
+          allOf:
+            - $ref: '#/components/schemas/SeriesRankPlace'
     IndicesResponse:
       x-stability: experimental
       type: object

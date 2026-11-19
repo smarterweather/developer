@@ -1645,6 +1645,78 @@
                           ],
                           "additionalProperties": {}
                         },
+                        "summary": {
+                          "description": "One sentence from this ranking's own numbers, places and times.",
+                          "type": "string"
+                        },
+                        "hotspot_threshold": {
+                          "description": "Every hotspot block is at or beyond this value.",
+                          "type": "number"
+                        },
+                        "hotspots": {
+                          "description": "Connected objects of the hottest blocks, at most 5; those holding a row first.",
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "rank": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "blocks": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "description": "Its 8-connected hot blocks."
+                              },
+                              "area_km2": {
+                                "type": "number"
+                              },
+                              "bbox": {
+                                "type": "array",
+                                "items": {
+                                  "type": "number"
+                                },
+                                "description": "[west, south, east, north] of its blocks' cells."
+                              },
+                              "mean": {
+                                "description": "mean and sum only: the area-weighted mean of its block values.",
+                                "type": "number"
+                              },
+                              "p90": {
+                                "description": "Descending: the area-weighted 90th percentile of its block values.",
+                                "type": "number"
+                              },
+                              "p10": {
+                                "description": "Ascending: the area-weighted 10th percentile of its block values.",
+                                "type": "number"
+                              },
+                              "peak": {
+                                "description": "The rank of its best row; absent when it holds no row.",
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "rows": {
+                                "description": "The ranks of its rows; absent when it holds none.",
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              }
+                            },
+                            "required": [
+                              "rank",
+                              "blocks",
+                              "area_km2",
+                              "bbox"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        },
                         "rows": {
                           "type": "array",
                           "items": {
@@ -1687,6 +1759,35 @@
                               },
                               "state": {
                                 "type": "string"
+                              },
+                              "place": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "state": {
+                                    "type": "string"
+                                  },
+                                  "distance_km": {
+                                    "type": "number"
+                                  },
+                                  "direction": {
+                                    "type": "string",
+                                    "description": "16-point compass, from the place to the cell."
+                                  },
+                                  "label": {
+                                    "type": "string",
+                                    "description": "In the call's units: \"5 mi S of Gasquet, CA\", or \"Gasquet, CA\" when the cell is inside the place or under half a unit from it."
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "distance_km",
+                                  "direction",
+                                  "label"
+                                ],
+                                "additionalProperties": {}
                               }
                             },
                             "required": [
