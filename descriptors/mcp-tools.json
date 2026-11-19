@@ -516,11 +516,11 @@
             }
           },
           "where": {
-            "description": "Value criteria over the selected variables' standard_names, tested per sample: they mask the series, or are the predicate for windows and count reducers.",
+            "description": "Value criteria, all must pass. On grids and snapshots: over the selected variables' standard_names, tested per sample: they mask the series, or are the predicate for windows and count reducers. On a feature product declaring query.where: grid variables, tested in the cell under each feature's point at `at` (required for a forecast); `stats` sum or count are over the passing features.",
             "type": "array",
             "minItems": 1,
             "items": {
-              "description": "`<name> <op> <value>`, op one of == != > >= < <= in (`in`: a comma-separated list); values in request units.",
+              "description": "`<name> <op> <value>`, op one of == != > >= < <= in (`in`: a comma-separated list); values in request units. On a feature read, name may be `<product>:<variable>`.",
               "type": "string"
             }
           },
@@ -1835,6 +1835,48 @@
                       "description": "features: the data time the read saw (UTC), when the service dates it.",
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "where": {
+                      "description": "features, with where: the grid product read and its frame (valid_time, reference_time its run). Each feature is tested in the cell under its representative point (method), in or out whole; a missing cell, a point off the grid or no point fails and counts in no_data. passed is matched; stats are over those features.",
+                      "type": "object",
+                      "properties": {
+                        "product": {
+                          "type": "string"
+                        },
+                        "method": {
+                          "type": "string"
+                        },
+                        "valid_time": {
+                          "type": "string"
+                        },
+                        "reference_time": {
+                          "type": "string"
+                        },
+                        "tested": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "passed": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "no_data": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "product",
+                        "method",
+                        "valid_time",
+                        "tested",
+                        "passed",
+                        "no_data"
+                      ],
+                      "additionalProperties": {}
                     },
                     "next_cursor": {
                       "description": "This element's next page, as `cursor`. A series element: resend every series select alone, with the words a series takes and the same place or area, every feature_id kept. A features element: resend its select alone, with the words it takes and its place or area, narrowed to its feature_id when the call had several. An index element: resend its select alone, with the words it takes, plus the cursor.",
