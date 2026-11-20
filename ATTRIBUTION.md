@@ -1,62 +1,2404 @@
-<!-- Generated from the Smarter Weather data catalog. Do not edit by hand. -->
+<!-- Generated from the Smarter Weather source record. Do not edit by hand. -->
 
 # Attribution
 
-Smarter Weather sources data from the parties below. This file mirrors the
-data sources on https://smarterweather.com/acknowledgements. Each product's
-own source, license and attribution text are also returned by
-`GET /v1/catalog` in its `source` object.
+Every data source Smarter Weather uses, with its license, its credit, what
+the license or terms require (the obligation) and why (the basis). The
+credits that are required are on https://smarterweather.com/acknowledgements/.
+Each product's own source, license and attribution text are also returned
+by `GET /v1/catalog` in its `source` object.
 
 ## Weather data
 
-### National Oceanic and Atmospheric Administration (NOAA) and National Weather Service (NWS)
+### CPC and NCEI Climate Indices
 
-Observations, forecasts, model output, radar, satellite and alerts.
+CPC and NCEI Climate Indices.
 
 - License: Public domain (U.S. Government work)
-- Attribution: Data provided by NOAA/NWS
+- Attribution: NOAA Climate Prediction Center and NOAA NCEI climate indices
 - Terms: https://www.weather.gov/disclaimer
+- Obligation: none
+- Basis: 17 U.S.C. §105: no copyright in works of the U.S. Government.
 
-### U.S. Environmental Protection Agency (EPA) AirNow
+### European Centre for Medium-Range Weather Forecasts
 
-Air quality observations and forecasts.
-
-- License: Public domain (U.S. Government work)
-- Attribution: Air quality data provided by EPA AirNow
-- Terms: https://www.epa.gov/web-policies-and-procedures/epa-disclaimers
-
-### NASA Short-term Prediction Research and Transition Center (SPoRT)
-
-Soil moisture analyses.
-
-- License: Public domain (U.S. Government work)
-- Attribution: Data provided by NASA SPoRT
-- Terms: https://www.nasa.gov/nasa-brand-center/images-and-media/
-
-### European Centre for Medium-Range Weather Forecasts (ECMWF)
-
-AIFS AI model forecasts.
+ECMWF AIFS Single (AI deterministic model); ECMWF IFS (deterministic, 0.25 deg); ECMWF IFS ENS (50-member ensemble, 0.25 deg).
 
 - License: Creative Commons Attribution 4.0 International (CC BY 4.0)
 - Attribution: Based on data and products of the European Centre for Medium-Range Weather Forecasts (ECMWF). © ECMWF, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Source: www.ecmwf.int. Values regridded and quantized by Smarter Weather; ECMWF accepts no liability.
 - Terms: https://apps.ecmwf.int/datasets/licences/general/
+- Obligation: required, with the data in API and MCP results and on https://smarterweather.com/acknowledgements/
+- Basis: CC BY 4.0 §3(a)(1), including in modified form; §3(a)(2) lets a link to a page with the information satisfy it.
 
-## Map data and distribution
+### Environmental Protection Agency
 
-### OpenStreetMap contributors
+Air quality observations and forecasts (AirNow). AirNow Air Quality System.
 
-Map and geographic reference data.
+- License: Public domain (U.S. Government work)
+- Attribution: Air quality data provided by EPA AirNow
+- Terms: https://www.epa.gov/web-policies-and-procedures/epa-disclaimers
+- Obligation: required, on https://smarterweather.com/acknowledgements/
+- Basis: AirNow Data Exchange Guidelines (last updated August 2025): "Credit should first be given ... in products", read conservatively. Credited on the acknowledgements page; API and MCP results carry no credit (public domain).
+
+### National Aeronautics and Space Administration
+
+SPoRT Land Information System.
+
+- License: Public domain (U.S. Government work)
+- Attribution: Data provided by NASA SPoRT
+- Terms: https://www.nasa.gov/nasa-brand-center/images-and-media/
+- Obligation: none
+- Basis: 17 U.S.C. §105: no copyright in works of the U.S. Government.
+
+### National Oceanic and Atmospheric Administration
+
+Reference tables: NWS zones, counties and offices, NEXRAD and GHCN-D station lists, the METAR station table and the climate normals archive. Climate Prediction Center Outlooks; GOES ABI Satellite Imagery; GOES-19 Geostationary Lightning Mapper; Global Forecast System; High-Resolution Rapid Refresh; Hurricane Hunter Reconnaissance; MADIS Integrated Observations; Multi-Radar/Multi-Sensor System; NOAA 1991-2020 U.S. Climate Normals (Gridded); NOAA AI Global Ensemble Forecast System (AIGEFS); NOAA AI Global Forecast System (AIGFS); NOAA CPC UV Index Forecast; NWS HeatRisk; National Blend of Models; National Hurricane Center; Next Generation Weather Radar; Rapid Refresh Forecast System; Real-Time Mesoscale Analysis; Storm Prediction Center; Unrestricted Mesoscale Analysis; WPC Excessive Rainfall Outlook; Winter Storm Severity Index.
+
+- License: Public domain (U.S. Government work)
+- Attribution: Data provided by NOAA/NWS
+- Terms: https://www.weather.gov/disclaimer
+- Obligation: none
+- Basis: 17 U.S.C. §105: no copyright in works of the U.S. Government.
+
+## Map, reference data and distribution
+
+### U.S. Census Bureau
+
+Boundaries, places, ZIP codes, address ranges, population estimates and centers of population (TIGER/Line 2025 and Census files).
+
+- License: Public domain (U.S. Government work)
+- Attribution: Source: U.S. Census Bureau (TIGER/Line, decennial census, American Community Survey).
+- Terms: https://www.census.gov/about/policies/citation.html
+- Obligation: none
+- Basis: 17 U.S.C. §105; the TIGER/Line 2025 documentation (§1.2) and the Bureau's citation page ask that the Census Bureau be cited (requests).
+
+### ESA WorldCover
+
+Land cover in the basemap (WorldCover 2021).
+
+- License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+- Attribution: © ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium
+- Terms: https://creativecommons.org/licenses/by/4.0/
+- Obligation: required, on https://smarterweather.com/acknowledgements/
+- Basis: CC BY 4.0 §3(a)(1), §3(a)(2); the credit is the form ESA asks for (esa-worldcover.org/en/data-access; Product User Manual v2.0 §5.1-5.2).
+
+### Esri Community Maps contributors
+
+Building footprints, through Overture Maps, drawn in the basemap and counted in the block group building totals.
+
+- License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+- Attribution: Esri Community Maps contributors. Available under CC BY 4.0.
+- Terms: https://creativecommons.org/licenses/by/4.0/
+- Obligation: required, with the data in API and MCP results and on https://smarterweather.com/acknowledgements/
+- Basis: CC BY 4.0 §3(a)(1), including in modified form; §3(a)(2) lets a link to a page with the information satisfy it.
+
+### Foursquare OS Places
+
+Points of interest, through Overture Maps Foundation places.
+
+- License: Apache License, Version 2.0
+- Attribution: Points of interest include Foursquare OS Places data. Copyright 2024 Foursquare Labs, Inc. All rights reserved. Licensed under the Apache License, Version 2.0: https://www.apache.org/licenses/LICENSE-2.0. Foursquare data was transformed to the Overture schema, then filtered and reclassified by Smarter Weather. NOTICE: https://opensource.foursquare.com/places-notice-txt/
+- Terms: https://www.apache.org/licenses/LICENSE-2.0
+- Obligation: required, on https://smarterweather.com/acknowledgements/
+- Basis: Overture places 2026-10-21.0 carries 1,109,358 US places whose primary dataset is Foursquare (sources[].license Apache-2.0); 47,261 of the 1,197,296 US places the POI filter admits are Foursquare-sourced (read 2026-11-11). docs.overturemaps.org/attribution (read 2026-11-12): "Data from Foursquare. Copyright 2024 Foursquare Labs, Inc. All rights reserved. Available under Apache 2.0. Foursquare data was transformed to the Overture schema. Changed: 2026-03-18. NOTICE.txt." Foursquare's notice (opensource.foursquare.com/places-notice-txt, read 2026-11-12) asks recipients to get a copy of the License, prominent notices of changes and the attribution preserved, and for an API recommends the notice in the developer documentation; Apache 2.0 §4(d) allows the documentation. The year is the one Overture transmits with the data; the live notice page shows 2026.
+
+### Microsoft Global ML Building Footprints
+
+Building footprints and heights, through Overture Maps, drawn in the basemap and counted in the block group building totals.
 
 - License: Open Database License (ODbL) 1.0
-- Attribution: © OpenStreetMap contributors. Data available under the Open Database License (ODbL).
-- Terms: https://www.openstreetmap.org/copyright
+- Attribution: Global ML Building Footprints. Licensed by Microsoft under the Open Database License.
+- Terms: https://opendatacommons.org/licenses/odbl/1-0/
+- Obligation: required, on https://smarterweather.com/acknowledgements/
+- Basis: Microsoft licenses Global ML Building Footprints under CDLA-Permissive-2.0 (its repository's LICENSE and README), and CDLA §3.1 places no obligation on Results, so counts derived from the footprints owe nothing. Overture's attribution page (last updated 2026-05-15) lists the footprints under its ODbL buildings theme as "Global ML Building Footprints. Licensed by Microsoft under the Open Database License.", so the basemap, which draws them, keeps that credit on the acknowledgements page (ODbL 1.0 §4.3, read conservatively).
+
+### U.S. DOT National Address Database
+
+Address points.
+
+- License: Public domain (U.S. Government work)
+- Terms: https://www.transportation.gov/gis/national-address-database
+- Obligation: required, met by the OpenAddresses credit
+- Basis: DOT metadata states Rights "public", and Overture names a "National Address Database Access and Usage License" whose text is still under review; credited as required until it is read.
+
+### Natural Earth
+
+Ocean polygons and place labels (10m), the land/water mask behind the GOES true color night layer (10m land and lakes), and a low-zoom world backdrop for web maps (50m land and country borders, z0-5).
+
+- License: Public domain (dedicated by its publisher)
+- Terms: https://www.naturalearthdata.com/about/terms-of-use/
+- Obligation: none
+- Basis: Natural Earth terms of use: public domain; "Crediting the authors is unnecessary".
 
 ### NOAA Open Data Dissemination (NODD) on AWS
 
 Bulk distribution of NOAA datasets.
 
-- Attribution: NOAA data accessed through the NOAA Open Data Dissemination (NODD) program on AWS.
+- License: Public domain (U.S. Government work)
 - Terms: https://registry.opendata.aws/collab/noaa/
+- Obligation: none
+- Basis: A distribution channel for NOAA public-domain data (17 U.S.C. §105); no license of its own.
+
+### OpenAddresses
+
+Address points.
+
+- License: Per source (each source under its own license)
+- Attribution: Addresses: OpenAddresses, Overture Maps Foundation and the U.S. DOT National Address Database, each source under its own license.
+- Attribution: Reproduced with permission granted by the County of Allegan, Michigan. Some information has been provided subject to a non-exclusive, limited, and revocable license granted by the County of Allegan, Michigan.
+- Attribution: Credited to Carson City. Carson City is not responsible for the accuracy of the information. Modifications were made without the involvement or knowledge of Carson City.
+- Attribution: The City of Las Cruces Enterprise GIS makes no representation of any kind, including, but not limited to, warranties of merchantability or fitness for a particular purpose or use, nor are any such warranties to be implied with respect to the accuracy information/data presented on this map. Transfer, copies and/or use of information in this solution without the presentation of this disclaimer is prohibited.
+- Attribution: Reproduced with permission granted by the County of Kent, Michigan. Some information has been provided subject to a non-exclusive, limited, and revocable license granted by the County of Kent, Michigan.
+- Attribution: Reproduced with permission granted Muskegon County, Michigan. Some information has been provided subject to a non-exclusive, limited, and revocable license granted by Muskegon County, Michigan.
+- Attribution: Regional Land Information System data are a product of Metro and made publicly available according to the license agreement found in https://rlisdiscovery.oregonmetro.gov/pages/open-database-license.
+- Attribution: Copyright © 2026 SEMCOG. All Rights Reserved. Reproduction or Use Without Permission is Prohibited.
+- Terms: https://github.com/openaddresses/openaddresses
+- Obligation: required, on https://smarterweather.com/acknowledgements/
+- Basis: OpenAddresses README: "Individual sources will have their own licenses"; each source's license applies.
+- Sources:
+  - Accomack, VA
+  - Acog-counties, OK
+  - Adair, IA
+  - Adams County, Indiana GIS
+  - Adams, CO (CC BY 4.0)
+  - Adams, ID
+  - Adams, IL
+  - Adams, MS
+  - Adams, NE
+  - Adams, OH
+  - Adams, PA
+  - Adams, WI
+  - Aiken, SC
+  - Aitkin, MN
+  - AK statewide
+  - Alachua County Property Appraiser
+  - Alamance, NC
+  - Alameda, CA
+  - Albany, WY
+  - Albemarle, VA
+  - Albuquerque, NM
+  - Alcona, MI
+  - Alcorn, MS
+  - Alexander, NC
+  - Allegany, MD
+  - Alleghany County, Virginia
+  - Alleghany, NC
+  - Allegheny, PA
+  - Allen County, KS
+  - Allen, IN
+  - Allen, OH
+  - Alpine, CA
+  - Amador, CA
+  - Amelia, VA
+  - Amherst, VA
+  - Amite, MS
+  - Anchorage, AK
+  - Anderson County, KS
+  - Anderson, SC
+  - Anderson, TX
+  - Andrews, TX
+  - Angelina, TX
+  - Anne Arundel, MD
+  - Anoka, MN
+  - Anson, NC
+  - Antelope, NE
+  - Antrim, MI
+  - Appling, GA
+  - Appomattox County GIS
+  - AR statewide
+  - Aransas, TX
+  - Arapahoe, CO
+  - Archer, TX
+  - Archuleta, CO
+  - Arenac, MI
+  - Arlington, VA
+  - Armstrong, PA
+  - Armstrong, TX
+  - Arthur, NE
+  - Ascension Parish Government
+  - Ashe, NC
+  - Ashland, OH
+  - Ashland, WI
+  - Ashtabula, OH
+  - Asotin County Public Works
+  - Assumption, LA
+  - Atascosa, TX
+  - Atchison County, KS
+  - Athens-Clarke County GIS: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+  - Athens-Clarke County Unified Government: [License](https://creativecommons.org/licenses/by/4.0/)
+  - Athens, OH
+  - Atkinson, GA
+  - Attala, MS
+  - Auglaize, OH
+  - Augusta, VA
+  - Aurora County, SD / Planning and Development District III
+  - Austin, TX
+  - Autauga, AL
+  - Avery County, NC
+  - AZ statewide
+  - Bacon, GA
+  - Bailey, TX
+  - Baker County Property Appraiser's Office
+  - Baker, OR
+  - Baldwin, AL
+  - Baldwin, GA
+  - Bandera, TX
+  - Banner, NE
+  - Bannock, ID
+  - Barber County, KS
+  - Barbour, WV
+  - Barron, WI
+  - Barrow County GIS
+  - Barry County Emergency Services E 9-1-1: [License](https://data-msdis.opendata.arcgis.com/maps/c22efafeed924bd8afea5ed24a265b13/about)
+  - Barry, MI
+  - Barton County, KS
+  - Bartow, GA
+  - Bastrop, TX
+  - Bates, MO
+  - Bay, FL
+  - Bayfield, WI
+  - Baylor, TX
+  - Beadle, SD
+  - Beaufort, NC
+  - Beaufort, SC
+  - Beauregard, LA
+  - Beaver, PA
+  - Beaverhead, MT
+  - Becker, MN
+  - Bedford, PA
+  - Bedford, VA
+  - Bee, TX
+  - Bell, TX
+  - Bellingham, WA
+  - Belmont County GIS
+  - Beltrami, MN
+  - Ben Hill, GA
+  - Bennett, SD
+  - Benton, MN
+  - Benton, MS
+  - Benton, OR
+  - Benton, WA
+  - Benzie County
+  - Bergen, NJ
+  - Berkeley County, WV
+  - Berkeley, CA
+  - Berkeley, SC
+  - Berks County GIS
+  - Bernalillo County GIS Technology Section, Planning & Development Services
+  - Berrien, GA
+  - Berrien, MI
+  - Bertie, NC
+  - Bexar, TX
+  - Bibb, AL
+  - Bibb, GA
+  - Bibb2, GA
+  - Bienville, LA
+  - Big Horn, MT
+  - Big Horn, WY
+  - Bingham, ID
+  - Bladen, NC
+  - Blaine, ID
+  - Blaine, MT
+  - Blaine, NE
+  - Blair, PA
+  - Blanco, TX
+  - Bleckley, GA
+  - Blount County Communications District
+  - Blount, TN
+  - Blowing Rock, NC
+  - Blue Earth, MN
+  - Bolivar, MS
+  - Bon Homme, SD
+  - Bond, IL
+  - Bonner, ID
+  - Bonneville County
+  - Boone, AR
+  - Boone, IL
+  - Boone, MO
+  - Boone, NE
+  - Borden, TX
+  - Bosque, TX
+  - Bossier Parish GIS Department
+  - Bottineau, ND
+  - Boulder, CO (CC BY 4.0)
+  - Boundary, ID
+  - Bourbon County, KS
+  - Bowie, TX
+  - Box Butte, NE
+  - Box Elder, UT
+  - Boyd, KY
+  - Bradford, FL
+  - Bradford, PA
+  - Branch, MI
+  - Brantley, GA
+  - Braxton, WV
+  - Brazoria, TX
+  - Brazos Central Appraisal District
+  - Bremer County GIS Department
+  - Brevard, FL
+  - Brewster, TX
+  - Briscoe, TX
+  - Bristol Bay Borough, AK
+  - Broadwater, MT
+  - Brooke, WV
+  - Brooks, GA
+  - Brooks, TX
+  - Broome, NY
+  - Broomfield, CO
+  - Broward, FL
+  - Brown County, KS
+  - Brown, IL
+  - Brown, NE
+  - Brown, OH
+  - Brown, TX
+  - Brown, WI
+  - Brule, SD
+  - Brunswick, NC
+  - Bryan, GA
+  - Buchanan, MO
+  - Buffalo, NE
+  - Buffalo, SD
+  - Buffalo, WI
+  - Bulloch, GA
+  - Bullock, AL
+  - Buncombe, NC
+  - Bureau, IL
+  - Burke, GA
+  - Burke, NC
+  - Burleigh, ND
+  - Burleson, TX
+  - Burnet, TX
+  - Burt, NE
+  - Butler County GIS/Mapping Department: [License](https://www.butlercountypa.gov/353/Mapping)
+  - Butler, KS
+  - Butler, NE
+  - Butler, OH
+  - Butte, CA
+  - Butte, SD
+  - Cabarrus, NC
+  - Cabell, WV
+  - Cache County GIS
+  - Caddo, LA
+  - Calaveras, CA
+  - Caldwell, NC
+  - Caldwell, TX
+  - Calhoun County Assessor
+  - Calhoun, AL
+  - Calhoun, FL
+  - Calhoun, GA
+  - Calhoun, IL
+  - Calhoun, MS
+  - Calhoun, TX
+  - Callahan, TX
+  - Calumet County Wisconsin: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+  - Calvert, MD
+  - Cambria, PA
+  - Camden County Board of Commissioners
+  - Camden, NC
+  - Cameron, PA
+  - Cameron, TX
+  - Camp, TX
+  - Campbell County, VA GIS Office
+  - Campbell, KY
+  - Campbell, SD
+  - Campbell, WY
+  - Candler, GA
+  - Canyon, ID
+  - Cape May, NJ
+  - Carbon, MT
+  - Carbon, PA
+  - Carbon, WY
+  - Caribou, ID
+  - Carlton, MN
+  - Caroline, MD
+  - Carroll, GA
+  - Carroll, IL
+  - Carroll, OH
+  - Carson, TX
+  - Carter-county, OK
+  - Carter, MT
+  - Carteret County GIS
+  - Cary, NC
+  - Cascade, MT
+  - Cass, MN
+  - Cass, ND
+  - Cass, NE
+  - Cass, TX
+  - Castro, TX
+  - Caswell, NC
+  - Catahoula, LA
+  - Catawba, NC
+  - Cayuga County Department of Planning and Economic Development
+  - Cecil, MD
+  - Cedar, IA
+  - Cedar, NE
+  - Centre, PA
+  - Cerro Gordo County, Iowa
+  - Chaffee, CO
+  - Chambers, TX
+  - Champaign, IL
+  - Champaign, OH
+  - Charles Mix, SD
+  - Charleston, SC
+  - Charlotte, FL
+  - Charlton, GA
+  - Chase, NE
+  - Chatham, NC
+  - Chattahoochee, GA
+  - Chattooga, GA
+  - Chautauqua County, KS
+  - Chaves, NM
+  - Cheatham County, Tennessee
+  - Cherokee County GIS
+  - Cherokee, AL
+  - Cherokee, TX
+  - Cherry, NE
+  - Chester, PA
+  - Chesterfield, SC
+  - Cheyenne County, Kansas
+  - Cheyenne, CO
+  - Cheyenne, NE
+  - Chickasaw, MS
+  - Childress, TX
+  - Chippewa, MN
+  - Chippewa, WI
+  - Choctaw, MS
+  - Chouteau, MT
+  - Chowan, NC
+  - Christian, IL
+  - Churchill, NV
+  - Citrus, FL
+  - City of Abilene, TX
+  - City of Albany, Oregon
+  - City of Alexandria, LA
+  - City of Alexandria, VA
+  - City of Allentown, PA
+  - City of Alma, GA
+  - City of Alpharetta, GA
+  - City of Alvin, TX
+  - City of Amarillo, TX
+  - City of Americus, Sumter County, KCS
+  - City of Anaheim, CA
+  - City of Arena, WI
+  - City of Atlanta, GA
+  - City of Auburn, AL
+  - City of Auburn, NH
+  - City of Aurora, IL
+  - City of Bakersfield
+  - City of Baltimore, MD
+  - City of Beaumont, TX
+  - City of Bellevue, WA
+  - City of Bellingham, WA
+  - City of Berkeley
+  - City of Biddeford, ME
+  - City of Biloxi, MS
+  - City of Bismarck, ND
+  - City of Bloomington, IN
+  - City of Boise: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+  - City of Boise, ID
+  - City of Boone, NC
+  - City of Bossier, LA
+  - City of Boston, MA
+  - City of Bothell, WA
+  - City of Brea, CA
+  - City of Brentwood, TN
+  - City of Bridgeport, CT
+  - City of Brookhaven
+  - City of Brookline, MA
+  - City of Bryan, TX
+  - City of Buda, TX
+  - City of Burbank, CA
+  - City of Burlington, VT
+  - City of Cape Coral, FL
+  - City of Cape Girardeau, MO
+  - City of Carlsbad, NM
+  - City of Carolina Beach, NC
+  - City of Carrollton, TX
+  - City of Carson, CA
+  - City of Cedar Park, TX
+  - City of Centennial
+  - City of Champaign, IL
+  - City of Charlottesville, VA
+  - City of Chattanooga, TN
+  - City of Chesapeake, VA
+  - City of Chicago, IL
+  - City of College Station: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+  - City of Colleyville, TX
+  - City of Columbia, MO
+  - City of Columbus, OH
+  - City of Commerce City
+  - City of Coopersville, MI
+  - City of Corvallis GIS
+  - City of Cranston, RI
+  - City of Culver City, CA
+  - City of Cupertino, CA
+  - City of Cupertino2, CA
+  - City of D'Iberville, MS
+  - City of Dalhart, TX
+  - City of Dallas, TX
+  - City of Danville, VA
+  - City of Denham Springs, LA
+  - City of Denison, TX
+  - City of Denton, TX
+  - City of Denver Open Data Catalog: [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)
+  - City of Diamondhead, MS
+  - City of Dillingham, AK
+  - City of Dover, DE
+  - City of East Peoria
+  - City of Edmond, OK
+  - City of Elizabeth City, NC
+  - City of Elk Grove, CA
+  - City of Emeryville, CA
+  - City of Emporia, VA
+  - City of Erie, CO
+  - City of Eugene, OR
+  - City of Eureka, CA
+  - City of Evanston, IL
+  - City of Evansville, IN
+  - City of Falls Church, VA
+  - City of Fargo, ND
+  - City of Farmington, NM
+  - City of Fayetteville, AR
+  - City of Flagstaff, AZ
+  - City of Flint, MI
+  - City of Flower Mound, TX
+  - City of Fort Collins, CO
+  - City of Fort Lauderdale, FL
+  - City of Frederick, CO
+  - City of Frederick, Maryland
+  - City of Frederick, MD
+  - City of Fullerton
+  - City of Fuquay Varina, NC
+  - City of Gainesville, FL
+  - City of Gaithersburg, MD
+  - City of Garden Grove, CA
+  - City of Garland, TX
+  - City of Gilbert, AZ
+  - City of Gillette GIS Division
+  - City of Glendale
+  - City of Grafton, ND
+  - City of Grand Forks, ND
+  - City of Grants Pass
+  - City of Greeley, CO
+  - City of Greensboro, NC
+  - City of Greenville, SC
+  - City of Gresham GIS
+  - City of Gulfport GIS
+  - City of Hampstead, NH
+  - City of Hartford, CT
+  - City of Hattiesburg, MS
+  - City of Hayward, CA
+  - City of Hermosa Beach, CA
+  - City of Horseshoe Bay, TX
+  - City of Huntington Beach, CA
+  - City of Huntsville, AL
+  - City of Hurst, TX
+  - City of Indianapolis and Marion County - IndyGIS: [License](https://www.arcgis.com/home/item.html?id=8c7b0c217ba0406f9c8e269c40b50632)
+  - City of Irvine, CA
+  - City of Jackson, CA
+  - City of Janesville, WI
+  - City of Johns Creek, GA: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+  - City of Johnson City, TN
+  - City of Joplin, MO
+  - City of Juneau, AK
+  - City of Kansas City, Missouri: [License](https://data.kcmo.org/terms)
+  - City of Katy, TX
+  - City of Keller, TX
+  - City of Kennewick, WA
+  - City of Kerman, CA
+  - City of Killeen, TX
+  - City of King, NC
+  - City of Kinston
+  - City of La Grande, OR
+  - City of Laguna Niguel: [License](https://www.cityoflagunaniguel.org/705/Maps)
+  - City of Lake Forest, CA
+  - City of Lakeland, Florida GIS Division
+  - City of Lancaster, CA
+  - City of Lawrence, KS
+  - City of Lawton GIS Division
+  - City of Lebanon, OR
+  - City of Lenexa, KS
+  - City of Lewisville, TX
+  - City of Lexington, Virginia
+  - City of Littleton, CO
+  - City of Long Beach, CA
+  - City of Longview, TX
+  - City of Loveland, CO
+  - City of Lyme, CT
+  - City of Lynchburg, VA
+  - City of Madras, OR
+  - City of Manchester, CT
+  - City of Mansfield, TX
+  - City of Manteca: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+  - City of Marietta, GA
+  - City of McKinney
+  - City of McMinnville
+  - City of Medford, OR
+  - City of Memphis, TN
+  - City of Mesa, AZ
+  - City of Mesquite, TX
+  - City of Miami, Department of Innovation and Technology, GIS Team: [Creative Commons Attribution 4.0 International](https://datahub-miamigis.opendata.arcgis.com/datasets/f12e4de69f2a474a8c29c8e8664f75c2)
+  - City of Midwest City, OK
+  - City of Milford, CT
+  - City of Milwaukee, WI
+  - City of Mobile, AL
+  - City of Monroe, MI
+  - City of Montgomery
+  - City of Moore, OK
+  - City of Moorhead, MN
+  - City of Morgan, UT
+  - City of Mountain View, CA
+  - City of Murfreesboro, TN
+  - City of Muskogee, Oklahoma
+  - City of Myrtle Beach GIS Division
+  - City of Naperville, IL
+  - City of Nashua, NH
+  - City of Nashville, TN
+  - City of Natchitoches
+  - City of New Britain, CT
+  - City of New Haven
+  - City of New Iberia, LA
+  - City of New York, NY
+  - City of Newark, DE
+  - City of Newberg, OR
+  - City of Newcastle, Oklahoma
+  - City of Newport Beach, CA
+  - City of Newport News, VA
+  - City of Newport, OR
+  - City of Nome, AK
+  - City of Norfolk, VA
+  - City of Norman GIS Services Division
+  - City of North Richland Hills, TX
+  - City of Norton, VA
+  - City of Norwalk, CT
+  - City of Ocean Springs, MS
+  - City of Ofallon, MO
+  - City of Olathe, KS
+  - City of Orange
+  - City of Oroville, CA
+  - City of Owensboro, KY
+  - City of Palestine, TX
+  - City of Palo Alto, CA
+  - City of Pascagoula
+  - City of Pasco, WA
+  - City of Pearland, TX
+  - City of Pelahatchie, MS
+  - City of Perrysburg, OH
+  - City of Perryville, MO
+  - City of Pflugerville, TX
+  - City of Piedmont, CA
+  - City of Pinellas Park, FL
+  - City of Plainfield, CT
+  - City of Plano, TX
+  - City of Porterville, CA
+  - City of Provo, UT
+  - City of Pullman, WA
+  - City of Radford, VA
+  - City of Rancho Cucamonga
+  - City of Redding, CA
+  - City of Redlands, CA
+  - City of Richland, WA
+  - City of Richmond, VA
+  - City of Riverside, CA
+  - City of Robertsdale, AL
+  - City of Rochelle, IL
+  - City of Rochester Hills
+  - City of Rochester, New York
+  - City of Rock Hill, SC
+  - City of Rockville, MD
+  - City of Rosenberg, TX
+  - City of Roseville, CA
+  - City of Roswell, GA
+  - City of Rural Retreat, VA
+  - City of Salem, Oregon: [License](https://data.cityofsalem.net/pages/disclaimer)
+  - City of Salem, VA
+  - City of Salina, KS
+  - City of Salisbury, NC
+  - City of San Antonio, TX
+  - City of San Jose, CA
+  - City of San Jose2, CA
+  - City of San Juan Capistrano, CA
+  - City of San Luis Obispo, CA
+  - City of Sandy Springs, Georgia: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+  - City of Santa Cruz
+  - City of Santa Fe, NM
+  - City of Santa Maria, CA
+  - City of Savannah, GA
+  - City of Schaumburg, IL
+  - City of Scottsdale, AZ
+  - City of Seattle, Enterprise Data
+  - City of Sheridan, WY
+  - City of Sherman GIS
+  - City of Shorewood, WI
+  - City of Sioux Falls, SD
+  - City of Snohomish, WA
+  - City of South Lake Tahoe, CA
+  - City of Southlake, TX
+  - City of Spartanburg, South Carolina
+  - City of Spring Hill, TN
+  - City of St Louis, MO
+  - City of Stamford, CT
+  - City of Staunton, VA
+  - City of Stillwater, OK
+  - City of Sugar Land, TX
+  - City of Sunnyvale, CA
+  - City of Tacoma
+  - City of Tecumseh, MI
+  - City of Temecula, CA
+  - City of Temple, TX
+  - City of Thornton, CO
+  - City of Twin Falls, ID
+  - City of Unalaska, AK
+  - City of Unity, OR
+  - City of University Park, TX
+  - City of Vail, CO
+  - City of Valdez, AK
+  - City of Vernonia, OR
+  - City of Vicksburg, MS
+  - City of Visalia
+  - City of Waco, TX
+  - City of Walnut Creek, CA
+  - City of Waterloo, IA
+  - City of Watertown, CT
+  - City of Waxahachie, TX
+  - City of West Bend, WI
+  - City of West Palm Beach
+  - City of West Peoria, IL
+  - City of West Sacramento, CA
+  - City of Westminster, CO
+  - City of Whittier, CA
+  - City of Wichita, KS
+  - City of Williamsburg, Virginia
+  - City of Winchester, Virginia: [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/)
+  - City of Wright, WY
+  - City-County Planning Commission of Warren County, KY
+  - City-of-ofallon, IL
+  - Clackamas, OR
+  - Claiborne, LA
+  - Claiborne, MS
+  - Clallam County GIS & Assessor's Dept.
+  - Clarion County GIS
+  - Clark County GIS
+  - Clark County Planning, Zoning, and Land Information
+  - Clark, IL
+  - Clark, NV
+  - Clark, OH
+  - Clark, WA
+  - Clarke, MS
+  - Clatsop, OR
+  - Clay County, MN
+  - Clay, FL
+  - Clay, MS
+  - Clay, NC
+  - Clay, NE
+  - Clay, TX
+  - Clayton, GA
+  - Clear Creek, CO
+  - Clearfield County GIS Department
+  - Clearwater County
+  - Clearwater, MN
+  - Cleveland, NC
+  - Clinch, GA
+  - Clinton, OH
+  - Clinton, PA
+  - Coahoma, MS
+  - Cobb, GA
+  - Cochise, AZ
+  - Cochran, TX
+  - Coconino County GIS
+  - Codington, SD
+  - Coffee, GA
+  - Coffey County, KS
+  - Coke, TX
+  - Colbert County Revenue Commissioner
+  - Cole County and City of Jefferson, Missouri (MidMoGIS)
+  - Coleman, TX
+  - Coles, IL
+  - Colleton, SC
+  - Colleyville, TX
+  - Collier, FL
+  - Collingsworth, TX
+  - Colorado, TX
+  - Colquitt, GA
+  - Columbia County GIS
+  - Columbia, FL
+  - Columbia, OR
+  - Columbia, WA
+  - Columbia, WI
+  - Columbiana, OH
+  - Columbus, NC
+  - Colusa, CA
+  - Comal, TX
+  - Comanche, TX
+  - Concho, TX
+  - Concordia, LA
+  - Conejos, CO
+  - Contra Costa, CA
+  - Converse, WY
+  - Cook, GA
+  - Cook, IL
+  - Cook, MN
+  - Cooke, TX
+  - Coos County GIS
+  - Copiah, MS
+  - Coryell, TX
+  - Coshocton County GIS Office
+  - Cottle, TX
+  - County of Fulton, PA
+  - County of Inyo, California
+  - County of Kern
+  - County of Kings
+  - County of Sonoma
+  - County of Tulare
+  - Covington, MS
+  - Coweta County GIS
+  - Cowley County, KS
+  - Cowlitz, WA
+  - Crane, TX
+  - Craven, NC
+  - Crawford County
+  - Crawford County, KS
+  - Crawford, OH
+  - Crawford, PA
+  - Creek, OK
+  - Crisp, GA
+  - Crockett, TX
+  - Crook, OR
+  - Crook, WY
+  - Crosby, TX
+  - Crow Wing, MN
+  - Culberson, TX
+  - Cullman, AL
+  - Cumberland, IL
+  - Cumberland, NC
+  - Cumberland, PA
+  - Cuming, NE
+  - Currituck, NC
+  - Curry, OR
+  - Custer, CO
+  - Custer, ID
+  - Custer, MT
+  - Custer, NE
+  - Cuyahoga, OH
+  - Dade, GA
+  - Dakota, MN
+  - Dakota, NE
+  - Dallam, TX
+  - Dallas, AL
+  - Dallas, IA
+  - Dallas, TX
+  - Dane, WI
+  - Daniels, MT
+  - Dare, NC
+  - Darke, OH
+  - Darlington, SC
+  - Dauphin County Information Technology, Dauphin County Tax Assessment
+  - Davidson, NC
+  - Davidson, SD
+  - Davidson, TN
+  - Davie, NC
+  - Davison, SD
+  - Dawson, GA
+  - Dawson, MT
+  - Dawson, NE
+  - Dawson, TX
+  - Day, SD
+  - DC statewide
+  - De Baca, NM
+  - DE statewide
+  - Deaf Smith, TX
+  - Decatur, GA
+  - Deer Lodge, MT
+  - Defiance, OH
+  - DeKalb County: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+  - Dekalb, AL
+  - Dekalb, IL
+  - Del Norte, CA
+  - Delaware County Emergency Services
+  - Delaware, IN
+  - Delaware, OH
+  - Delta, CO
+  - Delta, TX
+  - Denton, TX
+  - Des Moines, IA
+  - Deschutes, OR
+  - Desoto, FL
+  - Desoto, LA
+  - Desoto, MS
+  - Desoto, TX
+  - Deuel, NE
+  - Deuel, SD
+  - Dewitt, IL
+  - Dewitt, TX
+  - Dickens, TX
+  - Dickinson County, KS
+  - Dickinson Engineering Department
+  - Dimmit, TX
+  - Dixie, FL
+  - Dixon, NE
+  - Doddridge, WV
+  - Dodge, MN
+  - Dodge, WI
+  - Dolores, CO
+  - Doña Ana County GIS Division
+  - Dona Ana-2, NM
+  - Doniphan County, KS
+  - Donley, TX
+  - Dooly, GA
+  - Door, WI
+  - Dorchester County GIS Dept
+  - Dorchester, MD
+  - Dougherty, GA
+  - Douglas County GIS: [License](https://drive.google.com/file/d/0Bw1ZzvRYzwerakdRa1ludGtmdXc/view)
+  - Douglas County, Colorado: [License](https://www.douglasco.gov/documents/open-data-guidelines.pdf/)
+  - Douglas County, WA GIS: [License](https://www.douglascountywa.gov/240/GIS-Maps)
+  - Douglas, GA
+  - Douglas, IL
+  - Douglas, KS
+  - Douglas, MN
+  - Douglas, NE
+  - Douglas, NV
+  - Douglas, OR
+  - Douglas, SD
+  - Douglas, WI
+  - Dubuque, IA
+  - Dupage, IL
+  - Duplin, NC
+  - Durham, NC
+  - Dutchess, NY
+  - Duval, FL
+  - Duval, TX
+  - Eagle, CO
+  - Early, GA
+  - East Baton Rouge Parish, LA
+  - East Feliciana, LA
+  - Eastland, TX
+  - Eaton, MI
+  - Eau Claire, WI
+  - Ebci, NC
+  - Echols, GA
+  - Ector County GIS
+  - Eddy, NM
+  - Edgar, IL
+  - Edgecombe, NC
+  - Edmunds, SD
+  - Edwards County, KS
+  - Edwards, IL
+  - Edwards, TX
+  - Effingham, GA
+  - Effingham, IL
+  - El Dorado, CA
+  - El Paso, CO
+  - El Paso, TX
+  - Elbert, CO
+  - Elk County, KS
+  - Elk, PA
+  - Elko, NV
+  - Ellis, TX
+  - Elmore, AL
+  - Emanuel, GA
+  - Emmet, MI
+  - Erath, TX
+  - Erie County Office of Geographic Information Services (OGIS)
+  - Erie County, Pennsylvania GIS
+  - Erie, OH
+  - Escambia County Property Appraiser
+  - Esri Community Maps Contributors; Aurora, CO
+  - Esri Community Maps Contributors; Riley County, KS: [Creative Commons Attribution 4.0 (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)
+  - Essex County, Virginia GIS Office
+  - Etowah, AL
+  - Eureka County
+  - Evans, GA
+  - Fairbanks North Star Borough, AK
+  - Fairfax, VA
+  - Fairfield, OH
+  - Fall River, SD
+  - Fallon, MT
+  - Falls, TX
+  - Fannin, GA
+  - Fannin, TX
+  - Faribault, MN
+  - Faulk, SD
+  - Fauquier County GIS & Town of Warrenton
+  - Fauquier, VA
+  - Fayette County, Pennsylvania
+  - Fayette, GA
+  - Fayette, OH
+  - Fayette, TX
+  - Fayette, WV
+  - Fergus, MT
+  - Ferry, WA
+  - Fillmore, NE
+  - Fisher, TX
+  - FL statewide
+  - Flagler, FL
+  - Flathead, MT
+  - Florence, SC
+  - Floyd, GA
+  - Floyd, TX
+  - Fluvanna, VA
+  - Foard, TX
+  - Fond Du Lac, WI
+  - Forest, PA
+  - Forest, WI
+  - Forsyth, GA
+  - Forsyth, NC
+  - Fort Bend, TX
+  - Franklin County, KS
+  - Franklin County, KY GIS
+  - Franklin, AL
+  - Franklin, FL
+  - Franklin, ID
+  - Franklin, NC
+  - Franklin, NE
+  - Franklin, OH
+  - Franklin, PA
+  - Franklin, TN
+  - Franklin, TX
+  - Franklin, VA
+  - Franklin, WA
+  - Freeborn, MN
+  - Freestone, TX
+  - Fremont, CO
+  - Fremont, ID
+  - Fremont, WY
+  - Frio, TX
+  - Frontier, NE
+  - Fulton, IL
+  - Fulton, OH
+  - Gadsden, FL
+  - Gage, NE
+  - Gaines, TX
+  - Gallatin, MT
+  - Gallia, OH
+  - Garden, NE
+  - Garfield, CO
+  - Garfield, MT
+  - Garfield, NE
+  - Garfield, WA
+  - Garland, AR
+  - Garrett, MD
+  - Garza, TX
+  - Gaston, NC
+  - Gates, NC
+  - Geary County, KS
+  - Geauga County Auditor
+  - Genesee, MI
+  - Georgetown, SC
+  - Gila, AZ
+  - Gilchrist, FL
+  - Giles, VA
+  - Gillespie, TX
+  - Gilliam, OR
+  - Gilmer, WV
+  - Gilpin County
+  - GIS Services Division, Boone County Planning Commission
+  - Glacier, MT
+  - Glades, FL
+  - Glascock, GA
+  - Glasscock, TX
+  - Glenn, CA
+  - Glynn, GA
+  - Golden Valley County, ND
+  - Golden Valley, MT
+  - Golden Valley, ND
+  - Goliad, TX
+  - Gonzales, TX
+  - Goodhue, MN
+  - Gordon, GA
+  - Goshen, WY
+  - Gosper, NE
+  - Governor's Office of Information Technology (Public Domain)
+  - Grady, GA
+  - Graham, NC
+  - Grand Forks, ND
+  - Grand Traverse County GIS Department
+  - Grand, CO
+  - Granite, MT
+  - Grant County
+  - Grant, MN
+  - Grant, NE
+  - Grant, OR
+  - Grant, SD
+  - Grant, WA
+  - Grant, WV
+  - Granville, NC
+  - Gray, TX
+  - Grays Harbor, WA
+  - Grayson, TX
+  - Grayson, VA
+  - Greater Houston, TX
+  - Greeley, NE
+  - Green Lake, WI
+  - Green, WI
+  - Greenbrier, WV
+  - Greene County GIS
+  - Greene, IL
+  - Greene, MO
+  - Greene, NC
+  - Greene, PA
+  - Greene, VA
+  - Greenville, SC
+  - Greenwood County GIS
+  - Greenwood County, KS
+  - Gregg, TX
+  - Gregory, SD
+  - Gresham, OR
+  - Grimes, TX
+  - Guadalupe, TX
+  - Guernsey, OH
+  - Guilford County GIS
+  - Gulf, FL
+  - Gunnison, CO
+  - Gwinnett, GA
+  - Habersham, GA
+  - Haines, AK
+  - Hale, TX
+  - Halifax, NC
+  - Halifax, VA
+  - Hall, GA
+  - Hall, TX
+  - Hamilton County, Indiana GIS Office
+  - Hamilton, FL
+  - Hamilton, NE
+  - Hamilton, OH
+  - Hamilton, TN
+  - Hamilton, TX
+  - Hamlin, SD
+  - Hampshire, WV
+  - Hampton County GIS
+  - Hancock, MS
+  - Hancock, OH
+  - Hancock, WV
+  - Hand, SD
+  - Hansford, TX
+  - Hanson, SD
+  - Hardee, FL
+  - Hardeman, TX
+  - Hardin County, Kentucky
+  - Hardin, OH
+  - Hardin, TX
+  - Hardy, WV
+  - Harford, MD
+  - Harlan, NE
+  - Harnett, NC
+  - Harney, OR
+  - Harper County, KS
+  - Harris, GA
+  - Harris, TX
+  - Harrison, MS
+  - Harrison, OH
+  - Harrison, TX
+  - Harrison, WV
+  - Hartley, TX
+  - Harvey County, KS
+  - Haskell, TX
+  - Hawaii, HI
+  - Hayes, NE
+  - Hays, TX
+  - Haywood, NC
+  - Heard, GA
+  - Helena, MT
+  - Hemphill, TX
+  - Henderson County Appraisal District
+  - Henderson County, Kentucky
+  - Henderson, NC
+  - Henderson, NV
+  - Hendry, FL
+  - Hennepin, MN
+  - Henrico County GIS Office: [License](https://henrico.gov/transparency/terms-of-use/)
+  - Henry, GA
+  - Henry, IL
+  - Henry, OH
+  - Hertford, NC
+  - Hidalgo County, TX
+  - Highland, OH
+  - Highland, VA
+  - Highlands, FL
+  - Hill, MT
+  - Hill, TX
+  - Hillsborough County: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+  - Hillsdale, MI
+  - Hinds, MS
+  - Hitchcock, NE
+  - Hocking, OH
+  - Hockley, TX
+  - Hoke, NC
+  - Holmes, FL
+  - Holmes, OH
+  - Holt, NE
+  - Honolulu, HI
+  - Hood River County GIS
+  - Hood, TX
+  - Hooker, NE
+  - Hopkins, TX
+  - Horry, SC
+  - Hot Springs, WY
+  - Houston, AL
+  - Houston, GA
+  - Houston, TX
+  - Howard, NE
+  - Hubbard, MN
+  - Hudspeth, TX
+  - Hughes County, SD / Planning and Development District III
+  - Humboldt, CA
+  - Humboldt, NV
+  - Hunt, TX
+  - Huntingdon, PA
+  - Huron, OH
+  - Hutchinson, SD
+  - Hutchinson, TX
+  - Hyde, NC
+  - IA statewide
+  - Iberia, LA
+  - ID statewide
+  - Idaho, ID
+  - Imperial, CA
+  - IN statewide
+  - INCOG (Indian Nations Council of Governments)
+  - Indian River, FL
+  - Indiana County, Pennsylvania
+  - Ingham, MI
+  - Inyo, CA
+  - Iredell, NC
+  - Irion, TX
+  - Iron County 911 / SEMO Regional Planning Commission
+  - Iron County, Wisconsin
+  - Irwin, GA
+  - Isanti, MN
+  - Island, WA
+  - Isle of Wight County GIS Office
+  - Itasca, MN
+  - Itawamba, MS
+  - Jack, TX
+  - Jackson County GIS
+  - Jackson County, Alabama
+  - Jackson County, KS
+  - Jackson County, Oregon GIS: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+  - Jackson County, SD / Planning and Development District III
+  - Jackson, FL
+  - Jackson, GA
+  - Jackson, IL
+  - Jackson, MI
+  - Jackson, MN
+  - Jackson, MS
+  - Jackson, NC
+  - Jackson, OH
+  - Jackson, TX
+  - Jackson, WI
+  - James City, VA
+  - Jasper, MO
+  - Jasper, SC
+  - Jasper, TX
+  - Jeff Davis, TX
+  - Jefferson County, Alabama
+  - Jefferson County, Colorado
+  - Jefferson County, Kansas GIS Department
+  - Jefferson County, Washington: [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/)
+  - Jefferson Parish, LA
+  - Jefferson, FL
+  - Jefferson, GA
+  - Jefferson, ID
+  - Jefferson, MS
+  - Jefferson, MT
+  - Jefferson, OH
+  - Jefferson, OR
+  - Jefferson, TN
+  - Jefferson, TX
+  - Jefferson, WI
+  - Jefferson, WV
+  - Jerauld, SD
+  - Jerome, ID
+  - Jersey, IL
+  - Jim Hogg, TX
+  - Jim Wells, TX
+  - Johnson County AIMS
+  - Johnson, GA
+  - Johnson, IA
+  - Johnson, NE
+  - Johnson, TX
+  - Johnston, NC
+  - Jones, GA
+  - Jones, MS
+  - Jones, NC
+  - Jones, SD
+  - Jones, TX
+  - Josephine, OR
+  - Judith Basin, MT
+  - Juneau, WI
+  - Juniata, PA
+  - Kalamazoo, MI
+  - Kanabec, MN
+  - Kanawha, WV
+  - Kandiyohi, MN
+  - Kane, IL
+  - Kankakee, IL
+  - Karnes, TX
+  - Kauai, HI
+  - Kaufman, TX
+  - Kearney, NE
+  - Kearny County, KS
+  - Keith, NE
+  - Kenai Peninsula Borough
+  - Kendall County GIS
+  - Kendall, TX
+  - Kenedy, TX
+  - Kenosha, WI
+  - Kent, DE
+  - Kent, MD
+  - Kent, TX
+  - Kenton, KY
+  - Kerr, TX
+  - Kershaw, SC
+  - Ketchikan, AK
+  - Kewaunee, WI
+  - Keya Paha, NE
+  - Kimball, NE
+  - Kimble, TX
+  - King and Queen County GIS
+  - King George, VA
+  - King, TX
+  - King, WA
+  - Kingman County, KS
+  - Kingsbury, SD
+  - Kinney, TX
+  - Kitsap, WA
+  - Kittitas County Assessor
+  - Kittson, MN
+  - Klamath County GIS
+  - Kleberg, TX
+  - Knox, IL
+  - Knox, NE
+  - Knox, OH
+  - Knox, TX
+  - Kodiak Island Borough, AK
+  - Koochiching, MN
+  - Kootenai, ID
+  - KS statewide
+  - KY statewide
+  - La Crosse County
+  - La Plata, CO
+  - La Salle County Appraisal District
+  - La Salle, TX
+  - Lafayette, FL
+  - Lafayette, LA
+  - Lafayette, MS
+  - Lafayette, WI
+  - Lake County Mapping Department
+  - Lake of the Woods, MN
+  - Lake, CA
+  - Lake, IL
+  - Lake, IN
+  - Lake, MN
+  - Lake, MT
+  - Lake, OH
+  - Lake, OR
+  - Lake, SD
+  - Lamar, GA
+  - Lamar, TX
+  - Lamb, TX
+  - Lampasas, TX
+  - Lancaster, NE
+  - Lancaster, PA
+  - Lancaster, SC
+  - Lander, NV
+  - Lane County GIS
+  - Lane County, KS
+  - Lanier, GA
+  - Laramie, WY
+  - Larimer, CO
+  - Las Vegas, NV
+  - Lasalle, IL
+  - Lassen, CA
+  - Latah, ID
+  - Lauderdale, AL
+  - Lauderdale, MS
+  - Laurens, GA
+  - Laurens, SC
+  - Lavaca, TX
+  - Lawrence, AL
+  - Lawrence, IL
+  - Lawrence, OH
+  - Lawrence, PA
+  - Lawrence, SD
+  - Le Sueur County GIS Department
+  - Lea County, New Mexico
+  - Lebanon, PA
+  - Lee County GIS
+  - Lee, AL
+  - Lee, GA
+  - Lee, NC
+  - Lee, TX
+  - Lehigh, PA
+  - Lemhi, ID
+  - Leon, FL
+  - Leon, TX
+  - Levy, FL
+  - Lewis, WA
+  - Lewis, WV
+  - Lewiston, Maine
+  - Lexington, SC
+  - Liberty, FL
+  - Liberty, GA
+  - Liberty, MT
+  - Liberty, TX
+  - Libery, TX
+  - Licking County GIS
+  - Licking2, OH
+  - Limestone County, Alabama
+  - Limestone, TX
+  - Lincoln County, Nevada
+  - Lincoln, LA
+  - Lincoln, MT
+  - Lincoln, NC
+  - Lincoln, NE
+  - Lincoln, NM
+  - Lincoln, OR
+  - Lincoln, WA
+  - Lincoln, WI
+  - Lincoln, WV
+  - Lincoln, WY
+  - Linn County, KS
+  - Linn, OR
+  - Lipscomb, TX
+  - Live Oak, TX
+  - Liveoak, TX
+  - Livingston, LA
+  - Llano, TX
+  - Logan, CO
+  - Logan, IL
+  - Logan, NE
+  - Logan, OH
+  - Logan, WV
+  - LOJIC (Louisville/Jefferson County Information Consortium): [License](https://www.lojic.org/data/liability-statement)
+  - Long, GA
+  - Lorain, OH
+  - Los Alamos County GIS
+  - Loudoun, VA
+  - Louisa County, Virginia GIS
+  - Loveland feed, FL
+  - Loving, TX
+  - Lower Rio Grande Valley Development Council (LRGVDC) 911 GIS
+  - Lowndes, GA
+  - Lubbock, TX
+  - Lucas County Auditor's Office, GIS Department
+  - Lumpkin, GA
+  - Luna, NM
+  - Luzerne, PA
+  - Lycoming, PA
+  - Lyman, SD
+  - Lynn, TX
+  - Lyon County, NV Assessor's Office
+  - Macomb County GIS
+  - Macon County, Alabama
+  - Macon, GA
+  - Macon, IL
+  - Macon, NC
+  - Macoupin, IL
+  - Madera, CA
+  - Madison County Assessor / SEMO Regional Planning Commission
+  - Madison County GIS
+  - Madison County, Alabama
+  - Madison, FL
+  - Madison, ID
+  - Madison, IL
+  - Madison, IN
+  - Madison, KY
+  - Madison, MS
+  - Madison, MT
+  - Madison, NE
+  - Madison, OH
+  - Madison, TX
+  - Madison, VA
+  - Mahnomen, MN
+  - Mahoning, OH
+  - Maine Emergency Services Communication Bureau: [License](https://maine.hub.arcgis.com/datasets/27e5daf37f1f4e5c8231d6e3989835c4_0/about)
+  - Malheur, OR
+  - Manatee County: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+  - Manitowoc, WI
+  - MAP~GIS (McCracken County / City of Paducah GIS Consortium) (City of Paducah, KY)
+  - MAP~GIS (McCracken County / City of Paducah GIS Consortium) (Mccracken, KY)
+  - Marathon, WI
+  - Marengo, AL
+  - Maricopa, AZ
+  - Marin, CA
+  - Marion and Polk, OR
+  - Marion County, IN
+  - Marion County, KS
+  - Marion, FL
+  - Marion, GA
+  - Marion, OH
+  - Marion, OR
+  - Marion, TX
+  - Marion, WV
+  - Mariposa, CA
+  - Marlboro, SC
+  - Marquette, MI
+  - Marquette, WI
+  - Marshall County, Minnesota
+  - Marshall, AL
+  - Marshall, SD
+  - Marshall, WV
+  - Martin, FL
+  - Martin, NC
+  - Martin, TX
+  - Maryland State Department of Assessments and Taxation, Maryland Department of Planning, and Charles County Maryland Department of Planning and Growth Management Planning Division
+  - Mason, IL
+  - Mason, MI
+  - Mason, TX
+  - Mason, WA
+  - Massac, IL
+  - Matagorda, TX
+  - Matanuska Susitna Borough, AK
+  - Maui, HI
+  - Maury, TN
+  - Maverick, TX
+  - Mccone, MT
+  - Mcculloch, TX
+  - Mcdonough, IL
+  - Mcdowell, NC
+  - Mcdowell, WV
+  - Mcduffie, GA
+  - Mchenry, IL
+  - Mcintosh, GA
+  - McKean County GIS: [License](https://www.mckeancountypa.gov/Document%20Center/Departments/GIS/GIS%20Forms/McKean%20County%20GIS%20Disclaimer.pdf)
+  - McKenzie County GIS
+  - Mckinley, NM
+  - McLean County GIS Consortium: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+  - Mclennan, TX
+  - Mcleod, MN
+  - Mcmullen, TX
+  - Mcpherson, SD
+  - MD statewide
+  - Meade County, KS
+  - Meade, KY
+  - Meagher, MT
+  - Mecklenburg County GIS
+  - Medina, OH
+  - Medina, TX
+  - Meigs, OH
+  - Mellette, SD
+  - Menard, IL
+  - Menard, TX
+  - Mendocino, CA
+  - Merced County
+  - Mercer, OH
+  - Mercer, PA
+  - Meriwether, GA
+  - Merrick, NE
+  - Mesa County GIS (CC BY)
+  - MI statewide
+  - Miami County Auditor, Ohio
+  - Miami2, FL
+  - Middlesex County, Virginia
+  - Midland, MI
+  - Midland, TX
+  - Mifflin County GIS
+  - Milam, TX
+  - Milford, NH
+  - Mille Lacs, MN
+  - Miller, GA
+  - Mills, IA
+  - Mills, TX
+  - Milwaukee County Land Information Office
+  - Miner, SD
+  - Mineral, CO
+  - Mineral, MT
+  - Mineral, NV
+  - Mineral, WV
+  - Minnehaha, SD
+  - Missoula, MT
+  - Mitchell, GA
+  - Mitchell, NC
+  - Mitchell, TX
+  - MN statewide
+  - MO statewide
+  - Mobile County GIS
+  - Modoc, CA
+  - Moffat County Assessor's Office
+  - Mohave, AZ
+  - Monmouth, NJ
+  - Monongalia, WV
+  - Monroe County, Wisconsin
+  - Monroe, FL
+  - Monroe, GA
+  - Monroe, MI
+  - Monroe, OH
+  - Monroe, PA
+  - Montague, TX
+  - Monterey, CA
+  - Montezuma, CO
+  - Montgomery County Auditor's Office
+  - Montgomery County, Maryland: [License](https://data.montgomerycountymd.gov/terms-of-use)
+  - Montgomery County, TN
+  - Montgomery, AL
+  - Montgomery, GA
+  - Montgomery, PA
+  - Montgomery, VA
+  - Montour County
+  - Montrose, CO
+  - Moore, NC
+  - Moore, TX
+  - Morgan, AL
+  - Morgan, CO
+  - Morgan, GA
+  - Morgan, IL
+  - Morgan, OH
+  - Morgan, WV
+  - Morrill, NE
+  - Morris, NJ
+  - Morris, TX
+  - Morrow County, Oregon
+  - Morrow, OH
+  - Morton, ND
+  - Motley, TX
+  - Moultrie, IL
+  - MT statewide
+  - Multnomah, OR
+  - Muscogee, GA
+  - Muskingum, OH
+  - Musselshell, MT
+  - Nacogdoches, TX
+  - Nance, NE
+  - Nash, NC
+  - Nassau, FL
+  - Natrona Regional Geospatial Cooperative (NRGC)
+  - Navarro, TX
+  - NC statewide
+  - ND statewide
+  - NE statewide
+  - Nelson, VA
+  - Nemaha County, KS
+  - Nemaha, NE
+  - Nevada County: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+  - New Braunfels, TX
+  - New Castle, DE
+  - New Hanover, NC
+  - New Kent, VA
+  - New Mexico 911 (NM911) Program: [License](https://gstore.unm.edu/apps/rgis/datasets/8850b25e-e495-46b5-952d-0fa1fa129ada/metadata/FGDC-STD-001-1998.html)
+  - Newaygo County
+  - Newberry, SC
+  - Newton, GA
+  - Newton, TX
+  - Nez Perce, ID
+  - NH statewide
+  - Niobrara, WY
+  - NJ statewide
+  - NM911 Program
+  - Noble, OH
+  - Nolan, TX
+  - Norman, MN
+  - North Richland Hills, TX
+  - North Slope Borough GIS
+  - Northampton, NC
+  - Northampton, PA
+  - Northumberland, PA
+  - Nottoway, VA
+  - Noxubee, MS
+  - Nuckolls, NE
+  - Nueces, TX
+  - NY statewide
+  - Nye, NV
+  - Oakland County
+  - Ochiltree, TX
+  - Oconee, GA
+  - Oconee, SC
+  - Oconto, WI
+  - Office of Geographic Information (MassGIS), Commonwealth of Massachusetts, MassIT (Public Domain)
+  - Oglethrope, GA
+  - OH statewide
+  - Ohio County, WV
+  - Okaloosa, FL
+  - Okanogan, WA
+  - Okeechobee, FL
+  - Oklahoma County Assessor
+  - Oktibbeha, MS
+  - Oldham County Planning and Development Services
+  - Oldham, TX
+  - Olmsted County, MN GIS Division
+  - Oneida County, Wisconsin
+  - Onslow, NC
+  - OR statewide
+  - Orange County, FL
+  - Orange, TX
+  - Orangeburg, SC
+  - Oregon City GIS
+  - Oregon City, OR
+  - Osage County, KS
+  - Osage, MO
+  - Osage, OK
+  - Osceola, FL
+  - Otoe, NE
+  - Ottawa County GIS
+  - Ottawa, OH
+  - Otter Tail, MN
+  - Ouachita, AR
+  - Ouachita, LA
+  - Ouray, CO
+  - Outagamie, WI
+  - Ozaukee, WI
+  - Pacific, WA
+  - Palm Beach County, FL
+  - Palo Pinto, TX
+  - Pamlico, NC
+  - Panola, TX
+  - Park, CO
+  - Park, MT
+  - Park, WY
+  - Parker, TX
+  - Parmer, TX
+  - Pasco, FL
+  - Pasquotank, NC
+  - Paulding, GA
+  - Paulding, OH
+  - Pawnee County, KS
+  - Pawnee, NE
+  - Peach, GA
+  - Pearl River, MS
+  - Pecos, TX
+  - Pend Oreille, WA
+  - Pender, NC
+  - Pendleton, KY
+  - Pendleton, WV
+  - Pennington, MN
+  - Pepin, WI
+  - Perkins, NE
+  - Perquimans, NC
+  - Perry County GIS
+  - Perry, KY
+  - Perry, OH
+  - Pershing, NV
+  - Person, NC
+  - Petroleum, MT
+  - Phelps, NE
+  - Philadelphia, PA
+  - Phillips, CO
+  - Phillips, MT
+  - Piatt, IL
+  - Pickaway, OH
+  - Pickens, AL
+  - Pickens, SC
+  - Pierce, GA
+  - Pierce, NE
+  - Pierce, WA
+  - Pierce, WI
+  - Pike County, Alabama
+  - Pike, IL
+  - Pike, OH
+  - Pike, PA
+  - Pima, AZ
+  - Pinal, AZ
+  - Pitkin, CO
+  - Pitt, NC
+  - Placer, CA
+  - Plano, TX
+  - Platte, NE
+  - Plumas, CA
+  - Pocahontas County Homeland Security and Emergency Management
+  - Pointe Coupee, LA
+  - Polk, FL
+  - Polk, GA
+  - Polk, IA
+  - Polk, MN
+  - Polk, NC
+  - Polk, NE
+  - Polk, OR
+  - Polk, TX
+  - Polk, WI
+  - Pondera, MT
+  - Pontotoc County, Mississippi
+  - Pope, MN
+  - Portage, OH
+  - Portage, WI
+  - Porter County GIS
+  - Portland, OR
+  - Post Falls, ID
+  - Pottawatomie County, KS
+  - Potter County GIS/Planning Department
+  - Potter, SD
+  - Potter, TX
+  - Powder River, MT
+  - Powell, MT
+  - Prairie, MT
+  - Preble, OH
+  - Prentiss, MS
+  - Presidio, TX
+  - Preston, WV
+  - Prince George's County Planning Department: [License](https://creativecommons.org/licenses/by/4.0/)
+  - Prince William County GIS: [License](https://www.pwcva.gov/disclaimer)
+  - Pueblo, CO
+  - Pulaski, AR
+  - Putnam, FL
+  - Putnam, IL
+  - Putnam, NY
+  - Putnam, OH
+  - Putnam, TN
+  - Putnam, WV
+  - Queen Annes, MD
+  - Quitman, GA
+  - Racine, WI
+  - Rains, TX
+  - Raleigh, WV
+  - Randall, TX
+  - Randolph, GA
+  - Randolph, IL
+  - Randolph, NC
+  - Randolph, WV
+  - Rankin, MS
+  - Rapides, LA
+  - Ravalli, MT
+  - Reagan, TX
+  - Real, TX
+  - Red Lake, MN
+  - Red River Parish, LA
+  - Red River, TX
+  - Red Willow, NE
+  - Reeves, TX
+  - Refugio, TX
+  - Reno County, KS
+  - Renville, MN
+  - Rhode Island Geographic Information System (RIGIS) / RI E 9-1-1 and AK Associates: [License](https://www.arcgis.com/home/item.html?id=26c8df834cbb4aa49ed571ad35c5647f)
+  - Rice County GIS
+  - Richardson, NE
+  - Richland, IL
+  - Richland, LA
+  - Richland, MT
+  - Richland, ND
+  - Richland, OH
+  - Richland, WI
+  - Richmond, GA
+  - Richmond, NC
+  - Rio Blanco, CO
+  - Rio Grande, CO
+  - Riverside, CA
+  - Roane, WV
+  - Roanoke County (Creative Common License (CC BY))
+  - Roberts, SD
+  - Roberts, TX
+  - Robertson, TX
+  - Robeson, NC
+  - Rock Island, IL
+  - Rock, NE
+  - Rock, WI
+  - Rockbridge, VA
+  - Rockdale, GA
+  - Rockingham, NC
+  - Rockland, NY
+  - Rockwall County GIS
+  - Rogers, OK
+  - Rolette, ND
+  - Roosevelt, MT
+  - Roseau, MN
+  - Rosebud, MT
+  - Ross, OH
+  - Round Rock, TX
+  - Routt County GIS
+  - Rowan, NC
+  - Runnels, TX
+  - Rush County, KS
+  - Rusk County Appraisal District
+  - Rutherford, NC
+  - Sabine, TX
+  - Sacramento County: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+  - SAGIS
+  - Saguache, CO
+  - Saline, NE
+  - Saluda, SC
+  - Sampson, NC
+  - San Augustine, TX
+  - San Benito, CA
+  - San Bernardino County
+  - San Diego, CA
+  - San Jacinto, TX
+  - San Joaquin, CA
+  - San Juan County, New Mexico
+  - San Juan, WA
+  - San Luis Obispo, CA
+  - San Patricio, TX
+  - San Saba, TX
+  - Sanborn and Carroll County Dept of Planning & Land Mgmt
+  - Sanborn, SD
+  - Sanders, MT
+  - Sandoval, NM
+  - Sandusky, OH
+  - Sangamon, IL
+  - Sanmiguel, CO
+  - Santa Barbara, CA
+  - Santa Clara, CA
+  - Santa Cruz, AZ
+  - Santa Fe, NM
+  - Santa Rosa, FL
+  - Sarpy, NE
+  - Sauk, WI
+  - SC statewide
+  - Schleicher, TX
+  - Schley, GA
+  - Schuyler, IL
+  - Scioto, OH
+  - Scotland, NC
+  - Scott County Assessor / SEMO Regional Planning Commission
+  - Scott County, KS
+  - Scott, IA
+  - Scott, KY
+  - Scott, MN
+  - Screven, GA
+  - Scurry, TX
+  - SD statewide
+  - Sedgwick, CO
+  - Seminole, GA
+  - SEMO GIS (Southeast Missouri Regional Planning Commission) / Perry County, Missouri: [License](https://semogis.com/maps/perry-county/)
+  - Seneca County Auditor's Office
+  - Sevier, TN
+  - Seward, NE
+  - Shackelford, TX
+  - Shasta County GIS
+  - Shawano, WI
+  - Shawnee County, KS
+  - Sheboygan, WI
+  - Shelby County 911 District of Tennessee
+  - Shelby County, Kentucky
+  - Shelby, AL
+  - Shelby, IL
+  - Shelby, OH
+  - Shelby, TX
+  - Shenandoah County GIS
+  - Sherburne, MN
+  - Sheridan, MT
+  - Sheridan, NE
+  - Sherman, NE
+  - Sherman, OR
+  - Sherman, TX
+  - Sibley County GIS
+  - Sierra, CA
+  - Silverbow, MT
+  - Simpson, MS
+  - Sioux, ND
+  - Sioux, NE
+  - Siskiyou, CA
+  - Sitka, AK
+  - Skagit, WA
+  - Skagway, AK
+  - Skamania, WA
+  - Smith, MS
+  - Smith, TX
+  - Smyth, VA
+  - Snohomish County, WA
+  - Snyder County, Pennsylvania (via PASDA)
+  - Solano, CA
+  - Somerset, MD
+  - Spotsylvania, VA
+  - St Charles Parish, LA
+  - St Clair, AL
+  - St Clair, IL
+  - St Croix, WI
+  - St James, LA
+  - St John the Baptist Parish, LA
+  - St Joseph, IN
+  - St Martin, LA
+  - St Mary, LA
+  - St-johns, FL
+  - St-lucie, FL
+  - St. Charles County Government
+  - St. Clair County GIS
+  - St. Francois County Assessor / SEMO Regional Planning Commission
+  - St. Louis County GIS Service Center
+  - St. Louis County Sheriff's Office 9-1-1 Communications Department; Pro-West & Associates; Spatial Focus, Inc; cities and townships of St. Louis County, MN
+  - St. Mary's County Government
+  - Stafford, VA
+  - Stanislaus, CA
+  - Stanley, SD
+  - Stanly, NC
+  - Stanton, NE
+  - Stark County, ND
+  - Stark, IL
+  - Stark, OH
+  - Starr, TX
+  - Statewide-east, MS
+  - Statewide-partial, MS
+  - Statewide-partial, TX
+  - Statewide-west, MS
+  - Statewide2, FL
+  - Stearns, MN
+  - Steele Rural, MN
+  - Steele Urban, MN
+  - Stephens, TX
+  - Stephenson, IL
+  - Sterling, TX
+  - Stevens, MN
+  - Stevens, WA
+  - Stewart, GA
+  - Stillwater, MT
+  - Stokes, NC
+  - Stonewall, TX
+  - Storey, NV
+  - Stutsman, ND
+  - Sublette, WY
+  - Suffolk County GIS: [CC BY](https://creativecommons.org/licenses/by/3.0/)
+  - Sullivan County GIS
+  - Sullivan, PA
+  - Sully, SD
+  - Summers, WV
+  - Summit County
+  - Summit County (Ohio) GIS
+  - Sumner County, KS
+  - Sumter, FL
+  - Sumter, SC
+  - Surry, NC
+  - Susquehanna, PA
+  - Sussex, DE
+  - Sussex, NJ
+  - Sutter, CA
+  - Sutton, TX
+  - Suwannee, FL
+  - Swain, NC
+  - Sweet Grass, MT
+  - Sweetwater, WY
+  - Swift, MN
+  - Swisher, TX
+  - Talbot County Government
+  - Talbot, GA
+  - Talladega, AL
+  - Taney, MO
+  - Tangipahoa, LA
+  - Tarrant-county, TX
+  - Tarrant, TX
+  - Tattnall, GA
+  - Taylor, FL
+  - Taylor, TX
+  - Taylor, WV
+  - Tazewell, IL
+  - Tehama, CA
+  - Telfair County
+  - Teller County GIS
+  - Terrebonne, LA
+  - Terrell, TX
+  - Terry, TX
+  - Teton County, Idaho GIS
+  - Teton, MT
+  - Texoma-counties, TX
+  - Thayer, NE
+  - Thomas County, KS
+  - Thomas, GA
+  - Thomas, NE
+  - Throckmorton, TX
+  - Thurston County
+  - Thurston, NE
+  - Tift, GA
+  - Tillamook, OR
+  - Timmons Group; Lunenburg County, VA
+  - Tioga, PA
+  - Titus, TX
+  - TN statewide
+  - Todd, MN
+  - Toledo, OH
+  - Tom Green, TX
+  - Tompkins, NY
+  - Toole, MT
+  - Toombs, GA
+  - Torrance, NM
+  - Town of Avon, CT
+  - Town of Blacksburg, VA
+  - Town of Chapel Hill, NC
+  - Town of Dedham, MA GIS Division: [License](https://www.dedhamma.gov/town-departments/engineering/gis/gis-data-disclaimer)
+  - Town of Easton, MA
+  - Town of Fairfield, CT
+  - Town of Groton, CT
+  - Town of Hamden
+  - Town of Hilton Head Island, SC
+  - Town of Jaffrey, NH
+  - Town of New Milford, CT
+  - Town of Newton, MA
+  - Town of Stonington, CT
+  - Town of Stratford, CT
+  - Town of Summerville, SC
+  - Town of Taos GIS
+  - Town of Trumbull, CT
+  - Towns of Easton and Monroe, CT (via MetroCOG)
+  - Transylvania, NC
+  - Traverse, MN
+  - Travis, TX
+  - Treasure, MT
+  - Trempealeau, WI
+  - Trinity, CA
+  - Trinity, TX
+  - Tripp and Todd, SD
+  - Troup, GA
+  - Troy, MI
+  - Trumbull, OH
+  - Tucker, WV
+  - Tulsa, OK
+  - Tuolumne, CA
+  - Turner, GA
+  - Turner, SD
+  - Tuscaloosa, AL
+  - Tuscarawas, OH
+  - Twiggs, GA
+  - Tyler, TX
+  - Tyler, WV
+  - Tyrrell, NC
+  - Ulster, NY
+  - Umatilla, OR
+  - Union County Geospatial Information & Technology Department
+  - Union County, GA
+  - Union, FL
+  - Union, NC
+  - Union, OH
+  - Union, OR
+  - Union, SC
+  - Upshur, TX
+  - Upshur, WV
+  - Upton, TX
+  - Utah Geospatial Reference Center (AGRC): [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/)
+  - Utah UGRC: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+  - Utah, UT
+  - Uvalde, TX
+  - Val Verde, TX
+  - Valencia County Assessor's Office
+  - Valley, ID
+  - Valley, MT
+  - Valley, NE
+  - Van Wert, OH
+  - Van Zandt County
+  - Van Zandt, TX
+  - Vanburen, MI
+  - Vance, NC
+  - Venango County
+  - Ventura, CA
+  - Vermilion, IL
+  - Vernon County, Wisconsin
+  - Vernon, MO
+  - Victoria, TX
+  - Vilas, WI
+  - Village of Key Biscayne
+  - Vinton, OH
+  - Virginia Beach, VA
+  - VT statewide
+  - WA statewide
+  - Wabaunsee County, KS
+  - Waco, TX
+  - Wadena County
+  - Wagoner, OK
+  - Wake, NC
+  - Wakiakum, WA
+  - Wakulla, FL
+  - Walker, TX
+  - Walla Walla, WA
+  - Waller, TX
+  - Wallowa, OR
+  - Walworth, WI
+  - Ward, ND
+  - Ward, TX
+  - Ware, GA
+  - Warren County, Mississippi
+  - Warren, IL
+  - Warren, NC
+  - Warren, OH
+  - Warren, PA
+  - Warren, VA
+  - Wasco County GIS
+  - Waseca County GIS: [License](https://www.wasecacounty.gov/164/GIS-Information)
+  - Washburn, WI
+  - Washington County 911 / SEMO Regional Planning Commission
+  - Washington County GIS
+  - Washington County, NY GIS / Real Property Tax Service
+  - Washington, AL
+  - Washington, CO
+  - Washington, FL
+  - Washington, GA
+  - Washington, LA
+  - Washington, MD
+  - Washington, MN
+  - Washington, NC
+  - Washington, OH
+  - Washington, OR
+  - Washington, TX
+  - Washington, UT
+  - Washington, WI
+  - Washoe, NV
+  - Washtenaw, MI
+  - Watauga, NC
+  - Waukesha County, Wisconsin
+  - Waupaca County, Wisconsin: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)
+  - Waushara, WI
+  - Wayne, IL
+  - Wayne, IN
+  - Wayne, MI
+  - Wayne, MS
+  - Wayne, NC
+  - Wayne, NY
+  - Wayne, OH
+  - Wayne, PA
+  - Wayne, WV
+  - Webb, TX
+  - Weber, UT
+  - Webster, LA
+  - Webster, MS
+  - Webster, NE
+  - Webster, WV
+  - Weld, CO
+  - West Feliciana, LA
+  - Westchester County GIS
+  - Westmoreland County GIS
+  - Weston, WY
+  - Wetzel, WV
+  - Wharton, TX
+  - Whatcom County: [License](https://www.whatcomcounty.us/4444/GIS-Data-Disclaimer)
+  - Wheatland, MT
+  - Wheeler, GA
+  - Wheeler, OR
+  - Wheeler, TX
+  - White Pine, NV
+  - White, IL
+  - Whiteside, IL
+  - Whitfield, GA
+  - Whitman, WA
+  - Wibaux, MT
+  - Wichita, TX
+  - Wicomico, MD
+  - Wilbarger, TX
+  - Wilcox, GA
+  - Wilkes, NC
+  - Wilkin, MN
+  - Wilkinson, GA
+  - Will, IL
+  - Willacy, TX
+  - Williams, ND
+  - Williams, OH
+  - Williamson, IL
+  - Williamson, TN
+  - Wilson, NC
+  - Wilson, TX
+  - Winkler, TX
+  - Winnebago, IL
+  - Winnebago, WI
+  - Winston, MS
+  - Wirt, WV
+  - Wisconsin Department of Administration (Burnett, WI)
+  - Wisconsin Department of Administration (Dunn, WI)
+  - Wisconsin Department of Administration (Florence, WI)
+  - Wisconsin Department of Administration (Iowa, WI)
+  - Wisconsin Department of Administration (Langlade, WI)
+  - Wisconsin Department of Administration (Marinette, WI)
+  - Wisconsin Department of Administration (Menominee, WI)
+  - Wisconsin Department of Administration (Price, WI)
+  - Wisconsin Department of Administration (Rusk, WI)
+  - Wisconsin Department of Administration (Sawyer, WI)
+  - Wisconsin Department of Administration (Taylor, WI)
+  - Wise County GIS/E911
+  - Wise, TX
+  - Wood County, Wisconsin: [CC BY 3.0](https://creativecommons.org/licenses/by/3.0)
+  - Wood, OH
+  - Wood, TX
+  - Wood, WV
+  - Woodford, IL
+  - Worcester County GIS
+  - Worth, GA
+  - Wrangell, AK
+  - WV statewide
+  - WY statewide
+  - Wyandot, OH
+  - Wyoming, PA
+  - Wyoming, WV
+  - Yadkin County, NC
+  - Yakima, WA
+  - Yakutat Borough, AK
+  - Yamhill, OR
+  - Yancey County GIS
+  - Yankton, SD
+  - Yavapai, AZ
+  - Yazoo County Tax Assessor
+  - Yellow Medicine, MN
+  - Yellowstone, MT
+  - Yoakum, TX
+  - Yolo, CA
+  - York, NE
+  - York, PA
+  - York, SC
+  - Young, TX
+  - Yuba, CA
+  - Yuma, AZ
+  - Yuma, CO
+  - Zapata, TX
+  - Zavala, TX
+  - Ziebach, SD
+
+### OpenStreetMap
+
+Basemap tiles, civic points of interest and address points (Geofabrik North America extract).
+
+- License: Open Database License (ODbL) 1.0
+- Attribution: © OpenStreetMap contributors. Available under the Open Database License.
+- Terms: https://www.openstreetmap.org/copyright
+- Obligation: required, with the data in API and MCP results and on https://smarterweather.com/acknowledgements/
+- Basis: ODbL 1.0 §4.3: a notice on a Produced Work used publicly; OSMF Attribution Guidelines (board 2021-06-25, revision 14786 of 2026-09-10).
+
+### Overture Maps Foundation addresses
+
+Address points that fill gaps in the other address sources.
+
+- License: Per source (each source under its own license)
+- Terms: https://docs.overturemaps.org/attribution/
+- Obligation: required, met by the OpenAddresses credit
+- Basis: docs.overturemaps.org/attribution: per source (NAD, CC BY 4.0 county and city sources, others); each source's license applies.
+
+### Overture Maps Foundation buildings
+
+Building footprints.
+
+- License: Open Database License (ODbL) 1.0
+- Attribution: © OpenStreetMap contributors, Overture Maps Foundation. Available under the Open Database License.
+- Terms: https://docs.overturemaps.org/attribution/
+- Obligation: required, with the data in API and MCP results and on https://smarterweather.com/acknowledgements/
+- Basis: ODbL 1.0 §4.3: a notice on a Produced Work used publicly; OSMF Attribution Guidelines (board 2021-06-25, revision 14786 of 2026-09-10).
+
+### Overture Maps Foundation places
+
+Points of interest.
+
+- License: Community Data License Agreement Permissive, Version 2.0 (CDLA-Permissive-2.0)
+- Attribution: Overture Maps Foundation places data, available under CDLA-Permissive-2.0: https://cdla.dev/permissive-2-0/
+- Terms: https://cdla.dev/permissive-2-0/
+- Obligation: required, with the data in API and MCP results and on https://smarterweather.com/acknowledgements/
+- Basis: CDLA-Permissive-2.0 §2.1: shared Data carries the agreement text, which the credit links. docs.overturemaps.org/attribution: CDLA-Permissive-2.0 for most sources, AllThePlaces CC0; Foursquare rows (Apache 2.0) are in the data and carry their own entry, `foursquare`.
+
+### Pyspectral atmospheric correction look-up tables
+
+Rayleigh scattering correction in GOES true color.
+
+- License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+- Attribution: Rayleigh correction tables: A. Dybbroe, R. Scheirer and M. Raspaud, Pyspectral atmospheric correction look-up tables (doi:10.5281/zenodo.1288441), CC BY 4.0, interpolated to the GOES ABI bands.
+- Terms: https://creativecommons.org/licenses/by/4.0/
+- Obligation: required, on https://smarterweather.com/acknowledgements/
+- Basis: Zenodo record 1288441 (v1.0.1) is licensed CC-BY-4.0. CC BY 4.0 §3(a)(1): the creators, the licence and an indication of modification, which §3(a)(2) lets a page carry; the tables are interpolated in wavelength, so the credit says so.
+
+### timezone-boundary-builder
+
+Time zone boundaries.
+
+- License: Open Database License (ODbL) 1.0
+- Terms: https://github.com/evansiroky/timezone-boundary-builder
+- Obligation: required, met by the OpenStreetMap credit
+- Basis: Project README, Licenses: the data are ODbL 1.0 (derived from OpenStreetMap), so the OpenStreetMap credit covers them.
+
+### U.S. Geological Survey (GNIS, PAD-US 4.1, GMTED2010)
+
+Place codes (GNIS), park boundaries (PAD-US 4.1) and the terrain heights behind the GOES true color Rayleigh correction (GMTED2010).
+
+- License: Public domain (U.S. Government work)
+- Terms: https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits
+- Obligation: none
+- Basis: 17 U.S.C. §105; the USGS copyrights and credits page asks that proper credit be given and PAD-US recommends a citation (requests).
+
+### U.S. Geological Survey 3D Elevation Program (3DEP) seamless DEMs
+
+Terrain relief (hillshade) in the basemap: the 1/3 and 1 arc-second seamless DEMs, read through USGS_Seamless_DEM_13.vrt and USGS_Seamless_DEM_1.vrt (both dated 2026-10-30) at https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/.
+
+- License: Public domain (U.S. Government work)
+- Terms: https://www.usgs.gov/3d-elevation-program/about-3dep-products-services
+- Obligation: none
+- Basis: 17 U.S.C. §105. The 3DEP products page: "All 3DEP products are available, free of charge and without use restrictions." The 1 arc-second layer also carries cells over Canada and Mexico that reached USGS from NRCan and INEGI ("Most of Canada and Mexico are also covered by the 1 arc-second dataset."); no credit there rests on the same USGS statement, so a later licence review starts from it.
+
+Data has been modified by Smarter Weather. Where we use data available under the Open Database License, we will provide the derived database, or a description of how it was altered, on request: hello@smarterweather.com.
 
 When you build on the Smarter Weather API or MCP server, you remain
 responsible for complying with upstream license and attribution requirements
