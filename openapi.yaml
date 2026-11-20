@@ -14791,6 +14791,30 @@ components:
             Absent with no row, or when the first row has neither a place
             nor a county.
           example: About 2 in across Del Norte and Humboldt counties, CA, locally up to 3.4 in 5 mi S of Gasquet, CA, through Thu 4 PM PST.
+        areas:
+          type: array
+          x-stability: experimental
+          description: |
+            The named areas of the ranking's polygon product (today NWS
+            forecast zones) with more than half of their land (in-mask)
+            area, weighted by cell area, within the read's `bbox` or
+            `area`, ranked by their areal mean in `unit`, at most 10, in
+            the ranking's order (ties by `feature_id`). Each area's
+            `value`, bound and `area_km2` cover its whole in-mask area,
+            which can extend beyond the `bbox` or `area`. Only on a ranking
+            without a window reducer, over a `bbox` or `area` read at full
+            resolution; absent otherwise. Absent means not stated: also
+            when they were not computed this time (a failed or skipped
+            stage), with no note. While they are still being built they
+            are absent and the element's `notes` say so; a later re-read
+            may return them. Each area carries its own `name` and `state`
+            from its product, whether or not the rows are labelled. Each
+            area's `product` and `feature_id` are the
+            `area[product]` and `area[feature_id]` of a follow-up read;
+            that read simplifies the polygon to the grid's resolution, so
+            its mean can differ from the area's `value` in boundary cells.
+          items:
+            $ref: '#/components/schemas/SeriesRankArea'
         hotspot_threshold:
           type: number
           x-stability: experimental
@@ -14850,6 +14874,42 @@ components:
           items:
             type: integer
           description: The ranks of the object's returned rows; absent when it holds none.
+    SeriesRankArea:
+      x-stability: experimental
+      type: object
+      required: [product, feature_id, name, population, value, area_km2]
+      properties:
+        product:
+          type: string
+          description: The polygon product the area belongs to; a follow-up read's `area[product]`.
+          example: nws_zones
+        feature_id:
+          type: string
+          description: The area's id in `product`; a follow-up read's `area[feature_id]`.
+          example: forecast/ILZ014
+        name:
+          type: string
+        state:
+          type: string
+          example: IL
+        population:
+          type: integer
+          format: int64
+          description: The area's population, as its product states it.
+        value:
+          type: number
+          description: |
+            The cell-area weighted mean over the area's whole in-mask
+            area (not clipped to the `bbox` or `area`), in `unit`.
+        upper:
+          type: number
+          description: A descending ranking, the highest cell in the area's whole in-mask area, in `unit`.
+        lower:
+          type: number
+          description: An ascending ranking, the lowest cell in the area's whole in-mask area, in `unit`.
+        area_km2:
+          type: number
+          description: The area's whole in-mask area (not clipped to the `bbox` or `area`).
     SeriesRankPlace:
       x-stability: experimental
       type: object
