@@ -11294,11 +11294,14 @@ components:
       type: object
       additionalProperties: false
       description: |
-        An index variable's ordered states, cited to the provider page
-        whose bounds they are: a value's state is the first entry whose
-        bound admits it (`max` inclusive, `below` exclusive; the last entry
-        has neither). `GET /v1/indices` answers each value's entry `id` as
-        `states`. With `decimals`, the value is first rounded to that many
+        A variable's ordered states, cited to the provider page whose
+        bounds they are, in the variable's `units`: a value's state is the
+        first entry whose bound admits it (`max` inclusive, `below`
+        exclusive; the last entry has neither). On an index variable
+        `GET /v1/indices` answers each value's entry `id` as `states`. On a
+        grid or snapshot variable the set is its reference levels (such as
+        the freezing point of a 2 m air temperature) and no door answers a
+        per-value state. With `decimals`, the value is first rounded to that many
         decimals, half away from zero (the precision the provider
         classifies on), so `states` and `episodes` classify the value the
         provider prints; `values` keep the stored value.
