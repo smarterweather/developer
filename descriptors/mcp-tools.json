@@ -1649,6 +1649,78 @@
                           "description": "One sentence from this ranking's own numbers, places and times.",
                           "type": "string"
                         },
+                        "areas": {
+                          "description": "Named areas (today NWS forecast zones) with more than half their in-mask area in the bbox or area, by their areal mean, at most 10, in the order; only on a bbox or area ranking without a window reducer read at full resolution. Absent when not computed this time; absent while pending, see notes. Name and state are the area's own, labelled rows or not. A follow-up read of one can differ at its boundary.",
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "product": {
+                                "type": "string",
+                                "description": "Its polygon product: a follow-up read's area.product."
+                              },
+                              "feature_id": {
+                                "type": "string",
+                                "description": "Its id in product: a follow-up read's area.feature_id."
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string"
+                              },
+                              "population": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "value": {
+                                "type": "number",
+                                "description": "The cell-area weighted mean over the area's whole in-mask area, which can extend beyond the bbox or area."
+                              },
+                              "upper": {
+                                "description": "Descending: the highest cell in the area's whole in-mask area.",
+                                "type": "number"
+                              },
+                              "lower": {
+                                "description": "Ascending: the lowest cell in the area's whole in-mask area.",
+                                "type": "number"
+                              },
+                              "area_km2": {
+                                "type": "number",
+                                "description": "The area's whole in-mask area, not clipped to the bbox or area."
+                              },
+                              "call": {
+                                "description": "Ready to run as is: the area's mean over the same frame (value, up to its boundary cells), or the ranking inside it.",
+                                "type": "object",
+                                "properties": {
+                                  "tool": {
+                                    "type": "string"
+                                  },
+                                  "arguments": {
+                                    "type": "object",
+                                    "properties": {},
+                                    "additionalProperties": {}
+                                  }
+                                },
+                                "required": [
+                                  "tool",
+                                  "arguments"
+                                ],
+                                "additionalProperties": {}
+                              }
+                            },
+                            "required": [
+                              "product",
+                              "feature_id",
+                              "name",
+                              "population",
+                              "value",
+                              "area_km2"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        },
                         "hotspot_threshold": {
                           "description": "Every hotspot block is at or beyond this value.",
                           "type": "number"
@@ -1706,6 +1778,25 @@
                                   "minimum": -9007199254740991,
                                   "maximum": 9007199254740991
                                 }
+                              },
+                              "call": {
+                                "description": "Ready to run as is: the ranking inside its bbox by the same key, frame or window; it reproduces none of these numbers.",
+                                "type": "object",
+                                "properties": {
+                                  "tool": {
+                                    "type": "string"
+                                  },
+                                  "arguments": {
+                                    "type": "object",
+                                    "properties": {},
+                                    "additionalProperties": {}
+                                  }
+                                },
+                                "required": [
+                                  "tool",
+                                  "arguments"
+                                ],
+                                "additionalProperties": {}
                               }
                             },
                             "required": [
@@ -1786,6 +1877,25 @@
                                   "distance_km",
                                   "direction",
                                   "label"
+                                ],
+                                "additionalProperties": {}
+                              },
+                              "call": {
+                                "description": "Ready to run as is, while the ranked run is still the latest: the cell over the same frame (value) or window (the key's reducer: value for max and min; for mean and sum the cell's own, within upper or lower).",
+                                "type": "object",
+                                "properties": {
+                                  "tool": {
+                                    "type": "string"
+                                  },
+                                  "arguments": {
+                                    "type": "object",
+                                    "properties": {},
+                                    "additionalProperties": {}
+                                  }
+                                },
+                                "required": [
+                                  "tool",
+                                  "arguments"
                                 ],
                                 "additionalProperties": {}
                               }

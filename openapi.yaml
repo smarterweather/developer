@@ -4771,7 +4771,8 @@ paths:
         DC, without open water). Bare, the key ranks one instant: with no
         time word a forecast's frame at now (floored to its `step`; a daily
         product's current day, never an earlier one: when it files local
-        days, the local day in the area's centre's zone, or over a whole
+        days, the local day in the area's zone (its centre's, or the US
+        land's it holds when the centre lies in no state), or over a whole
         region the zone at the region's placeholder (CONUS ranks Central
         time's day, `America/Chicago`), else the UTC day; a zone that
         cannot be looked up answers `no-store`) and an analysis's newest
@@ -4779,7 +4780,7 @@ paths:
         frame there yet ranks its next step, said in `notes`. Over `hours`
         or `start` and `end` it names its window reducer: `<key>:max`, `<key>:min`,
         `<key>:mean` or `<key>:sum` (at most 256 frames; a date is a UTC
-        day, or over a bbox or area its centre's local day, at most 16
+        day, or over a bbox or area the local day in its zone, at most 16
         days; `hours` over a product that files local days covers whole
         local days, today's included); `-<key>:min` and `<key>:max` (a window extreme in the
         opposite order) are a `400` `operator_conflict`. Without `lat` and
@@ -8932,26 +8933,26 @@ components:
           minimum: 0
           maximum: 100
           description: >-
-            HRRR low-cloud-layer cover, percent (CONUS). Present only with
-            `cloud_cover_mid` and `cloud_cover_high` (all three numbers or
-            all three null). Null outside HRRR coverage or before the first
-            post-deploy cycle.
+            HRRR low-cloud-layer cover, percent (CONUS and Alaska). Present
+            only with `cloud_cover_mid` and `cloud_cover_high` (all three
+            numbers or all three null). Null outside HRRR coverage or before
+            the first post-deploy cycle.
         cloud_cover_mid:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
           description: >-
-            HRRR mid-cloud-layer cover, percent (CONUS). Same
-            all-three-or-null contract as `cloud_cover_low`.
+            HRRR mid-cloud-layer cover, percent (CONUS and Alaska).
+            Same all-three-or-null contract as `cloud_cover_low`.
         cloud_cover_high:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
           description: >-
-            HRRR high-cloud-layer cover, percent (CONUS). Same
-            all-three-or-null contract as `cloud_cover_low`.
+            HRRR high-cloud-layer cover, percent (CONUS and Alaska).
+            Same all-three-or-null contract as `cloud_cover_low`.
         uv_index:
           type: [number, "null"]
           format: double
@@ -9259,25 +9260,27 @@ components:
           minimum: 0
           maximum: 100
           description: >-
-            HRRR low-cloud-layer cover, percent (CONUS). Present only with
-            `cloud_cover_mid` and `cloud_cover_high` for hours inside the
-            HRRR horizon (18 h, or 48 h on 00/06/12/18Z cycles).
+            HRRR low-cloud-layer cover, percent (CONUS and Alaska). Present
+            only with `cloud_cover_mid` and `cloud_cover_high` for hours
+            inside the HRRR horizon (18 h, or 48 h on 00/06/12/18Z cycles).
+            HRRR Alaska runs every 3 h, not hourly, so its horizon ends
+            sooner after now.
         cloud_cover_mid:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
           description: >-
-            HRRR mid-cloud-layer cover, percent (CONUS). Same
-            all-three-or-null contract as `cloud_cover_low`.
+            HRRR mid-cloud-layer cover, percent (CONUS and Alaska).
+            Same all-three-or-null contract as `cloud_cover_low`.
         cloud_cover_high:
           type: [number, "null"]
           format: double
           minimum: 0
           maximum: 100
           description: >-
-            HRRR high-cloud-layer cover, percent (CONUS). Same
-            all-three-or-null contract as `cloud_cover_low`.
+            HRRR high-cloud-layer cover, percent (CONUS and Alaska).
+            Same all-three-or-null contract as `cloud_cover_low`.
         snow_level:
           type: [number, "null"]
           format: double
@@ -11294,11 +11297,14 @@ components:
       type: object
       additionalProperties: false
       description: |
-        An index variable's ordered states, cited to the provider page
-        whose bounds they are: a value's state is the first entry whose
-        bound admits it (`max` inclusive, `below` exclusive; the last entry
-        has neither). `GET /v1/indices` answers each value's entry `id` as
-        `states`. With `decimals`, the value is first rounded to that many
+        A variable's ordered states, cited to the provider page whose
+        bounds they are, in the variable's `units`: a value's state is the
+        first entry whose bound admits it (`max` inclusive, `below`
+        exclusive; the last entry has neither). On an index variable
+        `GET /v1/indices` answers each value's entry `id` as `states`. On a
+        grid or snapshot variable the set is its reference levels (such as
+        the freezing point of a 2 m air temperature) and no door answers a
+        per-value state. With `decimals`, the value is first rounded to that many
         decimals, half away from zero (the precision the provider
         classifies on), so `states` and `episodes` classify the value the
         provider prints; `values` keep the stored value.
@@ -14541,7 +14547,7 @@ components:
           description: An area element's grid cells (centers inside the area), equal to `basis.cells` where both are present.
         timezone:
           type: [string, "null"]
-          description: IANA timezone of the location (an area's center), null when it cannot be resolved.
+          description: IANA timezone of the location (an area's center, or the US land the area holds when its center lies in no state), null when it cannot be resolved.
           example: America/Chicago
         utc_offset_seconds:
           type: [integer, "null"]
@@ -14791,6 +14797,30 @@ components:
             Absent with no row, or when the first row has neither a place
             nor a county.
           example: About 2 in across Del Norte and Humboldt counties, CA, locally up to 3.4 in 5 mi S of Gasquet, CA, through Thu 4 PM PST.
+        areas:
+          type: array
+          x-stability: experimental
+          description: |
+            The named areas of the ranking's polygon product (today NWS
+            forecast zones) with more than half of their land (in-mask)
+            area, weighted by cell area, within the read's `bbox` or
+            `area`, ranked by their areal mean in `unit`, at most 10, in
+            the ranking's order (ties by `feature_id`). Each area's
+            `value`, bound and `area_km2` cover its whole in-mask area,
+            which can extend beyond the `bbox` or `area`. Only on a ranking
+            without a window reducer, over a `bbox` or `area` read at full
+            resolution; absent otherwise. Absent means not stated: also
+            when they were not computed this time (a failed or skipped
+            stage), with no note. While they are still being built they
+            are absent and the element's `notes` say so; a later re-read
+            may return them. Each area carries its own `name` and `state`
+            from its product, whether or not the rows are labelled. Each
+            area's `product` and `feature_id` are the
+            `area[product]` and `area[feature_id]` of a follow-up read;
+            that read simplifies the polygon to the grid's resolution, so
+            its mean can differ from the area's `value` in boundary cells.
+          items:
+            $ref: '#/components/schemas/SeriesRankArea'
         hotspot_threshold:
           type: number
           x-stability: experimental
@@ -14850,6 +14880,109 @@ components:
           items:
             type: integer
           description: The ranks of the object's returned rows; absent when it holds none.
+        call:
+          x-stability: experimental
+          allOf:
+            - $ref: '#/components/schemas/SuggestedCall'
+          description: |
+            The ranking inside the object's `bbox` (`GET /v1/series` with
+            its `min_lon`, `min_lat`, `max_lon`, `max_lat`), by the same
+            key and sign, over the same frame (`at`) or window (`start`
+            and `end`), with the request's `limit` when it sent one; ready
+            to send as is. It reproduces no number of the hotspot: those
+            are statistics of the object's blocks, not of its `bbox`.
+            Absent when the route does not serve it, or the `bbox`
+            crosses 180 degrees or leaves one US domain.
+      example:
+        rank: 1
+        blocks: 3
+        area_km2: 1720
+        bbox: [-112.6, 33.1, -111.7, 33.7]
+        p90: 103.8
+        peak: 1
+        rows: [1]
+        call:
+          method: GET
+          url: /v1/series?at=2026-07-14T23%3A00%3A00Z&max_lat=33.7&max_lon=-111.7&min_lat=33.1&min_lon=-112.6&select=nbm_conus%3Atemperature_2m&sort=-temperature_2m&units=imperial
+          query:
+            at: '2026-07-14T23:00:00Z'
+            max_lat: '33.7'
+            max_lon: '-111.7'
+            min_lat: '33.1'
+            min_lon: '-112.6'
+            select: nbm_conus:temperature_2m
+            sort: -temperature_2m
+            units: imperial
+    SeriesRankArea:
+      x-stability: experimental
+      type: object
+      required: [product, feature_id, name, population, value, area_km2]
+      properties:
+        product:
+          type: string
+          description: The polygon product the area belongs to; a follow-up read's `area[product]`.
+          example: nws_zones
+        feature_id:
+          type: string
+          description: The area's id in `product`; a follow-up read's `area[feature_id]`.
+          example: forecast/ILZ014
+        name:
+          type: string
+        state:
+          type: string
+          example: IL
+        population:
+          type: integer
+          format: int64
+          description: The area's population, as its product states it.
+        value:
+          type: number
+          description: |
+            The cell-area weighted mean over the area's whole in-mask
+            area (not clipped to the `bbox` or `area`), in `unit`.
+        upper:
+          type: number
+          description: A descending ranking, the highest cell in the area's whole in-mask area, in `unit`.
+        lower:
+          type: number
+          description: An ascending ranking, the lowest cell in the area's whole in-mask area, in `unit`.
+        area_km2:
+          type: number
+          description: The area's whole in-mask area (not clipped to the `bbox` or `area`).
+        call:
+          x-stability: experimental
+          allOf:
+            - $ref: '#/components/schemas/SuggestedCall'
+          description: |
+            The area read next by reference (`area[product]`,
+            `area[feature_id]`), ready to send as is. An instant ranking's
+            area reads its frame (`at`) as its areal mean (`stats=mean`),
+            which equals `value` up to the boundary cells the reference's
+            simplification to the grid's resolution moves, while the
+            ranked run is still the latest. On a variable the route does
+            not average, or over a window key's `start` and `end`, it is
+            the ranking inside the area by the same key and sign, which
+            reproduces no number. Absent when the route does not serve
+            it.
+      example:
+        product: nws_zones
+        feature_id: forecast/ILZ014
+        name: Cook
+        state: IL
+        population: 5087072
+        value: 91.4
+        upper: 93.1
+        area_km2: 2448
+        call:
+          method: GET
+          url: /v1/series?area[feature_id]=forecast%2FILZ014&area[product]=nws_zones&at=2026-07-14T23%3A00%3A00Z&select=nbm_conus%3Atemperature_2m&stats=mean&units=imperial
+          query:
+            area[feature_id]: forecast/ILZ014
+            area[product]: nws_zones
+            at: '2026-07-14T23:00:00Z'
+            select: nbm_conus:temperature_2m
+            stats: mean
+            units: imperial
     SeriesRankPlace:
       x-stability: experimental
       type: object
@@ -14929,6 +15062,44 @@ components:
             none.
           allOf:
             - $ref: '#/components/schemas/SeriesRankPlace'
+        call:
+          x-stability: experimental
+          allOf:
+            - $ref: '#/components/schemas/SuggestedCall'
+          description: |
+            The row's cell read next (`GET /v1/series` with its `lat` and
+            `lon`, the element's product and key as one `select` token, the
+            request's `units`), ready to send as is. It names no run, so
+            it returns what follows while the ranked run is still the
+            latest. An instant row reads its own frame (`at` its
+            `valid_time`) and returns `value`. A window row reads the
+            ranking's window (`start` and `end`) with the key's reducer
+            as `stats`: a `max` or `min` row returns `value` when the
+            ranking is `exact`; a `mean` or `sum` row
+            returns the cell's own window statistic, not the block's
+            `value`, at most `upper` (at least `lower`) when every frame
+            was ranked. Time is absolute, never the request's time words.
+            Absent when the route does not serve it, on an instant row
+            without a `valid_time`, or on a row whose `state` the ranking
+            labelled outside the 50 states and DC.
+      example:
+        rank: 1
+        lat: 33.4
+        lon: -112.1
+        value: 104.2
+        valid_time: '2026-07-14T23:00:00Z'
+        valid_time_local: '2026-07-14T16:00:00-07:00'
+        county: Maricopa
+        state: AZ
+        call:
+          method: GET
+          url: /v1/series?at=2026-07-14T23%3A00%3A00Z&lat=33.4&lon=-112.1&select=nbm_conus%3Atemperature_2m&units=imperial
+          query:
+            at: '2026-07-14T23:00:00Z'
+            lat: '33.4'
+            lon: '-112.1'
+            select: nbm_conus:temperature_2m
+            units: imperial
     IndicesResponse:
       x-stability: experimental
       type: object
