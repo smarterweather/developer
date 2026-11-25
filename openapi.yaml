@@ -14879,6 +14879,42 @@ components:
           items:
             type: integer
           description: The ranks of the object's returned rows; absent when it holds none.
+        call:
+          x-stability: experimental
+          allOf:
+            - $ref: '#/components/schemas/SuggestedCall'
+          description: |
+            The ranking inside the object's `bbox` (`GET /v1/series` with
+            its `min_lon`, `min_lat`, `max_lon`, `max_lat`), by the same
+            key and sign, over the same frame (`at`) or window (`start`
+            and `end`), with the request's `limit` when it sent one; ready
+            to send as is. It reproduces no number of the hotspot: those
+            are statistics of the object's blocks, not of its `bbox`.
+            Absent when the route does not serve it, or the `bbox`
+            crosses 180 degrees or leaves one US domain. The route holds
+            a `bbox` to coverage at its centre, so an object whose centre
+            lies in no US county (over open water, across a border)
+            answers `outside_coverage`.
+      example:
+        rank: 1
+        blocks: 3
+        area_km2: 1720
+        bbox: [-112.6, 33.1, -111.7, 33.7]
+        p90: 103.8
+        peak: 1
+        rows: [1]
+        call:
+          method: GET
+          url: /v1/series?at=2026-07-14T23%3A00%3A00Z&max_lat=33.7&max_lon=-111.7&min_lat=33.1&min_lon=-112.6&select=nbm_conus%3Atemperature_2m&sort=-temperature_2m&units=imperial
+          query:
+            at: '2026-07-14T23:00:00Z'
+            max_lat: '33.7'
+            max_lon: '-111.7'
+            min_lat: '33.1'
+            min_lon: '-112.6'
+            select: nbm_conus:temperature_2m
+            sort: -temperature_2m
+            units: imperial
     SeriesRankArea:
       x-stability: experimental
       type: object
@@ -14915,6 +14951,40 @@ components:
         area_km2:
           type: number
           description: The area's whole in-mask area (not clipped to the `bbox` or `area`).
+        call:
+          x-stability: experimental
+          allOf:
+            - $ref: '#/components/schemas/SuggestedCall'
+          description: |
+            The area read next by reference (`area[product]`,
+            `area[feature_id]`), ready to send as is. An instant ranking's
+            area reads its frame (`at`) as its areal mean (`stats=mean`),
+            which equals `value` up to the boundary cells the reference's
+            simplification to the grid's resolution moves, while the
+            ranked run is still the latest. On a variable the route does
+            not average, or over a window key's `start` and `end`, it is
+            the ranking inside the area by the same key and sign, which
+            reproduces no number. Absent when the route does not serve
+            it.
+      example:
+        product: nws_zones
+        feature_id: forecast/ILZ014
+        name: Cook
+        state: IL
+        population: 5087072
+        value: 91.4
+        upper: 93.1
+        area_km2: 2448
+        call:
+          method: GET
+          url: /v1/series?area[feature_id]=forecast%2FILZ014&area[product]=nws_zones&at=2026-07-14T23%3A00%3A00Z&select=nbm_conus%3Atemperature_2m&stats=mean&units=imperial
+          query:
+            area[feature_id]: forecast/ILZ014
+            area[product]: nws_zones
+            at: '2026-07-14T23:00:00Z'
+            select: nbm_conus:temperature_2m
+            stats: mean
+            units: imperial
     SeriesRankPlace:
       x-stability: experimental
       type: object
@@ -14994,6 +15064,44 @@ components:
             none.
           allOf:
             - $ref: '#/components/schemas/SeriesRankPlace'
+        call:
+          x-stability: experimental
+          allOf:
+            - $ref: '#/components/schemas/SuggestedCall'
+          description: |
+            The row's cell read next (`GET /v1/series` with its `lat` and
+            `lon`, the element's product and key as one `select` token, the
+            request's `units`), ready to send as is. It names no run, so
+            it returns what follows while the ranked run is still the
+            latest. An instant row reads its own frame (`at` its
+            `valid_time`) and returns `value`. A window row reads the
+            ranking's window (`start` and `end`) with the key's reducer
+            as `stats`: a `max` or `min` row returns `value` when the
+            ranking is `exact`; a `mean` or `sum` row
+            returns the cell's own window statistic, not the block's
+            `value`, at most `upper` (at least `lower`) when every frame
+            was ranked. Time is absolute, never the request's time words.
+            Absent when the route does not serve it, on an instant row
+            without a `valid_time`, or on a row whose `state` the ranking
+            labelled outside the 50 states and DC.
+      example:
+        rank: 1
+        lat: 33.4
+        lon: -112.1
+        value: 104.2
+        valid_time: '2026-07-14T23:00:00Z'
+        valid_time_local: '2026-07-14T16:00:00-07:00'
+        county: Maricopa
+        state: AZ
+        call:
+          method: GET
+          url: /v1/series?at=2026-07-14T23%3A00%3A00Z&lat=33.4&lon=-112.1&select=nbm_conus%3Atemperature_2m&units=imperial
+          query:
+            at: '2026-07-14T23:00:00Z'
+            lat: '33.4'
+            lon: '-112.1'
+            select: nbm_conus:temperature_2m
+            units: imperial
     IndicesResponse:
       x-stability: experimental
       type: object

@@ -1689,6 +1689,25 @@
                               "area_km2": {
                                 "type": "number",
                                 "description": "The area's whole in-mask area, not clipped to the bbox or area."
+                              },
+                              "call": {
+                                "description": "Ready to run as is: the area's mean over the same frame (value, up to its boundary cells), or the ranking inside it.",
+                                "type": "object",
+                                "properties": {
+                                  "tool": {
+                                    "type": "string"
+                                  },
+                                  "arguments": {
+                                    "type": "object",
+                                    "properties": {},
+                                    "additionalProperties": {}
+                                  }
+                                },
+                                "required": [
+                                  "tool",
+                                  "arguments"
+                                ],
+                                "additionalProperties": {}
                               }
                             },
                             "required": [
@@ -1759,6 +1778,25 @@
                                   "minimum": -9007199254740991,
                                   "maximum": 9007199254740991
                                 }
+                              },
+                              "call": {
+                                "description": "Ready to run as is: the ranking inside its bbox by the same key, frame or window; it reproduces none of these numbers. A bbox whose centre is in no US county (open water, across a border) answers outside_coverage.",
+                                "type": "object",
+                                "properties": {
+                                  "tool": {
+                                    "type": "string"
+                                  },
+                                  "arguments": {
+                                    "type": "object",
+                                    "properties": {},
+                                    "additionalProperties": {}
+                                  }
+                                },
+                                "required": [
+                                  "tool",
+                                  "arguments"
+                                ],
+                                "additionalProperties": {}
                               }
                             },
                             "required": [
@@ -1839,6 +1877,25 @@
                                   "distance_km",
                                   "direction",
                                   "label"
+                                ],
+                                "additionalProperties": {}
+                              },
+                              "call": {
+                                "description": "Ready to run as is, while the ranked run is still the latest: the cell over the same frame (value) or window (the key's reducer: value for max and min; for mean and sum the cell's own, within upper or lower).",
+                                "type": "object",
+                                "properties": {
+                                  "tool": {
+                                    "type": "string"
+                                  },
+                                  "arguments": {
+                                    "type": "object",
+                                    "properties": {},
+                                    "additionalProperties": {}
+                                  }
+                                },
+                                "required": [
+                                  "tool",
+                                  "arguments"
                                 ],
                                 "additionalProperties": {}
                               }
