@@ -1780,7 +1780,7 @@
                                 }
                               },
                               "call": {
-                                "description": "Ready to run as is: the ranking inside its bbox by the same key, frame or window; it reproduces none of these numbers. A bbox whose centre is in no US county (open water, across a border) answers outside_coverage.",
+                                "description": "Ready to run as is: the ranking inside its bbox by the same key, frame or window; it reproduces none of these numbers.",
                                 "type": "object",
                                 "properties": {
                                   "tool": {

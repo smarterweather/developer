@@ -4771,7 +4771,8 @@ paths:
         DC, without open water). Bare, the key ranks one instant: with no
         time word a forecast's frame at now (floored to its `step`; a daily
         product's current day, never an earlier one: when it files local
-        days, the local day in the area's centre's zone, or over a whole
+        days, the local day in the area's zone (its centre's, or the US
+        land's it holds when the centre lies in no state), or over a whole
         region the zone at the region's placeholder (CONUS ranks Central
         time's day, `America/Chicago`), else the UTC day; a zone that
         cannot be looked up answers `no-store`) and an analysis's newest
@@ -4779,7 +4780,7 @@ paths:
         frame there yet ranks its next step, said in `notes`. Over `hours`
         or `start` and `end` it names its window reducer: `<key>:max`, `<key>:min`,
         `<key>:mean` or `<key>:sum` (at most 256 frames; a date is a UTC
-        day, or over a bbox or area its centre's local day, at most 16
+        day, or over a bbox or area the local day in its zone, at most 16
         days; `hours` over a product that files local days covers whole
         local days, today's included); `-<key>:min` and `<key>:max` (a window extreme in the
         opposite order) are a `400` `operator_conflict`. Without `lat` and
@@ -14546,7 +14547,7 @@ components:
           description: An area element's grid cells (centers inside the area), equal to `basis.cells` where both are present.
         timezone:
           type: [string, "null"]
-          description: IANA timezone of the location (an area's center), null when it cannot be resolved.
+          description: IANA timezone of the location (an area's center, or the US land the area holds when its center lies in no state), null when it cannot be resolved.
           example: America/Chicago
         utc_offset_seconds:
           type: [integer, "null"]
@@ -14891,10 +14892,7 @@ components:
             to send as is. It reproduces no number of the hotspot: those
             are statistics of the object's blocks, not of its `bbox`.
             Absent when the route does not serve it, or the `bbox`
-            crosses 180 degrees or leaves one US domain. The route holds
-            a `bbox` to coverage at its centre, so an object whose centre
-            lies in no US county (over open water, across a border)
-            answers `outside_coverage`.
+            crosses 180 degrees or leaves one US domain.
       example:
         rank: 1
         blocks: 3
